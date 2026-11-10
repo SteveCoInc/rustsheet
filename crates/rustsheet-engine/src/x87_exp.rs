@@ -12,6 +12,15 @@
 //! are points where 2^|f| - 1 lies within 0.09 ulp of a 64-bit rounding midpoint, where Excel's
 //! F2XM1 is faithful but not correctly rounded (T-1940). The worksheet EXP (T-1931) and the ERFC
 //! kernel use it.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::float_cmp,
+    clippy::many_single_char_names
+)]
+// LINT-DEBT-END
 
 use crate::arithmetic::{
     round_extended_to_double, round_extended_to_subnormal, round_to_bits, significand_and_exponent,
@@ -74,9 +83,11 @@ pub(crate) fn excel_expm1(x: f64) -> f64 {
 }
 
 /// Below this |x| Excel's 1 - e^x is minus its expm1 ([`excel_one_minus_exp`]). The value is the
-/// cut PMT's, WEIBULL.DIST's and EXPON.DIST's cells put between 0.99 and 1.35 (`annuity.rs`
-/// `PAYMENT_EXPM1_TO`, `weibull.rs` `weibull_cdf`, `exponential.rs` `EXPON_EXPM1_CUT`), copied, not
-/// fitted again; the incomplete beta's a0 = 1 tail takes it too (T-3764).
+/// cut PMT's, WEIBULL.DIST's and EXPON.DIST's cells put between 0.99 and 1.35 (PMT's
+/// 0.9896..1.0648 on probes/t3014-pmt-fv-type-alone, T-3014: `annuity.rs` `discounted_balance`
+/// takes this function since T-4975; `weibull.rs` `weibull_cdf`, `exponential.rs`
+/// `EXPON_EXPM1_CUT`), copied, not fitted again; the incomplete beta's a0 = 1 tail, IPMT, PPMT
+/// and CUMIPMT/CUMPRINC's balance drop take it too (T-3764, T-4975).
 const ONE_MINUS_EXP_EXPM1_TO: f64 = 1.0;
 
 /// Excel's 1 - e^x: minus Excel's expm1 ([`excel_expm1`], Kahan's form) for |x| below

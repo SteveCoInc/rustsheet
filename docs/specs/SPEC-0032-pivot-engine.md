@@ -39,7 +39,8 @@ Goals:
 3. **Refresh semantics as Excel's:**
    - a pivot refreshes on load when its cache is `refreshOnLoad`, on an explicit API call, and when it is
      created;
-   - never on a source edit (Auto Refresh only as T-4182 evidences) nor on a calculate (probed through
+   - never on a source edit (Excel for the web neither stores nor honours Auto Refresh; T-4182 was dropped,
+     pivots.md) nor on a calculate (probed through
      a Graph write on a refreshOnLoad pivot only; pivots.md lists what is not probed), and a pivot loaded
      without `refreshOnLoad` keeps the cells the file saved, even when its `rowItems`/`colItems`
      disagree with the cache or are absent (probes/t4586-pivot-refresh-on-load, T-4586).
@@ -138,10 +139,13 @@ success (see the limits). Its rules:
   level, a manual group) keeps its base (`CacheField::added_group`) and is derived again from the base's
   new values before the base is grouped in place (`pivot/added_groups.rs`, T-4171).
 
-A Table or a defined name resolves to its range at refresh (T-4506). `SourceCells` is a trait in
-`pivot/refresh.rs`, implemented by `Model` over the evaluated cell values. It reads values only, so a
-refresh does no I/O and never evaluates a formula. Because it reads what the recalculation produced, a
-refresh is ordered after that calculation.
+A Table or a defined name resolves to its range at refresh (T-4506): `Model::pivot_source_area` reads a
+Table's header row and body, and evaluates a defined name's body in reference context, as a formula outside a
+cell is evaluated (a dynamic `OFFSET` or `INDEX` name included; pivots.md "A pivot over a defined name or a
+Table reads it again at the refresh"). `SourceCells` is a trait in `pivot/refresh.rs`, implemented by `Model`
+over the evaluated cell values. It reads values only, so a refresh does no I/O and evaluates no formula but a
+source name's body. Because it reads what the recalculation produced, a refresh is ordered after that
+calculation.
 
 **Who refreshes, and when (T-4151).**
 - The importer only records `refreshOnLoad` on the cache, since import cannot calculate.
@@ -153,7 +157,8 @@ refresh is ordered after that calculation.
   pivots unrendered, laying out only a grouped one.
 - The refresh on open plans every marked cache within one shared work and cell budget, and writes
   and recalculates only when at least one plan succeeds.
-- Auto Refresh is added only as T-4182 evidences it.
+- Auto Refresh is not implemented: Excel for the web neither stores nor honours it (pivots.md "PivotTable Auto
+  Refresh is not stored or honoured by Excel for the web"; T-4182, dropped).
 
 ### PivotResult (T-4142, T-4163, T-4165, T-4174, T-4175)
 `fn compute(table: &PivotTable, cache: &PivotCache, work: &mut u64) -> Result<PivotResult, PivotComputeError>`
@@ -235,13 +240,16 @@ As built (T-4176, `crates/rustsheet-xlsx/src/export/pivots.rs`): the regeneratin
 `worksheetSource@name`, now kept as `PivotCache::source_name`) with a `pivotCacheRecords` part of `<x v>` indices, and
 every pivot as a `pivotTableDefinition`: typed attributes where they differ from the schema's defaults, the verbatim
 rest on its owner, root children in schema order, and `rowItems`/`colItems`: the saved ones as read until the engine
-lays the pivot out (a render or refresh drops them), then the engine's when its layout gives the location and
-geometry the pivot holds. A cache is held to the import limits, and one with case-variant texts in a field is
-dropped (Excel for the web calls it corrupt). An axis field with no `<items>` gets one per cache
-item plus its subtotal lines (ClosedXML's invariant), a data field's pivot field `dataField="1"`. A grouped cache is
-written with its `<fieldGroup>`s in the shapes Excel saves, from each range-grouped field's kept own values
-(`CacheField::ungrouped`), and dropped with its pivots for any other shape (T-4734); a cache definition's unread rest is T-4735's. The source-preserving tiers
-(SPEC-0034) still keep an unchanged pivot's own parts byte for byte.
+lays the pivot out (a render or refresh drops them), then the engine's when its layout gives the location and geometry
+the pivot holds. A layout that changes nothing keeps the saved ones (T-4825): the same cache, location and geometry,
+and the cells the sheet already shows, with none to clear. So a `refreshOnLoad` pivot that nothing edited leaves the
+pivot model as read, and the source-preserving tiers keep its parts. A cache is held to the import limits, and one
+with case-variant texts in a field is dropped (Excel for the web calls it corrupt). An axis field with no `<items>`
+gets one per cache item plus its subtotal lines (ClosedXML's invariant), a data field's pivot field `dataField="1"`. A
+grouped cache is written with its `<fieldGroup>`s in the shapes Excel saves, from each range-grouped field's kept own
+values (`CacheField::ungrouped`), and dropped with its pivots for any other shape (T-4734); a cache definition's
+unread rest is T-4735's. The source-preserving tiers (SPEC-0034) still keep an unchanged pivot's own parts byte for
+byte.
 
 ### PivotChart data (T-4186)
 `PivotChartData { categories: Vec<Vec<CellValue>>, series: Vec<Series> }` is derived from the
@@ -381,7 +389,8 @@ introducing it adds:
 - **Probes:** the `pivots` probes (t4123, t4128, t4134, t4137, t4138 and the later probe tasks) score
   every pivot cell and layout through T-4124.
 - **Generated:** `gen-pivot` (T-4132, T-4160) adds covering-array coverage.
-- **Corpora:** fresh pivot-corpus files (T-4131) re-render exactly.
+- **Corpora:** fresh pivot-corpus files (T-4131; fresh when their saved records give their saved values,
+  T-4906) re-render exactly, cell by cell and in their `rowItems`/`colItems`.
 - **Metamorphic** (T-4155):
   - refresh is idempotent;
   - GETPIVOTDATA of each non-empty value cell's tuple equals the cell, when no missing or error caption
@@ -403,7 +412,7 @@ introducing it adds:
 8. T-4154: GETPIVOTDATA over the result.
 9. PV2 and PV3 stages (T-4163, T-4165, T-4168, T-4169, T-4171, T-4174, T-4175), each after its probe
    (T-4161, T-4164, T-4170, T-4505, T-4582, T-4583, T-4584).
-10. Auto Refresh (T-4182), once its evidence lands.
+10. Auto Refresh: dropped (T-4182), since Excel for the web neither stores nor honours it.
 11. Export and API (T-4176–T-4178, T-4184), then PivotChart data and I/O (T-4186, T-4187) and slicers
     (T-4188).
 

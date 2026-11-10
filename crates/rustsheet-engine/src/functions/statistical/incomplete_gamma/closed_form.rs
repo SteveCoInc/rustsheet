@@ -3,9 +3,12 @@
 //! "Deep lower tail at a shape above 1"): the root of the cdf's leading factor, with or without
 //! one Newton step; and, where that root is close but not Excel's value, Newton steps from it
 //! on Excel's cdf (T-3311). The first three moved out of `mod.rs` unchanged (T-3313).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 
 use super::{
-    excel_form_lower, gamma_density, pair_with, Exponent, Terms, DIRECT_SHAPE_MAX, MAX_TERMS,
+    excel_form_lower, gamma_density, pair_with, Exponent, Tail, Terms, DIRECT_SHAPE_MAX, MAX_TERMS,
 };
 use crate::functions::statistical::gammaln::excel_gammaln;
 use crate::x87_exp::excel_exp;
@@ -118,7 +121,9 @@ pub(super) fn excel_tiny_quantile(a: f64, p: f64) -> Option<f64> {
         return None;
     }
     // One cdf of a shape below 20 at x below 1: the series, at most `cdf_terms_bound(20)` terms.
-    let cdf = pair_with(a, x, &mut Terms(MAX_TERMS), Exponent::Excel).0;
+    // The accurate exponent, the meaning the check was fitted with: GAMMA.DIST's three rounded
+    // factors (T-3219) came after it.
+    let cdf = pair_with(a, x, &mut Terms(MAX_TERMS), Exponent::Accurate).0;
     ((cdf / p - 1.0).abs() <= TINY_QUANTILE_CHECK).then_some(x)
 }
 
@@ -215,4 +220,87 @@ pub(super) fn excel_newton_quantile(a: f64, p: f64) -> Option<f64> {
         }
     }
     Some(best.0)
+}
+
+/// The shapes over which Excel's chi-squared quantile is [`excel_halley_quantile`] (T-3146; the
+/// research prototype's region, docs/research/excel-parity-findings-2026-11-07.md item 6). Shape 1
+/// keeps its closed form ([`super::exponential_quantile`]), which the caller takes first.
+const HALLEY_SHAPES: std::ops::RangeInclusive<f64> = 1.0..=DIRECT_SHAPE_MAX;
+
+/// The largest unit quantile [`excel_halley_quantile`] returns; above it the accurate crossing
+/// applies. `CHIINV(0.975,5)` (unit quantile 0.4156) is inside it.
+const HALLEY_UNIT_X_MAX: f64 = 0.5;
+
+/// The largest right-tail p at which Excel's right-tail quantile searches the upper tail Q; above
+/// it, it searches the lower tail at 1 - p. Bracketed, not measured: Excel switches somewhere in
+/// (0.9999, 0.9999 + 2E-6] (`CHISQ.INV.RT(((-0.0001)+1),3)`, gen-m9/4250f880ab640c49 A371, is a
+/// Q search; probes/t4974-chisq-inv-rt-q-to-p-switch rows 2 to 33, from 0.9999 + 2E-6, are
+/// P searches), and 0.9999 is the lower end. A Q search at the next double up,
+/// 0.9999 + 2^-53 (A38), is 473 to 3,140 ulp off Excel at all five shapes there and the P search
+/// 0 to 7, which puts the switch at 0.9999 itself unless Excel's own search differs there
+/// (UNVERIFIED: T-4996 probes the 4-ulp rows with comparators).
+const Q_SEARCH_P_MAX: f64 = 0.9999;
+
+/// Excel's quantile of the gamma distribution at scale 1 where it is small (T-3146;
+/// docs/excel-semantics/statistics.md "Small gamma quantiles: Halley steps on Excel's cdf"): from
+/// the leading-factor root ([`leading_factor_root`]) of the lower-tail probability, Halley steps
+/// `x -= t/(1 - t*((a-1)/x - 1)/2)` on the leading-factor series form of P
+/// ([`excel_form_lower`]) and Excel's density, t = (p - Q)/f searching the upper tail and
+/// (P - p)/f the lower one. The upper tail is `(0.5 - P) + 0.5`, each operation a double, not
+/// 1 - P: exact on 51 of 51 cells of probes-numeric/t3148-gamma-quantile-flat-band against 45 for
+/// 1 - P, it makes Q flat for up to 0.75 ulp of p, where Excel lands (`CHIINV(0.975,5)` =
+/// 0.8312116134866638, 10 ulp above the true quantile, gen-m9/285d87cea1aaa73c A261;
+/// `CHISQ.INV.RT(((-0.0001)+1),3)` = 0.005214832329030269, 3,084 ulp from it). Once the rounded
+/// cdf cycles the first iterate with the smallest residual is kept.
+///
+/// `None` outside [`HALLEY_SHAPES`], at a p outside (0, 1), where the root is not normal, where a
+/// cdf or density fails and where the result is above [`HALLEY_UNIT_X_MAX`]: the caller's other
+/// forms apply there.
+pub(super) fn excel_halley_quantile(a: f64, p: f64, tail: Tail) -> Option<f64> {
+    if !(HALLEY_SHAPES.contains(&a) && p > 0.0 && p < 1.0) {
+        return None;
+    }
+    // Above the switch Excel searches P at 1 - p, with the same Halley steps (T-4975): on them
+    // probes/t4974-chisq-inv-rt-q-to-p-switch A38:A41 (p from 0.9999 + 2^-53) are within 1 ulp of
+    // Excel, where T-3311's Newton steps ([`excel_newton_quantile`]) were up to 7 ulp off, and the
+    // probe goes from 186 failing cells to 137. Against Newton steps above the switch, every suite
+    // has 115 cells newly bit-exact and 25 no longer (gated 90 to 23); one of the 23 is
+    // `CHIINV(1-1E-10,7)` = 0.005605668625082421 (gen-m9/eced4bb6a0234c9e A265), Newton's bits
+    // and 1 ulp from Halley's.
+    let (search, target) = if tail == Tail::Upper && p > Q_SEARCH_P_MAX {
+        (Tail::Lower, 1.0 - p)
+    } else {
+        (tail, p)
+    };
+    let lower = match search {
+        Tail::Lower => target,
+        Tail::Upper => 1.0 - target,
+    };
+    let mut x = leading_factor_root(a, lower);
+    if !(f64::MIN_POSITIVE..=HALLEY_UNIT_X_MAX).contains(&x) {
+        return None;
+    }
+    let mut best: Option<(f64, f64)> = None;
+    for _ in 0..NEWTON_STEPS {
+        let cdf = excel_form_lower(a, x, a * excel_ln(x))?;
+        let residual = match search {
+            Tail::Lower => cdf - target,
+            Tail::Upper => target - ((0.5 - cdf) + 0.5),
+        };
+        // A NaN residual fails the comparison and leaves the best as it is.
+        if best.is_none_or(|(_, miss)| residual.abs() < miss) {
+            best = Some((x, residual.abs()));
+        }
+        if residual == 0.0 {
+            break;
+        }
+        let t = residual / gamma_density(a, x, 1.0)?;
+        x -= t / (1.0 - t * ((a - 1.0) / x - 1.0) / 2.0);
+        // Only guards the form's domain: the steps stay near the root below the mode.
+        if !(f64::MIN_POSITIVE..1.0).contains(&x) {
+            break;
+        }
+    }
+    let (x, miss) = best?;
+    (miss.is_finite() && x <= HALLEY_UNIT_X_MAX).then_some(x)
 }

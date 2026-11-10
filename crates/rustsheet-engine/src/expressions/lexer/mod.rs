@@ -41,6 +41,15 @@
 //! assert_eq!(lexer.next_token(), TokenType::Compare(OpCompare::Equal));
 //! assert!(matches!(lexer.next_token(), TokenType::Reference { .. }));
 //! ```
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::needless_pass_by_value,
+    clippy::redundant_else,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 
 use std::mem;
 
@@ -51,8 +60,8 @@ use crate::expressions::token::{OpCompare, OpProduct, OpSum};
 use crate::language::Language;
 use crate::locale::Locale;
 
-use super::token::{starts_with_getting_data, Error, TokenType};
-use super::types::*;
+use super::token::{formula_error_prefix, Error, TokenType};
+use super::types::{ParsedRange, ParsedReference};
 use super::utils;
 use peek::Peeked;
 
@@ -113,6 +122,10 @@ pub enum LexerMode {
 
 /// Tokenize an input
 #[derive(Clone)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "independent lexing modes, each set by its own setter"
+)]
 pub struct Lexer {
     position: usize,
     next_token_position: Option<usize>,
@@ -512,15 +525,14 @@ impl Lexer {
                                                     left,
                                                     right,
                                                 };
-                                            } else {
-                                                return TokenType::Reference {
-                                                    sheet: None,
-                                                    column: left.column,
-                                                    row: left.row,
-                                                    absolute_row: left.absolute_row,
-                                                    absolute_column: left.absolute_column,
-                                                };
                                             }
+                                            return TokenType::Reference {
+                                                sheet: None,
+                                                column: left.column,
+                                                row: left.row,
+                                                absolute_row: left.absolute_row,
+                                                absolute_column: left.absolute_column,
+                                            };
                                         }
                                         Err(error) => {
                                             // This could be the range operator: ":"
@@ -561,11 +573,10 @@ impl Lexer {
                                         ));
                                     }
                                     return TokenType::Ident(name);
-                                } else {
-                                    return TokenType::Illegal(
-                                        self.set_error("Invalid identifier (A1)", self.position),
-                                    );
                                 }
+                                return TokenType::Illegal(
+                                    self.set_error("Invalid identifier (A1)", self.position),
+                                );
                             } else {
                                 let pos = self.position;
                                 self.position = position - 1;
@@ -577,15 +588,11 @@ impl Lexer {
                                             self.position = pos;
                                             if is_valid_r1c1_identifier(&name, self.peek_char()) {
                                                 return TokenType::Ident(name);
-                                            } else {
-                                                self.position = self.len;
-                                                return TokenType::Illegal(
-                                                    self.set_error(
-                                                        "Invalid identifier (R1C1)",
-                                                        pos,
-                                                    ),
-                                                );
                                             }
+                                            self.position = self.len;
+                                            return TokenType::Illegal(
+                                                self.set_error("Invalid identifier (R1C1)", pos),
+                                            );
                                         }
                                         // An uppercase `R0C1` or `R1048577C1` is no cell but a
                                         // name Excel never resolves (`#NAME?`, T-1657); reading it
@@ -602,15 +609,14 @@ impl Lexer {
                                                 left,
                                                 right,
                                             };
-                                        } else {
-                                            return TokenType::Reference {
-                                                sheet: None,
-                                                column: left.column,
-                                                row: left.row,
-                                                absolute_row: left.absolute_row,
-                                                absolute_column: left.absolute_column,
-                                            };
                                         }
+                                        return TokenType::Reference {
+                                            sheet: None,
+                                            column: left.column,
+                                            row: left.row,
+                                            absolute_row: left.absolute_row,
+                                            absolute_column: left.absolute_column,
+                                        };
                                     }
                                     Err(error) => {
                                         self.position = position - 1;
@@ -632,12 +638,11 @@ impl Lexer {
                                         }
                                         if is_valid_r1c1_identifier(&name, self.peek_char()) {
                                             return TokenType::Ident(name);
-                                        } else {
-                                            return TokenType::Illegal(self.set_error(
-                                                &format!("Invalid identifier (R1C1): {name}"),
-                                                error.position,
-                                            ));
                                         }
+                                        return TokenType::Illegal(self.set_error(
+                                            &format!("Invalid identifier (R1C1): {name}"),
+                                            error.position,
+                                        ));
                                     }
                                 }
                             }
@@ -769,13 +774,13 @@ impl Lexer {
                     success = true;
                     break;
                 }
-                if self.chars[position] != '\'' {
-                    success = true;
-                    break;
-                } else {
+                if self.chars[position] == '\'' {
                     // In Excel we escape "'" with "''"
                     needs_escape = true;
                     position += 1;
+                } else {
+                    success = true;
+                    break;
                 }
             }
         }
@@ -795,49 +800,10 @@ impl Lexer {
 
     // Reads an error from the input stream
     fn consume_error(&mut self) -> TokenType {
-        let errors = &self.language.errors;
         let rest_of_formula: String = self.chars[self.position - 1..self.len].iter().collect();
-        if rest_of_formula.starts_with(&errors.r#ref) {
-            self.position += errors.r#ref.chars().count() - 1;
-            return TokenType::Error(Error::REF);
-        } else if rest_of_formula.starts_with(&errors.name) {
-            self.position += errors.name.chars().count() - 1;
-            return TokenType::Error(Error::NAME);
-        } else if rest_of_formula.starts_with(&errors.value) {
-            self.position += errors.value.chars().count() - 1;
-            return TokenType::Error(Error::VALUE);
-        } else if rest_of_formula.starts_with(&errors.div) {
-            self.position += errors.div.chars().count() - 1;
-            return TokenType::Error(Error::DIV);
-        } else if rest_of_formula.starts_with(&errors.na) {
-            self.position += errors.na.chars().count() - 1;
-            return TokenType::Error(Error::NA);
-        } else if rest_of_formula.starts_with(&errors.num) {
-            self.position += errors.num.chars().count() - 1;
-            return TokenType::Error(Error::NUM);
-        } else if rest_of_formula.starts_with(&errors.error) {
-            self.position += errors.error.chars().count() - 1;
-            return TokenType::Error(Error::ERROR);
-        } else if rest_of_formula.starts_with(&errors.nimpl) {
-            self.position += errors.nimpl.chars().count() - 1;
-            return TokenType::Error(Error::NIMPL);
-        } else if rest_of_formula.starts_with(&errors.spill) {
-            self.position += errors.spill.chars().count() - 1;
-            return TokenType::Error(Error::SPILL);
-        } else if rest_of_formula.starts_with(&errors.calc) {
-            self.position += errors.calc.chars().count() - 1;
-            return TokenType::Error(Error::CALC);
-        } else if rest_of_formula.starts_with(&errors.null) {
-            self.position += errors.null.chars().count() - 1;
-            return TokenType::Error(Error::NULL);
-        } else if rest_of_formula.starts_with(&errors.circ) {
-            self.position += errors.circ.chars().count() - 1;
-            return TokenType::Error(Error::CIRC);
-        } else if starts_with_getting_data(&rest_of_formula) {
-            // An en-US constant, matched in any case (SPEC-0003). `#BLOCKED!`, `#CONNECT!` and
-            // `#FIELD!` stay unparseable, as Excel refuses them (T-0175).
-            self.position += "#GETTING_DATA".len() - 1;
-            return TokenType::Error(Error::GETTINGDATA);
+        if let Some((error, len)) = formula_error_prefix(&rest_of_formula, self.language) {
+            self.position += len - 1;
+            return TokenType::Error(error);
         }
         // If it is not an error it _might_ be a spill operator.
         TokenType::Spill

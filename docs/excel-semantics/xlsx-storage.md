@@ -79,12 +79,19 @@ shared string, `=B1` is "x", `=C1` 7, `=ISBLANK(B1)` FALSE, `=ISTEXT(D1)` TRUE, 
 (`=ISBLANK(B2)` TRUE, `=COUNTA(A2:B2)` 1). A covered formula `=A1+1` in B1 of A1:B1 is recalculated
 (2), `=B1` is 2, ISFORMULA TRUE and `=COUNT(A1:B1)` 2. This is the file-level form of the
 "merge with Format Painter keeps the hidden values" behaviour.
-Ours: the importer empties every covered cell (`clear_covered_cells`) because covered cells holding
-no content is an engine invariant (merge, autofill and clipboard rely on it), so these cells are
-visibly off and poi/bug66675.xlsx and other census files lose covered values on a round trip.
+Ours: the importer keeps covered cells as stored (T-5044, T-4975 item 1; before it emptied them,
+`clear_covered_cells`, to keep an engine invariant "covered cells hold no content", so these cells were
+visibly off and poi/bug66675.xlsx and other census files lost covered values on a round trip), so
+references, ranges and recalculation see them and a round trip keeps them. Copy- and cut-paste carry
+covered content and the recreated merge keeps it inside the pasted block, autofill copies it (never as a
+progression term), unmerge shows it and clear over the range clears it (T-4975 item 1).
 Evidence: fixtures/merged-covered-values, fixtures/merged-covered-formula (excel-graph, 2026-11-06, T-4148).
-Status: VERIFIED (excel-graph); not implemented (owner task in the fixtures' baseline entries).
-What Excel's UI merge then does with such a range (unmerge, edit, autofill) is UNVERIFIED.
+Status: VERIFIED (excel-graph); implemented in crates/rustsheet-xlsx/src/import/worksheets.rs
+(`load_sheet` no longer clears; T-5044), user_model/clipboard.rs (`recreate_pasted_merge`) and
+user_model/autofill.rs (`fill_covered_cell`; T-4975).
+What Excel's UI merge then does with such a range (unmerge, edit, clear, paste, autofill, Ctrl+arrow, a delete of
+the anchor's row) is UNVERIFIED; docs/specs/SPEC-0036-merged-covered-content.md states our rule for each operation
+and which probe (T-5048) settles it.
 
 ## Import resource limits reject a workbook outright
 Rule: the importer rejects a workbook with `XlsxError::Limit` when its zip lists more than 5,000
@@ -247,8 +254,18 @@ formula; GROUPBY and PIVOTBY are not on it, so specs spell them `_xlfn.`
 prefixed: normsdist-stored-form A1-A2 and availability-27 A8-A9 (refilled bare) and A4
 `_xlfn.NORMSDIST(0)` = 0.5 (excel-graph, 2026-10-07, T-0052).
 Status: VERIFIED
-Implemented in: `Function::to_xlsx_string` (functions/xlsx_names.rs; test `newer_functions_export_with_xlfn_prefix`, T-0411). The engine parser resolves a bare newer name read from a file, and the
-exporter never writes `_xleta.` (T-1089).
+Implemented in: `Function::to_xlsx_string` (functions/xlsx_names.rs; test `newer_functions_export_with_xlfn_prefix`, T-0411).
+Import (T-1089): the xlsx cell importer reads `<f>` text with `Parser::set_file_names`, under which a call of a function
+whose `to_xlsx_string` starts `_xlfn.`, written without a prefix and in any case, is an unknown name, `#NAME?`
+(`needs_stored_prefix`, expressions/parser/operands.rs; tests rustsheet-xlsx/tests/bare_newer_function_names.rs). The
+call keeps its name, so it is saved bare again and a reload reads it the same. Typed and API text, and the harness's case
+formulas (whose builder writes the prefixes), still read the bare name as the function. Consequence: openpyxl writes
+`CONCAT(...)` bare (rustsheet-xlsx/tests/openpyxl_example.xlsx), and openpyxl's own docs say such formulas "must be
+prefixed with _xlfn. to work", so B1 is `#NAME?`.
+Known gaps: a bare newer name in a defined name's body is still the function (the importer's name parser does not set
+the mode; unprobed); whether Excel shows such a legacy cell as `=@PERCENTOF(1,2)` (ours) or without the `@` is
+unprobed; a bare `SINGLE(`/`ANCHORARRAY(` in a file still reads as `@`/`#` (unprobed, "Typed `SINGLE(x)`" below); the
+exporter never writes `_xleta.`, since a typed bare function name is not read as a function passed by name (T-5011).
 Comparison (T-0412): the exporter's arms were checked against XlsxWriter 3.2.9's future-function list; every
 name there that has an engine function already has an arm. XlsxWriter also prefixes ANCHORARRAY (the `#`
 operator), SINGLE (the `@` operator, handled by the parser), FILTERXML, QUERYSTRING and WEBSERVICE; the engine
@@ -265,7 +282,7 @@ the case builder: Excel accepts the prefixed forms, since none of the 16,517 GAM
 eval suites' excel-graph oracle files built that way (for example probes-numeric/t1042-gamma-int-1-90 A91 `GAMMALN(1)` =
 0, probes/t2715-ceiling-floor-subnormal-ratio G1) is `#NAME?`. The arms are gone, so the exporter and the case builder
 write them bare (test `test_export_gammaln_and_iso_ceiling_have_no_xlfn_prefix`).
-Tasks: T-0040, T-0412, T-0416, T-0417, T-1089
+Tasks: T-0040, T-0412, T-0416, T-0417, T-1089, T-5011
 
 ## Written parentheses are stored as written; `@(x)` is `_xlfn.SINGLE((x))`
 Rule: the stored `<f>` text keeps every redundant parenthesis as written. A group directly after `@`
@@ -313,7 +330,7 @@ Calc!D27, written bare and built as `_xlfn.SINGLE(` by the case builder, agrees.
 Ours: the parser reads a bare `SINGLE(` with one argument as `@`, typed, through the API and in stored text alike; a
 typed call with other than one argument is refused (`set_typed_user_input`), and stored text keeps it as a parse error.
 Known gaps: a bare `SINGLE(` read from a file is likely `#NAME?` in Excel, as other bare newer names are ("Newer functions
-need `_xlfn.`"; unprobed for SINGLE); ours reads it as `@`, the gap T-1089 owns. A LET or LAMBDA name spelled `single`
+need `_xlfn.`"; unprobed for SINGLE); ours reads it as `@` (left by T-1089, which made the other bare newer names `#NAME?`). A LET or LAMBDA name spelled `single`
 and called (`LET(single,LAMBDA(x,x*2),single(3))`) is `@3` in ours, as `anchorarray` is; Excel's reading is unprobed.
 Status: VERIFIED (web)
 Implemented in: crates/rustsheet-engine/src/expressions/parser/operands.rs (`parse_named_call`).
@@ -384,6 +401,21 @@ Status: VERIFIED (web)
 Implemented in: engine import (expressions/parser/lambda.rs) and export (stringify.rs) already use
 `_xlop.`; the case builder writes it since T-1274 (spec2xlsx.py `prefix_bound_names`).
 Tasks: T-1083, T-1274
+
+## Boolean attributes and boolean cells (T-4853)
+Rule (schema, ECMA-376 and W3C XML Schema Part 2): an `xsd:boolean` attribute is `true`, `false`, `1` or `0`, and a `t="b"`
+cell's value is `0` or `1`. Excel writes `1` and `0` in both. The importer reads every `xsd:boolean` attribute
+through one reader, `util::xsd_boolean`: exactly the four literals, anything else the attribute's default (SPEC-0005
+keeps `date1904="TRUE"` 1900). The style and sheet-view attributes read through `parse_bool_with_default` trim and
+lower-case the value first, a lenient read kept from before T-4853. That covers `calcPr@iterate`, `workbookPr@date1904`, `sheetView@tabSelected` and `@showGridLines`,
+the `<f>` flags `ca`, `dt2D`, `dtr`, `del1` and `del2`, `<c cm>`, externalLink `sheetData@refreshError`, the pivot
+table flags and a pivot cache's boolean item. Before T-4853 several of these read only `"1"`, so a `showGridLines="true"`
+from another writer hid the gridlines. A `t="b"` value goes through `util::cell_boolean`: `1` is TRUE, anything else
+FALSE.
+Evidence: the schemas; Excel's own reading of `true` in these attributes is unprobed (UNVERIFIED for Excel)
+Status: UNVERIFIED (schema-backed)
+Implemented in: crates/rustsheet-xlsx/src/import/util.rs `xsd_boolean`, `cell_boolean`
+Tasks: T-4853
 
 ## Cells and rows without r are positional
 Rule: `r` is optional on `<row>` and `<c>`. A row without `r` is the row after the previous one (row
@@ -472,18 +504,27 @@ So within a pivot cache, `1899-12-30T00:00:00` is 0, a time alone is `1899-12-30
 one day earlier than the cell calendar reads them. Since T-3182 the importer reads a cache `<d>` item dated 1899-12-30
 to 1900-02-28 on the OLE epoch in a 1900 workbook (`pivot_cache_date_serial`), and later dates with the cell rule
 (`iso8601_to_date_system_serial`); before, it rejected these dates and skipped the whole cache ("bad date"). The cutoff
-at 61 is inferred from where the two calendars agree (1900-03-01), not observed. UNVERIFIED: serial 60 (the phantom
-1900-02-29; the importer reads a cached `1900-02-29` as 60 and `1900-02-28` as 60 too) and serials 1 to 60 other than
-the one point above; whether `rangePr` dates follow the same rule (since T-4225 the importer reads `startDate` and
+at 61 is inferred from where the two calendars agree (1900-03-01), not observed. Serials 1, 2, 31, 59, 60 (the phantom
+1900-02-29) and 61 are VERIFIED since T-4177 (below). UNVERIFIED: a cached `1900-02-29` (the importer reads it as 60,
+as it reads `1900-02-28`); whether `rangePr` dates follow the same rule (since T-4225 the importer reads `startDate` and
 `endDate` with it, so 59932's `1899-12-30T00:00:00` start is serial 0, which matches its `<1/0/1900` label);
-1904 workbooks (a cache date before 1904-01-01 still skips the cache). No GETPIVOTDATA cell depends on it yet.
+a 1904 cache date before 1904-01-01 (the importer skips the cache). T-4177's GETPIVOTDATA cells (below) depend on it.
 Implemented in: crates/rustsheet-xlsx/src/import/iso_date.rs (`pivot_cache_date_serial`), import/pivots.rs (`read_item`)
 Implemented in: crates/rustsheet-xlsx/src/export/pivots/cache.rs (`date_text`, T-4176): the export writes the
 inverse, a 1900 workbook's cache date as 1899-12-30 plus the serial and a 1904 workbook's as 1904-01-01 plus it, to
-the second, so export then import is a fixed point. UNVERIFIED that Excel reads them so: serials 1 to 60, the
-phantom serial 60 (written as `1900-02-28T00:00:00`, the date serial 59 also reads as), and every 1904 cache date
-(probe pending: T-4177).
-Tasks: T-3182, T-4176
+the second, so export then import is a fixed point.
+Evidence (VERIFIED, excel-graph, 2026-11-07, T-4177): eval/suites/pivot-export t4177-cache-dates-1900.export.json, a
+pivot over date cells 1, 2, 31, 59, 60 (the phantom 1900-02-29), 61 and 62, and t4177-cache-dates-1904.export.json,
+the same in a 1904 workbook over 0, 1, 2, 59, 60, 61 and 1462. Without `refreshOnLoad` Excel reads the exported cache
+(`1899-12-31T00:00:00` … `1900-02-28T00:00:00` for 60, `1900-03-01T00:00:00` for 61; `1904-01-01T00:00:00` for 0 …
+`1908-01-02T00:00:00`) and GETPIVOTDATA on each serial finds its own item (1, 2, 4, … 64). With `refreshOnLoad`
+patched on (the `-refresh` cases) Excel rebuilds the cache from the cells and writes those same dates itself, with
+`containsNonDate="0"`, `minDate` the first date and `maxDate` a day past the last (`1900-03-03T00:00:00`,
+`1908-01-03T00:00:00`). So serial 60 is `1900-02-28T00:00:00` in a cache, and serial 59 is `1900-02-27T00:00:00`, not
+the cell calendar's 1900-02-28. Excel shows the refreshed items as dates (`2/29/1900` for 60; serial 0 of the 1904
+workbook as `12:00:00 AM`); the engine shows them as `m/d/yyyy` dates (T-4807), and serial 0 of the 1904 workbook as
+`1/1/1904` (T-4943).
+Tasks: T-3182, T-4176, T-4177
 
 ## Structured references in the file
 Rule (excel-graph uploads of spec2xlsx files, 2026-10-16, T-1607): the file form of a structured reference
@@ -836,10 +877,16 @@ Evidence: oracle excel-graph, 2026-11-07, T-4890 (docs/research/xlsx-round-trip/
   - the source's styles.xml;
   - `<t></t>` written as `<t/>`.
 
-An empty `modified`, or another malformed W3CDTF value, is not probed.
-Ours: the regenerating export writes the empty element whenever the source records no creation date
-(`export/doc_props.rs` `get_core_xml`).
-Status: VERIFIED (excel-graph; desktop not observed); not implemented (T-4909).
+An empty `modified`, or another malformed W3CDTF value, is not probed. Given a package with no `created`, Excel's own save
+writes one set to the save time; a `created` that is present is kept (T-4909 re-probe: valueless-cell-forms R1/E5 came
+back with `2026-11-07T18:28:37Z`, equal to `modified`; poi link-external-workbook-a kept 2021-09-28T20:02:21Z).
+Ours: a source that records no creation date gets no `created` element. Since T-4909 the fixtures
+valueless-cell-forms R1/E5 and R1/all saves open in Excel for the web (excel-graph, 2026-11-07; sha256
+863551c9e9271ac5da13b1e95dbe6d3b2f6fd0ec22a01703b6b6ccb6aec98610 and
+a76a541e9fdb3004127fdaa24f09dfda74468c75fbe4406a50d9832f9592f109).
+Implemented in: `get_core_xml` (crates/rustsheet-xlsx/src/export/doc_props.rs), which also escapes the creator and the
+date.
+Status: VERIFIED (excel-graph; desktop not observed). Tasks: T-4890, T-4909.
 
 ## An empty `cellStyles` makes Excel refuse the package
 Rule: Excel for the web refuses to open a package whose `xl/styles.xml` holds `<cellStyles count="0"></cellStyles>`,
@@ -851,9 +898,48 @@ Evidence: oracle excel-graph, 2026-11-07, T-4890.
 - With the element removed (5d941486ce51b2b3b71561c55f7615141666e81748e116d8885e1f7c41ab1310), it opens.
 - With the Normal style added (73e6065fe084b0a5d3b3e189dcfb2bf4de950cf2509a5edc10af9ce3a61fdb0a), it opens.
 
-Ours: the regenerating export writes the element with the table's count, even when the count is 0
-(`export/styles.rs`, the `cellStyles` section).
-Status: VERIFIED (excel-graph; desktop not observed); not implemented (T-4909).
+Ours: an empty cell-style table writes no `cellStyles` element. That keeps what such a source had; Excel's own save adds
+the Normal style. Since T-4909 the poi link-external-workbook-a R1/all save opens in Excel for the web (excel-graph,
+2026-11-07; sha256 5ee42e7bacd5654f47bcd8c88bb7861b55a8644ab8aac81c61e1a3001d70037a).
+Implemented in: `get_cell_styles_xml` (crates/rustsheet-xlsx/src/export/styles.rs).
+Status: VERIFIED (excel-graph; desktop not observed). Tasks: T-4890, T-4909.
+
+## A chart's `mc:Choice` must have its `Requires` prefix in scope
+Rule: Excel for the web refuses to open a package with a chart part that writes
+`<mc:Choice Requires="c14"><c14:style xmlns:c14="…/drawing/2007/8/2/chart" val="102"/></mc:Choice>`, where the
+`c14` prefix that `Requires` names is declared only on the child element. Graph reports createSession 501
+`FileCorruptTryRepair` (inner `unsupportedWorkbook`), and the drive's PDF conversion refuses the file too (406). The
+same package opens when the declaration moves up to `<mc:Choice Requires="c14" xmlns:c14="…">`, or when the
+`mc:AlternateContent` is dropped. Excel's own save declares it on `mc:Choice`: the Excel Online-saved
+eval/roundtrip/excel-saved/cases/t4187-pivot-chart-caches.xlsx writes `<mc:Choice Requires="c14"
+xmlns:c14="…/drawing/2007/8/2/chart"><c14:style val="102"/>` in xl/charts/chart1.xml. That fits Markup Compatibility
+(ECMA-376 Part 3), which resolves a `Requires` prefix in the scope of the `mc:Choice` element, where a child's
+declaration is not in scope.
+Evidence: oracle excel-graph, 2026-11-10, recording the render probes (eval/render/README.md, "First recording").
+- eval/render/probes/charts.xlsx (sha256 f254966247195b1a8ec1631f5024cd7ccca8e4e4625576d0d32df86e088c7114, 14 charts
+  on 3 sheets, written by T1's chart writer, outside this repository) is refused.
+- Refusal record: eval/render/refs/graph/charts.refused.json (Graph codes `FileCorruptTryRepair`, inner
+  `unsupportedWorkbook`; the PDF conversion answered 406).
+- Bisection. Each package is the original with the one change named, and each was opened through createSession.
+  The packages' bytes are not kept. Each is that one edit to the pinned file, rebuilt in the same zip order, and the
+  last step's hash reproduces:
+  - every `<drawing>` element removed (c14cc39f425a36cc9f00431fdb7a5da8d80e961b5c9b07452995b6107271d08e): opens.
+  - only sheet 1's drawing kept (14ad96e6970b44f492a69fd9233d3b8ec9636411221dbe63002cbf21d7a3f6c6), only sheet 2's
+    (8bfbae525c933b334591961a16182bf488600322374e788842ab7f738e551b91) or only sheet 3's
+    (77fa8c84095734ca4307586f523c510b6b34c737a178e6b7e452031d698cf8ac): each refused.
+  - only chart1 (sheet 1's first anchor) kept (01292591bfa3968bc3380bd2a76d620769e1525d3b19714f0d36db12f344ef9e):
+    refused.
+  - that, with chart1's `mc:AlternateContent` dropped
+    (c04b2ac15d5278244110faad38fd37f0f8dbde298d4f6c956a6282258a3f40db): opens. Dropping its `c:title`, `c:extLst` or
+    `c:printSettings` instead leaves it refused.
+  - that, with the declaration moved to `mc:Choice` (c65b7b5761b5d4ee08b9c78c9324aef708b5d64c2962429cd13e19fd99a51493):
+    opens.
+  - all three drawings, with the declaration moved in all 14 charts
+    (3209e9497e4f75e1d9cf28764bd723c739f835b1da0419938dbb049931fe95dd): opens.
+
+Ours: no RustSheet code writes this element. The export writes chart parts only for pivot charts
+(`export/pivot_charts.rs`), and those carry no `mc:AlternateContent`. The refused file is T1's.
+Status: VERIFIED (excel-graph; desktop not observed). Tasks: T-5113 (re-pin and record the corrected probe).
 
 ## A [n] reference without its externalLink part makes Excel refuse the package
 Rule: Excel for the web refuses to open a package whose formulas use `[1]Sheet!A1` while the package has no
@@ -893,3 +979,25 @@ string with an escape. Status: UNVERIFIED (Excel's decoding of escapes inside `<
 open a file with `<is><t>a_x0041_b</t></is>` and read `=A1`).
 Implemented in: `get_cell_from_excel` (import/worksheets.rs), both the constant and the formula-value inline paths.
 
+
+## externalLink parts: relationship order, sparse `sheetData`, cached text escapes (T-4143)
+A workbook that links to other workbooks holds one `xl/externalLinks/externalLinkN.xml` part per link, the `N`th
+`<externalReference>` of workbook.xml (between `<sheets>` and `<definedNames>`), so `[N]` in a formula names it. What Excel
+writes, from the fixtures and the corpora:
+- **Relationship order.** Excel numbers the workbook's relationship to each externalLink part right after the sheets'
+  (eval/suites/fixtures/cases/external-link-cached-text.xlsx: sheets `rId1`–`rId3`, externalLink `rId4`, then theme, styles,
+  sharedStrings). The export does the same and numbers the pivot caches after them; no evidenced file holds both, so
+  that part of the order is RustSheet's choice. The part's own relationship is `externalLinkPath`, `TargetMode="External"`, with the target as the source
+  wrote it: a bare file name (`56737.xlsx`, poi/ref-56737.xlsx) or a `file:///` UNC URL with `%20` escapes
+  (corpus-bench/59932).
+- **Sparse `sheetData`.** The cache does not hold a `<sheetData>` for every cached sheet: fixtures/external-link-uncached-lookups
+  names 5 sheets and writes `sheetData` for sheets 0, 1, 2 (`refreshError="1"`) and an empty one for 4, none for 3. The
+  import keeps which sheets had one (`ExternalBook::data_sheets`) and the export writes the same elements back.
+- **Unread links.** A link the import could not read as a workbook (DDE, OLE, a missing part) is written as an empty
+  `<externalLink/>`, so later books keep their `[n]`. Status: UNVERIFIED (whether Excel opens it without a repair is
+  unprobed; T-4937).
+- **Cached text.** A `t="str"` cache cell's `_xHHHH_` escapes are decoded as a shared string's are. Status: UNVERIFIED (no
+  Excel-written cache with an escape was seen; the ST_Xstring rule is assumed to apply, as for inline strings above).
+Evidence: the files named above (Excel-written); the round trip of every fixtures `external-link-*` case, poi/ref-56737 and
+corpus-bench/59932 keeps the books and every cell value (crates/rustsheet-xlsx/tests/external_link_export.rs).
+Implemented in: `export/external_links.rs`, `import/external_links.rs`, `export/workbook_xml_rels.rs`.

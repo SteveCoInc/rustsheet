@@ -1,0 +1,103 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "Probe": {
+   "B1": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B10": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B11": {
+    "t": "e",
+    "v": "#DIV/0!"
+   },
+   "B12": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B13": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B14": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B15": {
+    "t": "b",
+    "v": false
+   },
+   "B16": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B17": {
+    "t": "e",
+    "v": "#NUM!"
+   },
+   "B18": {
+    "t": "n",
+    "v": 1.0
+   },
+   "B19": {
+    "t": "b",
+    "v": false
+   },
+   "B2": {
+    "t": "b",
+    "v": true
+   },
+   "B20": {
+    "t": "b",
+    "v": false
+   },
+   "B21": {
+    "t": "s",
+    "v": "[0]"
+   },
+   "B22": {
+    "t": "n",
+    "v": 9.84375
+   },
+   "B3": {
+    "t": "s",
+    "v": "=FVSCHEDULE(5916,{-1E+300,1E+300})"
+   },
+   "B4": {
+    "t": "n",
+    "v": 1.0
+   },
+   "B5": {
+    "t": "b",
+    "v": true
+   },
+   "B6": {
+    "t": "b",
+    "v": false
+   },
+   "B7": {
+    "t": "b",
+    "v": true
+   },
+   "B8": {
+    "t": "b",
+    "v": false
+   },
+   "B9": {
+    "t": "b",
+    "v": false
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "a5f590d10e8b013f4d87ea4767ef9aa40c28a5b55a340190bd066139fd97878b",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-09T00:25:38+00:00",
+  "version": null,
+  "workbook_name": "eee4a919f248a576eba99ad36260fd8a396a96a55253a3d805541f20abf39d4b.xlsx"
+ }
+}

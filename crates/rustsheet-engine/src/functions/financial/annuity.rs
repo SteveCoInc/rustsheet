@@ -6,11 +6,16 @@
 //! Evidence: probes/fin-argument-modes, probes/fin-later-argument-ranges K1-K25 and
 //! probes/scalar-lift-shapes H13-H48 (docs/excel-semantics/financial.md "Financial function
 //! argument modes"). Moved out of `financial/mod.rs` (T-1372).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 
 use super::financial_util::compute_rate;
 use super::{formula_error, number_or_error};
 use crate::functions::lift::{div_error, num_error};
-use crate::x87_exp::{dd_add, dd_div, dd_mul, dd_neg, excel_exp, excel_expm1, two_sum};
+use crate::x87_exp::{
+    dd_add, dd_div, dd_mul, dd_neg, excel_exp, excel_expm1, excel_one_minus_exp, two_sum,
+};
 use crate::x87_log10::excel_ln;
 use crate::x87_register::Register;
 use crate::{
@@ -362,22 +367,6 @@ fn fitted_payment(rate: f64, rate_nper: f64, pv: f64, fv: f64, period_start: boo
     }
 }
 
-/// Below this |nper*L| PMT's `1-Q` is Excel's expm1, from it on `1 - EXP(-nper*L)`
-/// (probes/t3014-pmt-fv-type-alone column C: expm1 through |nper*L| 0.9896, `1-Q` from 1.0648).
-/// FITTED(T-3014, 63 cells, PMT |nper*L| 0.5..1.6; cut bracketed 0.9896..1.0648)
-const PAYMENT_EXPM1_TO: f64 = 1.0;
-
-/// `1-Q` for `Q = EXP(x)` as Excel's PMT, IPMT and PPMT take it: `-expm1(x)` (Excel's expm1)
-/// for |x| < [`PAYMENT_EXPM1_TO`] and `1 - EXP(x)` beyond (financial.md "PMT is a discounted
-/// payment", "IPMT and PPMT split Excel's discounted payment").
-fn discount_complement(x: f64) -> f64 {
-    if x.abs() < PAYMENT_EXPM1_TO {
-        -excel_expm1(x)
-    } else {
-        1.0 - excel_exp(x)
-    }
-}
-
 /// PMT's per-period factor `d`: the rate for type 0 and `1/(1/rate + 1)` for type 1, which is an
 /// ulp off `rate/(1+rate)` at some rates (financial.md "PMT is a discounted payment"). `None` for
 /// a subnormal rate, where `1/rate` overflows and type 1's factor is 0 (unprobed).
@@ -391,13 +380,18 @@ fn payment_factor(rate: f64, period_start: bool) -> Option<f64> {
 }
 
 /// The discounted balance `A = (pv+fv)/(1-Q(-nper*L))` of Excel's PMT, IPMT and PPMT, with
-/// [`growth_log`]'s L, and the L itself. `None` where `1-Q` is not finite and normal (no
-/// periods, `(1+rate)^-nper` past the double range, or `-nper*L` below the normal range) or `A`
-/// is not finite (`pv+fv` or the quotient past the double range). Excel's IPMT is `#NUM!` in
-/// each of these (financial.md "IPMT is #NUM! where its discounted balance fails", T-4314).
-fn discounted_balance(rate: f64, nper: f64, pv: f64, fv: f64) -> Option<(f64, f64)> {
+/// [`growth_log`]'s L, and the L itself. `1-Q` for `Q = EXP(x)` is Excel's 1 - e^x
+/// ([`excel_one_minus_exp`]): its expm1 below |x| = 1 and `1 - EXP(x)` from there, the cut
+/// probes/t3014-pmt-fv-type-alone column C brackets in 0.9896..1.0648 (expm1 through |nper*L|
+/// 0.9896, `1-Q` from 1.0648; T-3014), shared with IPMT's and PPMT's `1-Q(x)` and the incomplete
+/// beta. `None` where `1-Q` is not finite and normal (no periods, `(1+rate)^-nper` past the
+/// double range, or `-nper*L` below the normal range) or `A` is not finite (`pv+fv` or the
+/// quotient past the double range). Excel's IPMT is `#NUM!` in each of these (financial.md "IPMT
+/// is #NUM! where its discounted balance fails", T-4314). CUMIPMT and CUMPRINC's principal is its
+/// drop over the range (`cumulative.rs`, T-4975).
+pub(super) fn discounted_balance(rate: f64, nper: f64, pv: f64, fv: f64) -> Option<(f64, f64)> {
     let log = growth_log(rate);
-    let periods = discount_complement(-nper * log);
+    let periods = excel_one_minus_exp(-nper * log);
     if !periods.is_normal() {
         return None;
     }
@@ -426,7 +420,7 @@ fn discounted_payment(rate: f64, nper: f64, pv: f64, fv: f64, period_start: bool
 }
 
 /// Excel's IPMT and PPMT (financial.md "IPMT and PPMT split Excel's discounted payment"): with
-/// PMT's `A`, `d` and `1-Q` ([`discounted_balance`], [`payment_factor`], [`discount_complement`])
+/// PMT's `A`, `d` and `1-Q` ([`discounted_balance`], [`payment_factor`], [`excel_one_minus_exp`])
 /// and `x = (period-1-nper)*L`, IPMT is `-((A*(1-Q(x)) - fv) * d)` and PPMT `-(A*Q(x)*d)`, every
 /// operation a double: the balance after period-1 periods and the payment's discounted
 /// principal. Bit-exact on every IPMT cell with constant arguments of probes-numeric/m9-fin-pmt,
@@ -449,7 +443,7 @@ fn discounted_split(
     // The product with `d` below the normal range is a true 0, as Excel's `*` is
     // (`IPMT(2.2250738585073E-308,2,1E+9,1E-10)` is 0 and `(..)=0` TRUE; probes/
     // t4314-ipmt-balance-overflow C9:C11, E1:E3; numbers.md "Subnormal results become 0").
-    let interest = flush_subnormal(-((balance * discount_complement(x) - fv) * factor));
+    let interest = flush_subnormal(-((balance * excel_one_minus_exp(x) - fv) * factor));
     // The discounted balance `A*Q(x)` below the normal range is 0, whatever the period: a subnormal
     // discount alone is kept where `A` lifts the product (`PPMT(7,1,341,1.9999)` is 0,
     // `PPMT(7,1,341,2)` and `PPMT(7,10,350,2)` -1.5575517009551696E-307, the discount 8^-341 =
@@ -496,7 +490,7 @@ fn payment_pair(rate: f64, nper: f64, pv: f64, fv: f64, period_start: bool) -> R
     }
     if rate <= -1.0 {
         return Err(Error::NUM);
-    };
+    }
     let rate_nper = payment_growth(rate, nper);
     // A `(1+rate)^nper` so small that its reciprocal overflows (0 or 2^-1070) is #NUM!, whatever
     // fv and type are, for PMT and so IPMT, PPMT and CUMIPMT (`PMT(-0.5,2000,1)`,
@@ -824,7 +818,7 @@ impl Model {
         // A rate of -1 is `#NUM!`: ln(1+rate) is LN(0) (`NPER(-1,-31,1)`, gen-m9/3c06f9298f65a3ba A50).
         if rate <= -1.0 {
             return Err(num_error(cell));
-        };
+        }
         // NPER = ln((pmt*k - fv*r)/(pmt*k + pv*r)) / ln(1+r), with plain logarithms of
         // the double 1+r, not log1p: all 95 numeric cells of probes-numeric/m9-fin-nper-npv, where
         // log1p gives 11 (financial.md "Annuity evaluation order"; fit lab `annuity-nper`, T-1524).
@@ -847,8 +841,17 @@ impl Model {
             // (probes-numeric/t3367-nper-tiny-rate), so the value is the math, from the exact
             // difference ratio - 1 = -(fv+pv)·rate / (pmt·k + pv·rate) and log1p; Excel's errors
             // above still decide which cells are errors.
-            let excess =
-                -(future_value + present_value) * rate / (payment_k + present_value * rate);
+            // `fv + pv` can overflow where the ratio has a value (both near 1E+308 at a rate of
+            // 1E-15: `NPER(1E-15,-1E+294,9E+307,9E+307)` is about 1.807E+14); each times the rate
+            // cannot, so the sum is then taken after the products (T-4975 audit 6). Elsewhere the
+            // order stays, keeping the probed bits.
+            let owed = future_value + present_value;
+            let owed_interest = if owed.is_finite() {
+                owed * rate
+            } else {
+                future_value * rate + present_value * rate
+            };
+            let excess = -owed_interest / (payment_k + present_value * rate);
             excess.ln_1p() / rate.ln_1p()
         } else {
             // The final division is Excel's `/`, rounded twice (A9 `NPER(0.2,-1000,-1000,20000)`)

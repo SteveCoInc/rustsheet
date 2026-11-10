@@ -113,6 +113,7 @@ fn catalog_entry(
     returns: &str,
 ) -> crate::catalog::CatalogFunction {
     crate::catalog::CatalogFunction {
+        usage: crate::catalog::Usage::default(),
         name: name.into(),
         category: "math".into(),
         milestone: "M2".into(),

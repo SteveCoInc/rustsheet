@@ -9,11 +9,11 @@ use super::test_fn_pivotby::records;
 fn results(formulas: &[&str]) -> Vec<String> {
     let mut model = records();
     for (i, formula) in formulas.iter().enumerate() {
-        model._set(&format!("H{}", i + 1), formula);
+        model.set_a1(&format!("H{}", i + 1), formula);
     }
     model.evaluate();
     (1..=formulas.len())
-        .map(|i| model._get_text(&format!("H{i}")))
+        .map(|i| model.get_text_a1(&format!("H{i}")))
         .collect()
 }
 

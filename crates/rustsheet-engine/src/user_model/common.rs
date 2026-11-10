@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss
+)]
+// LINT-DEBT-END
 #![deny(missing_docs)]
 
 use std::{collections::HashMap, fmt::Debug};
@@ -147,36 +155,39 @@ fn update_style(old_value: &Style, style_path: &str, value: &str) -> Result<Styl
             }
             style.alignment = None;
         }
-        "alignment.horizontal" => match style.alignment {
-            Some(ref mut s) => s.horizontal = horizontal(value)?,
-            None => {
+        "alignment.horizontal" => {
+            if let Some(ref mut s) = style.alignment {
+                s.horizontal = horizontal(value)?;
+            } else {
                 let alignment = Alignment {
                     horizontal: horizontal(value)?,
                     ..Default::default()
                 };
                 style.alignment = Some(alignment);
             }
-        },
-        "alignment.vertical" => match style.alignment {
-            Some(ref mut s) => s.vertical = vertical(value)?,
-            None => {
+        }
+        "alignment.vertical" => {
+            if let Some(ref mut s) = style.alignment {
+                s.vertical = vertical(value)?;
+            } else {
                 let alignment = Alignment {
                     vertical: vertical(value)?,
                     ..Default::default()
                 };
                 style.alignment = Some(alignment);
             }
-        },
-        "alignment.wrap_text" => match style.alignment {
-            Some(ref mut s) => s.wrap_text = boolean(value)?,
-            None => {
+        }
+        "alignment.wrap_text" => {
+            if let Some(ref mut s) = style.alignment {
+                s.wrap_text = boolean(value)?;
+            } else {
                 let alignment = Alignment {
                     wrap_text: boolean(value)?,
                     ..Default::default()
                 };
                 style.alignment = Some(alignment);
             }
-        },
+        }
         _ => {
             return Err(format!("Invalid style path: '{style_path}'."));
         }
@@ -336,7 +347,7 @@ impl UserModel {
                 r#type: DiffType::Undo,
                 list: diff_list.clone(),
             });
-        };
+        }
         Ok(())
     }
 
@@ -352,7 +363,7 @@ impl UserModel {
                 r#type: DiffType::Redo,
                 list: diff_list.clone(),
             });
-        };
+        }
         Ok(())
     }
 
@@ -432,7 +443,7 @@ impl UserModel {
         let line_count = value.split('\n').count() as f64;
         let row_height = self.model.get_row_height(sheet, row)?;
         // This is in sync with the front-end auto fit row
-        let font_size = style.font.sz as f64;
+        let font_size = f64::from(style.font.sz);
         let line_height = font_size * 1.5;
         let cell_height = (line_count - 1.0) * line_height + 8.0 + font_size;
         if cell_height > row_height {
@@ -598,7 +609,7 @@ impl UserModel {
         if sheet == sheet_count - 1 && sheet_count > 1 {
             if let Some(view) = self.model.workbook.views.get_mut(&self.model.view_id) {
                 view.sheet = sheet_count - 2;
-            };
+            }
         }
 
         self.push_diff_list(vec![Diff::DeleteSheet {
@@ -673,7 +684,7 @@ impl UserModel {
             if self.model.workbook.worksheet(sheet_index)?.state == SheetState::Visible {
                 if let Some(view) = self.model.workbook.views.get_mut(&self.model.view_id) {
                     view.sheet = sheet_index;
-                };
+                }
                 break;
             }
         }
@@ -750,8 +761,10 @@ impl UserModel {
         }
         // Clearing the cells also removes their links: capture them for undo
         let link_diffs = self.range_link_diffs(range)?;
+        let old_data_tables = self.model.data_tables_of(sheet)?;
         self.model.range_clear_all(range)?;
-        let mut diff_list = vec![Diff::RangeClearAll {
+        let mut diff_list = self.data_tables_snapshot_diffs(sheet, old_data_tables)?;
+        diff_list.push(Diff::RangeClearAll {
             sheet,
             row: range.row,
             column: range.column,
@@ -759,7 +772,7 @@ impl UserModel {
             height: range.height,
             old_value,
             old_style,
-        }];
+        });
         diff_list.extend(link_diffs);
 
         self.push_diff_list(diff_list);
@@ -799,15 +812,17 @@ impl UserModel {
         }
         // Clearing the cells also removes their links: capture them for undo
         let link_diffs = self.range_link_diffs(range)?;
+        let old_data_tables = self.model.data_tables_of(sheet)?;
         self.model.range_clear_contents(range)?;
-        let mut diff_list = vec![Diff::RangeClearContents {
+        let mut diff_list = self.data_tables_snapshot_diffs(sheet, old_data_tables)?;
+        diff_list.push(Diff::RangeClearContents {
             sheet,
             row: range.row,
             column: range.column,
             width: range.width,
             height: range.height,
             old_value,
-        }];
+        });
         diff_list.extend(link_diffs);
         Ok(diff_list)
     }
@@ -1153,11 +1168,13 @@ impl UserModel {
 
         let old_merged_cells = self.model.get_merged_cells(sheet)?.to_vec();
         let old_tables = self.model.table_extents(sheet)?;
+        let old_data_tables = self.model.data_tables_of(sheet)?;
         let snapshot = self.rewrite_snapshot(sheet)?;
         let rewritten = self.model.delete_rows_rewriting(sheet, row, row_count)?;
         let tables = self.model.changed_table_extents(sheet, old_tables)?;
 
         let mut diff_list = self.merged_cells_snapshot_diffs(sheet, old_merged_cells)?;
+        diff_list.extend(self.data_tables_snapshot_diffs(sheet, old_data_tables)?);
         diff_list.extend(link_diffs);
         diff_list.extend(self.rewritten_snapshot_diffs(sheet, snapshot)?);
         diff_list.push(Diff::DeleteRows {
@@ -1231,10 +1248,12 @@ impl UserModel {
         })?;
 
         let old_merged_cells = self.model.get_merged_cells(sheet)?.to_vec();
+        let old_data_tables = self.model.data_tables_of(sheet)?;
         let snapshot = self.rewrite_snapshot(sheet)?;
-        let (tables, rewritten, shown) =
+        let (tables, rewritten, toggled) =
             (self.model).delete_columns_keeping_tables(sheet, column, column_count)?;
         let mut diff_list = self.merged_cells_snapshot_diffs(sheet, old_merged_cells)?;
+        diff_list.extend(self.data_tables_snapshot_diffs(sheet, old_data_tables)?);
         diff_list.extend(link_diffs);
         diff_list.extend(self.rewritten_snapshot_diffs(sheet, snapshot)?);
         diff_list.push(Diff::DeleteColumns {
@@ -1245,7 +1264,8 @@ impl UserModel {
             tables,
             rewritten,
         });
-        diff_list.extend(shown.into_iter().map(|row| Diff::row_shown(sheet, row)));
+        diff_list
+            .extend((toggled.into_iter()).map(|(row, h)| Diff::row_hidden_toggled(sheet, row, h)));
         self.push_diff_list(diff_list);
         self.evaluate_if_not_paused();
         Ok(())
@@ -1427,7 +1447,7 @@ impl UserModel {
                     self.set_selected_cell(1, column)?;
                     self.set_selected_range(1, column, LAST_ROW, column)?;
                 }
-            };
+            }
         }
         self.push_diff_list(diff_list);
         Ok(())
@@ -1481,7 +1501,7 @@ impl UserModel {
                     self.set_selected_cell(row, 1)?;
                     self.set_selected_range(row, 1, row, LAST_COLUMN)?;
                 }
-            };
+            }
         }
         self.push_diff_list(diff_list);
         Ok(())
@@ -1697,7 +1717,7 @@ impl UserModel {
                 });
 
                 // We need to update the styles in all cells that have a row style
-                for row_s in styled_rows.iter() {
+                for row_s in styled_rows {
                     let row = row_s.r;
                     self.update_single_cell_style(
                         sheet,
@@ -1754,8 +1774,8 @@ impl UserModel {
                 }
 
                 // We need to go through all the cells that have a column style and merge the styles
-                for col in styled_columns.iter() {
-                    for column in col.min..col.max + 1 {
+                for col in styled_columns {
+                    for column in col.min..=col.max {
                         self.update_single_cell_style(
                             sheet,
                             row,

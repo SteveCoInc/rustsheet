@@ -1,0 +1,57 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "val4-fvs-03: val3-fvs-05 again, with one change: Probe!A1 is `=2^1023` instead of a label. Excel runs B1, its observers B2:B5 (moved to just after B1), then A1. If an overflowing FVSCHEDULE leaves a state that the next literal `^` takes, A1 is #NUM!, the workbook ends with nothing pending and the canary's SQRT(2) is 1.4142135623730951, so the fill is not refused and B1 = FVSCHEDULE(2^1023,{1,0}) is read at last: 0, TYPE 1, ISNUMBER TRUE, code 0, B5 0. One workbook per case, filled like val3 (rustsheet-oracle fill -b excel-graph, each case its own session). Raw values only. Precision!B2:B4 must be 0.9999999999999998, 1, 1.0000000000000002 and C2:C4 -1, 0, 1. Predictions are hypotheses, NOT expected values. If the canary refuses a workbook, keep the downloaded bytes and report `rustsheet-eval snapshot` of them: the refusal is a result. Protocol and frozen predictions: docs/research/probe-request-val4-fvs.md.",
+ "tags": [
+  "M9",
+  "financial",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Probe",
+   "cells": {
+    "A1": "=2^1023",
+    "B1": "=FVSCHEDULE(2^1023,{1,0})",
+    "A2": "TYPE",
+    "B2": "=TYPE(B1)",
+    "A3": "ISNUMBER",
+    "B3": "=ISNUMBER(B1)",
+    "A4": "error code, 0 for numbers",
+    "B4": "=IF(ISERROR(B1),ERROR.TYPE(B1),0)",
+    "A5": "identity observer",
+    "B5": "=IFERROR(B1+0,\"error\")"
+   }
+  },
+  {
+   "name": "Precision",
+   "cells": {
+    "A1": "offset",
+    "B1": "raw",
+    "C1": "raw subtraction, not SUM",
+    "A2": -1,
+    "B2": "=1+A2*2^-52",
+    "C2": "=(B2-1)*2^52",
+    "A3": 0,
+    "B3": "=1+A3*2^-52",
+    "C3": "=(B3-1)*2^52",
+    "A4": 1,
+    "B4": "=1+A4*2^-52",
+    "C4": "=(B4-1)*2^52"
+   }
+  }
+ ],
+ "check": [
+  "Probe!A1",
+  "Probe!B1",
+  "Probe!B2",
+  "Probe!B3",
+  "Probe!B4",
+  "Probe!B5",
+  "Precision!B2",
+  "Precision!C2",
+  "Precision!B3",
+  "Precision!C3",
+  "Precision!B4",
+  "Precision!C4"
+ ]
+}

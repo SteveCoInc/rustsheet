@@ -50,3 +50,20 @@ fn only_unprefixed_references_move_to_the_database_sheet() {
         [(false, 1), (false, 1), (true, 0), (true, 1)]
     );
 }
+
+#[test]
+fn pin_cell_row_fixes_only_row_calls_without_argument() {
+    let worksheets = vec!["Db".to_string()];
+    let mut parser = new_parser(worksheets, vec![], HashMap::new());
+    let context = CellReferenceRC {
+        sheet: "Db".to_string(),
+        row: 2,
+        column: 13,
+    };
+    let mut node = parser.parse("ISODD(ROW())+ROW(B5)+COLUMN()", &context);
+    assert!(node.reads_cell_row());
+    node.pin_cell_row(2);
+    assert!(!node.reads_cell_row());
+    let expected = parser.parse("ISODD(2)+ROW(B5)+COLUMN()", &context);
+    assert_eq!(node, expected);
+}

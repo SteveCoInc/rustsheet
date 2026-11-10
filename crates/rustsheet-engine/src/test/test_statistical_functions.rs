@@ -8,45 +8,45 @@ use crate::test::util::new_empty_model;
 fn test_frequency_basic() {
     let mut model = new_empty_model();
     // data: 1,2,3,4,5  bins: 2,4
-    model._set("A1", "1");
-    model._set("A2", "2");
-    model._set("A3", "3");
-    model._set("A4", "4");
-    model._set("A5", "5");
-    model._set("B1", "2");
-    model._set("B2", "4");
-    model._set("C1", "=FREQUENCY(A1:A5, B1:B2)");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "2");
+    model.set_a1("A3", "3");
+    model.set_a1("A4", "4");
+    model.set_a1("A5", "5");
+    model.set_a1("B1", "2");
+    model.set_a1("B2", "4");
+    model.set_a1("C1", "=FREQUENCY(A1:A5, B1:B2)");
     model.evaluate();
     // ≤2: {1,2}=2, (2,4]: {3,4}=2, >4: {5}=1
-    assert_eq!(model._get_text("C1"), "2");
-    assert_eq!(model._get_text("C2"), "2");
-    assert_eq!(model._get_text("C3"), "1");
+    assert_eq!(model.get_text_a1("C1"), "2");
+    assert_eq!(model.get_text_a1("C2"), "2");
+    assert_eq!(model.get_text_a1("C3"), "1");
 }
 
 // Evidence: probes/frequency-bins (excel-graph, 2026-10-24, T-2427).
 #[test]
 fn test_frequency_rows_and_errors() {
     let mut model = new_empty_model();
-    model._set("A1", "x");
-    model._set("B1", "=ROWS(FREQUENCY({1;2;3},2))");
-    model._set("B2", "=ROWS(FREQUENCY({1;2},A1))");
-    model._set("B3", "=INDEX(FREQUENCY({1;2;3},\"a\"),2)");
-    model._set("B4", "=FREQUENCY(NA(),{1;2})");
-    model._set("B5", "=FREQUENCY({1;2},NA())");
-    model._set("B6", "=FREQUENCY({1;#DIV/0!},NA())");
-    model._set("B7", "=FREQUENCY(1/0,NA())");
-    model._set("B8", "=T.TEST({0.02,0.027},2,44,NA())");
-    model._set("B9", "=T.TEST({0.02,0.027},2,44,2)");
+    model.set_a1("A1", "x");
+    model.set_a1("B1", "=ROWS(FREQUENCY({1;2;3},2))");
+    model.set_a1("B2", "=ROWS(FREQUENCY({1;2},A1))");
+    model.set_a1("B3", "=INDEX(FREQUENCY({1;2;3},\"a\"),2)");
+    model.set_a1("B4", "=FREQUENCY(NA(),{1;2})");
+    model.set_a1("B5", "=FREQUENCY({1;2},NA())");
+    model.set_a1("B6", "=FREQUENCY({1;#DIV/0!},NA())");
+    model.set_a1("B7", "=FREQUENCY(1/0,NA())");
+    model.set_a1("B8", "=T.TEST({0.02,0.027},2,44,NA())");
+    model.set_a1("B9", "=T.TEST({0.02,0.027},2,44,2)");
     model.evaluate();
-    assert_eq!(model._get_text("B8"), "#N/A");
-    assert_eq!(model._get_text("B9"), "#NUM!");
-    assert_eq!(model._get_text("B1"), "2");
-    assert_eq!(model._get_text("B2"), "2");
-    assert_eq!(model._get_text("B3"), "3");
-    assert_eq!(model._get_text("B4"), "#N/A");
-    assert_eq!(model._get_text("B5"), "#N/A");
-    assert_eq!(model._get_text("B6"), "#N/A");
-    assert_eq!(model._get_text("B7"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("B8"), "#N/A");
+    assert_eq!(model.get_text_a1("B9"), "#NUM!");
+    assert_eq!(model.get_text_a1("B1"), "2");
+    assert_eq!(model.get_text_a1("B2"), "2");
+    assert_eq!(model.get_text_a1("B3"), "3");
+    assert_eq!(model.get_text_a1("B4"), "#N/A");
+    assert_eq!(model.get_text_a1("B5"), "#N/A");
+    assert_eq!(model.get_text_a1("B6"), "#N/A");
+    assert_eq!(model.get_text_a1("B7"), "#DIV/0!");
 }
 
 /// An error cell in a data range comes before a scalar bins error (as on `main`, unprobed), and an
@@ -55,17 +55,17 @@ fn test_frequency_rows_and_errors() {
 #[test]
 fn test_frequency_data_range_error_and_bins_error_element() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("A2", "=1/0");
-    model._set("B1", "=FREQUENCY(A1:A2,NA())");
-    model._set("B2", "=ROWS(FREQUENCY({1;2},{1,#N/A}))");
-    model._set("B3", "=INDEX(FREQUENCY(0,{1,#VALUE!,3}),1)");
-    model._set("B4", "=PROB({1,#N/A,3},{0.2,0.3,0.5},1)");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "=1/0");
+    model.set_a1("B1", "=FREQUENCY(A1:A2,NA())");
+    model.set_a1("B2", "=ROWS(FREQUENCY({1;2},{1,#N/A}))");
+    model.set_a1("B3", "=INDEX(FREQUENCY(0,{1,#VALUE!,3}),1)");
+    model.set_a1("B4", "=PROB({1,#N/A,3},{0.2,0.3,0.5},1)");
     model.evaluate();
-    assert_eq!(model._get_text("B4"), "#N/A");
-    assert_eq!(model._get_text("B1"), "#DIV/0!");
-    assert_eq!(model._get_text("B2"), "2");
-    assert_eq!(model._get_text("B3"), "1");
+    assert_eq!(model.get_text_a1("B4"), "#N/A");
+    assert_eq!(model.get_text_a1("B1"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("B2"), "2");
+    assert_eq!(model.get_text_a1("B3"), "1");
 }
 
 // Evidence: probes/mode-typed-arguments A21-A29 (excel-graph, 2026-10-16, T-1291), which supersedes
@@ -74,28 +74,28 @@ fn test_frequency_data_range_error_and_bins_error_element() {
 #[test]
 fn test_mode_text_and_blank_reference_arguments() {
     let mut model = new_empty_model();
-    model._set("A1", "2");
-    model._set("A2", "text");
-    model._set("A4", "2");
-    model._set("B1", "=MODE(A1,\"1\",2,3)");
-    model._set("B2", "=MODE(1,\"1\",#DIV/0!,2,3)");
-    model._set("B3", "=MODE(A1,2,A3)");
-    model._set("B4", "=MODE(A1:A4,2)");
-    model._set("B5", "=MODE(A1,A2,\"1\",2)");
-    model._set("B6", "=MODE(1,1,)");
-    model._set("B7", "=MODE(1,2,2,TRUE)");
-    model._set("B8", "=MODE(\"2\",\"2\",5)");
+    model.set_a1("A1", "2");
+    model.set_a1("A2", "text");
+    model.set_a1("A4", "2");
+    model.set_a1("B1", "=MODE(A1,\"1\",2,3)");
+    model.set_a1("B2", "=MODE(1,\"1\",#DIV/0!,2,3)");
+    model.set_a1("B3", "=MODE(A1,2,A3)");
+    model.set_a1("B4", "=MODE(A1:A4,2)");
+    model.set_a1("B5", "=MODE(A1,A2,\"1\",2)");
+    model.set_a1("B6", "=MODE(1,1,)");
+    model.set_a1("B7", "=MODE(1,2,2,TRUE)");
+    model.set_a1("B8", "=MODE(\"2\",\"2\",5)");
     model.evaluate();
-    assert_eq!(model._get_text("B1"), "2");
-    assert_eq!(model._get_text("B2"), "#DIV/0!");
-    assert_eq!(model._get_text("B3"), "#VALUE!");
+    assert_eq!(model.get_text_a1("B1"), "2");
+    assert_eq!(model.get_text_a1("B2"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("B3"), "#VALUE!");
     // Text and blanks inside a range are ignored.
-    assert_eq!(model._get_text("B4"), "2");
-    assert_eq!(model._get_text("B5"), "2");
-    assert_eq!(model._get_text("B6"), "#VALUE!");
+    assert_eq!(model.get_text_a1("B4"), "2");
+    assert_eq!(model.get_text_a1("B5"), "2");
+    assert_eq!(model.get_text_a1("B6"), "#VALUE!");
     // Typed booleans and numeric text are skipped, not read as numbers (A9, A6).
-    assert_eq!(model._get_text("B7"), "2");
-    assert_eq!(model._get_text("B8"), "#N/A");
+    assert_eq!(model.get_text_a1("B7"), "2");
+    assert_eq!(model.get_text_a1("B8"), "#N/A");
 }
 
 // ── MODE.SNGL ────────────────────────────────────────────────────────────────
@@ -103,24 +103,24 @@ fn test_mode_text_and_blank_reference_arguments() {
 #[test]
 fn test_mode_sngl_basic() {
     let mut model = new_empty_model();
-    model._set("A1", "3");
-    model._set("A2", "1");
-    model._set("A3", "3");
-    model._set("A4", "2");
-    model._set("B1", "=MODE.SNGL(A1:A4)");
+    model.set_a1("A1", "3");
+    model.set_a1("A2", "1");
+    model.set_a1("A3", "3");
+    model.set_a1("A4", "2");
+    model.set_a1("B1", "=MODE.SNGL(A1:A4)");
     model.evaluate();
-    assert_eq!(model._get_text("B1"), "3");
+    assert_eq!(model.get_text_a1("B1"), "3");
 }
 
 #[test]
 fn test_mode_sngl_no_mode_returns_na() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("A2", "2");
-    model._set("A3", "3");
-    model._set("B1", "=MODE.SNGL(A1:A3)");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "2");
+    model.set_a1("A3", "3");
+    model.set_a1("B1", "=MODE.SNGL(A1:A3)");
     model.evaluate();
-    assert_eq!(model._get_text("B1"), "#N/A");
+    assert_eq!(model.get_text_a1("B1"), "#N/A");
 }
 
 // ── MODE.MULT ────────────────────────────────────────────────────────────────
@@ -129,15 +129,15 @@ fn test_mode_sngl_no_mode_returns_na() {
 fn test_mode_mult_two_modes() {
     let mut model = new_empty_model();
     // 1,1,2,2,3 → modes are 1 and 2
-    model._set("A1", "1");
-    model._set("A2", "1");
-    model._set("A3", "2");
-    model._set("A4", "2");
-    model._set("A5", "3");
-    model._set("B1", "=MODE.MULT(A1:A5)");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "1");
+    model.set_a1("A3", "2");
+    model.set_a1("A4", "2");
+    model.set_a1("A5", "3");
+    model.set_a1("B1", "=MODE.MULT(A1:A5)");
     model.evaluate();
-    assert_eq!(model._get_text("B1"), "1");
-    assert_eq!(model._get_text("B2"), "2");
+    assert_eq!(model.get_text_a1("B1"), "1");
+    assert_eq!(model.get_text_a1("B2"), "2");
 }
 
 // ── PERCENTILE.INC ───────────────────────────────────────────────────────────
@@ -145,27 +145,27 @@ fn test_mode_mult_two_modes() {
 #[test]
 fn test_percentile_inc_median() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("A2", "2");
-    model._set("A3", "3");
-    model._set("A4", "4");
-    model._set("A5", "5");
-    model._set("B1", "=PERCENTILE.INC(A1:A5, 0.5)");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "2");
+    model.set_a1("A3", "3");
+    model.set_a1("A4", "4");
+    model.set_a1("A5", "5");
+    model.set_a1("B1", "=PERCENTILE.INC(A1:A5, 0.5)");
     model.evaluate();
-    assert_eq!(model._get_text("B1"), "3");
+    assert_eq!(model.get_text_a1("B1"), "3");
 }
 
 #[test]
 fn test_percentile_inc_q1() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("A2", "2");
-    model._set("A3", "3");
-    model._set("A4", "4");
-    model._set("B1", "=PERCENTILE.INC(A1:A4, 0.25)");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "2");
+    model.set_a1("A3", "3");
+    model.set_a1("A4", "4");
+    model.set_a1("B1", "=PERCENTILE.INC(A1:A4, 0.25)");
     model.evaluate();
     // rank = 0.25 * 3 = 0.75 → 1 + 0.75*(2-1) = 1.75
-    let v: f64 = model._get_text("B1").parse().unwrap();
+    let v: f64 = model.get_text_a1("B1").parse().unwrap();
     assert!((v - 1.75).abs() < 1e-10);
 }
 
@@ -174,14 +174,14 @@ fn test_percentile_inc_q1() {
 #[test]
 fn test_percentile_exc_basic() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("A2", "2");
-    model._set("A3", "3");
-    model._set("A4", "4");
-    model._set("B1", "=PERCENTILE.EXC(A1:A4, 0.25)");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "2");
+    model.set_a1("A3", "3");
+    model.set_a1("A4", "4");
+    model.set_a1("B1", "=PERCENTILE.EXC(A1:A4, 0.25)");
     model.evaluate();
     // rank = 0.25*(4+1)-1 = 0.25 → 1 + 0.25*(2-1) = 1.25
-    let v: f64 = model._get_text("B1").parse().unwrap();
+    let v: f64 = model.get_text_a1("B1").parse().unwrap();
     assert!((v - 1.25).abs() < 1e-10);
 }
 
@@ -190,35 +190,35 @@ fn test_percentile_exc_basic() {
 #[test]
 fn test_percentrank_inc_exact_match() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("A2", "2");
-    model._set("A3", "3");
-    model._set("A4", "4");
-    model._set("A5", "5");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "2");
+    model.set_a1("A3", "3");
+    model.set_a1("A4", "4");
+    model.set_a1("A5", "5");
     // rank of 3 in {1,2,3,4,5}: 2/4 = 0.5
-    model._set("B1", "=PERCENTRANK.INC(A1:A5, 3)");
+    model.set_a1("B1", "=PERCENTRANK.INC(A1:A5, 3)");
     model.evaluate();
-    let v: f64 = model._get_text("B1").parse().unwrap();
+    let v: f64 = model.get_text_a1("B1").parse().unwrap();
     assert!((v - 0.5).abs() < 0.001);
 }
 
 #[test]
 fn test_percentrank_inc_single_value() {
     let mut model = new_empty_model();
-    model._set("A1", "2");
-    model._set("B1", "=PERCENTRANK.INC(A1, 2)");
-    model._set("B2", "=PERCENTRANK(A1, 2)");
-    model._set("B3", "=PERCENTRANK.INC(A1, 3)");
-    model._set("B4", "=PERCENTRANK.EXC(A1, 2)");
-    model._set("B5", "=PERCENTRANK.INC(A1, 2, 0)");
-    model._set("B6", "=PERCENTRANK.INC(A1, 2, -400)");
+    model.set_a1("A1", "2");
+    model.set_a1("B1", "=PERCENTRANK.INC(A1, 2)");
+    model.set_a1("B2", "=PERCENTRANK(A1, 2)");
+    model.set_a1("B3", "=PERCENTRANK.INC(A1, 3)");
+    model.set_a1("B4", "=PERCENTRANK.EXC(A1, 2)");
+    model.set_a1("B5", "=PERCENTRANK.INC(A1, 2, 0)");
+    model.set_a1("B6", "=PERCENTRANK.INC(A1, 2, -400)");
     model.evaluate();
-    assert_eq!(model._get_text("B4"), "1");
-    assert_eq!(model._get_text("B5"), "1");
-    assert_eq!(model._get_text("B6"), "1");
-    assert_eq!(model._get_text("B1"), "1");
-    assert_eq!(model._get_text("B2"), "1");
-    assert_eq!(model._get_text("B3"), "#N/A");
+    assert_eq!(model.get_text_a1("B4"), "1");
+    assert_eq!(model.get_text_a1("B5"), "1");
+    assert_eq!(model.get_text_a1("B6"), "1");
+    assert_eq!(model.get_text_a1("B1"), "1");
+    assert_eq!(model.get_text_a1("B2"), "1");
+    assert_eq!(model.get_text_a1("B3"), "#N/A");
 }
 
 // ── PERCENTRANK.EXC ──────────────────────────────────────────────────────────
@@ -226,15 +226,15 @@ fn test_percentrank_inc_single_value() {
 #[test]
 fn test_percentrank_exc_basic() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("A2", "2");
-    model._set("A3", "3");
-    model._set("A4", "4");
-    model._set("A5", "5");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "2");
+    model.set_a1("A3", "3");
+    model.set_a1("A4", "4");
+    model.set_a1("A5", "5");
     // rank of 3: position 2 (0-indexed) → (2+1)/(5+1) = 3/6 = 0.5
-    model._set("B1", "=PERCENTRANK.EXC(A1:A5, 3)");
+    model.set_a1("B1", "=PERCENTRANK.EXC(A1:A5, 3)");
     model.evaluate();
-    let v: f64 = model._get_text("B1").parse().unwrap();
+    let v: f64 = model.get_text_a1("B1").parse().unwrap();
     assert!((v - 0.5).abs() < 0.001);
 }
 
@@ -243,18 +243,18 @@ fn test_percentrank_exc_basic() {
 #[test]
 fn test_permut_basic() {
     let mut model = new_empty_model();
-    model._set("A1", "=PERMUT(6, 2)");
+    model.set_a1("A1", "=PERMUT(6, 2)");
     model.evaluate();
     // 6*5 = 30
-    assert_eq!(model._get_text("A1"), "30");
+    assert_eq!(model.get_text_a1("A1"), "30");
 }
 
 #[test]
 fn test_permut_invalid() {
     let mut model = new_empty_model();
-    model._set("A1", "=PERMUT(2, 6)");
+    model.set_a1("A1", "=PERMUT(2, 6)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#NUM!");
+    assert_eq!(model.get_text_a1("A1"), "#NUM!");
 }
 
 // ── PERMUTATIONA ─────────────────────────────────────────────────────────────
@@ -262,27 +262,27 @@ fn test_permut_invalid() {
 #[test]
 fn test_permutationa_basic() {
     let mut model = new_empty_model();
-    model._set("A1", "=PERMUTATIONA(3, 2)");
+    model.set_a1("A1", "=PERMUTATIONA(3, 2)");
     model.evaluate();
     // 3^2 = 9
-    assert_eq!(model._get_text("A1"), "9");
+    assert_eq!(model.get_text_a1("A1"), "9");
 }
 
 #[test]
 fn test_permutationa_number_chosen_cut() {
     // probes/t4501-permutationa-chosen-cut: a truncated number_chosen of 2^31 - 1 or more is #NUM!.
     let mut model = new_empty_model();
-    model._set("A1", "=PERMUTATIONA(1, 2147483646.9)");
-    model._set("A2", "=PERMUTATIONA(1, 2147483647)");
-    model._set("A3", "=PERMUTATIONA(0, 2147483647.5)");
-    model._set("A4", "=PERMUTATIONA(0, 1E10)");
-    model._set("A5", "=PERMUTATIONA(0, 2147483646)");
+    model.set_a1("A1", "=PERMUTATIONA(1, 2147483646.9)");
+    model.set_a1("A2", "=PERMUTATIONA(1, 2147483647)");
+    model.set_a1("A3", "=PERMUTATIONA(0, 2147483647.5)");
+    model.set_a1("A4", "=PERMUTATIONA(0, 1E10)");
+    model.set_a1("A5", "=PERMUTATIONA(0, 2147483646)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "1");
-    assert_eq!(model._get_text("A2"), "#NUM!");
-    assert_eq!(model._get_text("A3"), "#NUM!");
-    assert_eq!(model._get_text("A4"), "#NUM!");
-    assert_eq!(model._get_text("A5"), "0");
+    assert_eq!(model.get_text_a1("A1"), "1");
+    assert_eq!(model.get_text_a1("A2"), "#NUM!");
+    assert_eq!(model.get_text_a1("A3"), "#NUM!");
+    assert_eq!(model.get_text_a1("A4"), "#NUM!");
+    assert_eq!(model.get_text_a1("A5"), "0");
 }
 
 // ── PROB ─────────────────────────────────────────────────────────────────────
@@ -291,18 +291,18 @@ fn test_permutationa_number_chosen_cut() {
 fn test_prob_basic() {
     let mut model = new_empty_model();
     // x: 1,2,3,4  prob: 0.1, 0.2, 0.3, 0.4
-    model._set("A1", "1");
-    model._set("A2", "2");
-    model._set("A3", "3");
-    model._set("A4", "4");
-    model._set("B1", "0.1");
-    model._set("B2", "0.2");
-    model._set("B3", "0.3");
-    model._set("B4", "0.4");
-    model._set("C1", "=PROB(A1:A4, B1:B4, 2, 3)");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "2");
+    model.set_a1("A3", "3");
+    model.set_a1("A4", "4");
+    model.set_a1("B1", "0.1");
+    model.set_a1("B2", "0.2");
+    model.set_a1("B3", "0.3");
+    model.set_a1("B4", "0.4");
+    model.set_a1("C1", "=PROB(A1:A4, B1:B4, 2, 3)");
     model.evaluate();
     // P(2<=x<=3) = 0.2+0.3 = 0.5
-    let v: f64 = model._get_text("C1").parse().unwrap();
+    let v: f64 = model.get_text_a1("C1").parse().unwrap();
     assert!((v - 0.5).abs() < 1e-10);
 }
 
@@ -311,14 +311,14 @@ fn test_prob_basic() {
 #[test]
 fn test_quartile_inc_q2_is_median() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("A2", "2");
-    model._set("A3", "3");
-    model._set("A4", "4");
-    model._set("A5", "5");
-    model._set("B1", "=QUARTILE.INC(A1:A5, 2)");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "2");
+    model.set_a1("A3", "3");
+    model.set_a1("A4", "4");
+    model.set_a1("A5", "5");
+    model.set_a1("B1", "=QUARTILE.INC(A1:A5, 2)");
     model.evaluate();
-    assert_eq!(model._get_text("B1"), "3");
+    assert_eq!(model.get_text_a1("B1"), "3");
 }
 
 // ── QUARTILE.EXC ─────────────────────────────────────────────────────────────
@@ -326,14 +326,14 @@ fn test_quartile_inc_q2_is_median() {
 #[test]
 fn test_quartile_exc_q2() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("A2", "2");
-    model._set("A3", "3");
-    model._set("A4", "4");
-    model._set("A5", "5");
-    model._set("B1", "=QUARTILE.EXC(A1:A5, 2)");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "2");
+    model.set_a1("A3", "3");
+    model.set_a1("A4", "4");
+    model.set_a1("A5", "5");
+    model.set_a1("B1", "=QUARTILE.EXC(A1:A5, 2)");
     model.evaluate();
-    assert_eq!(model._get_text("B1"), "3");
+    assert_eq!(model.get_text_a1("B1"), "3");
 }
 
 // ── TRIMMEAN ─────────────────────────────────────────────────────────────────
@@ -343,12 +343,12 @@ fn test_trimmean_basic() {
     let mut model = new_empty_model();
     // data: 1,2,3,4,5,6,7,8,9,10  percent=0.2 → trim 1 from each end → mean(2..9)
     for i in 1..=10 {
-        model._set(&format!("A{i}"), &i.to_string());
+        model.set_a1(&format!("A{i}"), &i.to_string());
     }
-    model._set("B1", "=TRIMMEAN(A1:A10, 0.2)");
+    model.set_a1("B1", "=TRIMMEAN(A1:A10, 0.2)");
     model.evaluate();
     // trim 1 from each end of [1..10]: mean(2,3,4,5,6,7,8,9) = 44/8 = 5.5
-    let v: f64 = model._get_text("B1").parse().unwrap();
+    let v: f64 = model.get_text_a1("B1").parse().unwrap();
     assert!((v - 5.5).abs() < 1e-10);
 }
 
@@ -358,17 +358,17 @@ fn test_trimmean_basic() {
 fn test_linest_slope_intercept() {
     let mut model = new_empty_model();
     // y = 2x + 1: data (1,3), (2,5), (3,7)
-    model._set("A1", "3");
-    model._set("A2", "5");
-    model._set("A3", "7");
-    model._set("B1", "1");
-    model._set("B2", "2");
-    model._set("B3", "3");
-    model._set("C1", "=LINEST(A1:A3, B1:B3)");
+    model.set_a1("A1", "3");
+    model.set_a1("A2", "5");
+    model.set_a1("A3", "7");
+    model.set_a1("B1", "1");
+    model.set_a1("B2", "2");
+    model.set_a1("B3", "3");
+    model.set_a1("C1", "=LINEST(A1:A3, B1:B3)");
     model.evaluate();
     // slope = 2, intercept = 1
-    let slope: f64 = model._get_text("C1").parse().unwrap();
-    let intercept: f64 = model._get_text("D1").parse().unwrap();
+    let slope: f64 = model.get_text_a1("C1").parse().unwrap();
+    let intercept: f64 = model.get_text_a1("D1").parse().unwrap();
     assert!((slope - 2.0).abs() < 1e-10);
     assert!((intercept - 1.0).abs() < 1e-10);
 }
@@ -377,16 +377,16 @@ fn test_linest_slope_intercept() {
 fn test_linest_stats_true() {
     let mut model = new_empty_model();
     // Perfect line y = 2x + 1 → R² = 1
-    model._set("A1", "3");
-    model._set("A2", "5");
-    model._set("A3", "7");
-    model._set("B1", "1");
-    model._set("B2", "2");
-    model._set("B3", "3");
-    model._set("C1", "=LINEST(A1:A3, B1:B3, TRUE, TRUE)");
+    model.set_a1("A1", "3");
+    model.set_a1("A2", "5");
+    model.set_a1("A3", "7");
+    model.set_a1("B1", "1");
+    model.set_a1("B2", "2");
+    model.set_a1("B3", "3");
+    model.set_a1("C1", "=LINEST(A1:A3, B1:B3, TRUE, TRUE)");
     model.evaluate();
     // LINEST stats=TRUE returns 5×2 array at C1:D5; R² is at C3
-    let r_sq: f64 = model._get_text("C3").parse().unwrap();
+    let r_sq: f64 = model.get_text_a1("C3").parse().unwrap();
     assert!(
         (r_sq - 1.0).abs() < 1e-10,
         "R² should be 1 for perfect fit, got {r_sq}"
@@ -397,16 +397,16 @@ fn test_linest_stats_true() {
 fn test_linest_one_point_shapes_and_flags() {
     // probes/linest-modes K141, K204, K239, K232, K155, K113 (excel-graph).
     let mut model = new_empty_model();
-    model._set("A15", "3");
-    model._set("B15", "9");
-    model._set("A20", "1");
-    model._set("A21", "2");
-    model._set("C1", "=LINEST(B15,A15,TRUE,TRUE)");
-    model._set("C10", "=LINEST(5,A20:A21)");
-    model._set("C12", "=LINEST({2,4},{1,2})");
-    model._set("C14", "=LINEST({1,2,3,5},{1;2;3;4})");
-    model._set("C16", r#"=LINEST({1;2},{1;3},"x")"#);
-    model._set("C18", r#"=LINEST({1;2},{1;3}&"")"#);
+    model.set_a1("A15", "3");
+    model.set_a1("B15", "9");
+    model.set_a1("A20", "1");
+    model.set_a1("A21", "2");
+    model.set_a1("C1", "=LINEST(B15,A15,TRUE,TRUE)");
+    model.set_a1("C10", "=LINEST(5,A20:A21)");
+    model.set_a1("C12", "=LINEST({2,4},{1,2})");
+    model.set_a1("C14", "=LINEST({1,2,3,5},{1;2;3;4})");
+    model.set_a1("C16", r#"=LINEST({1;2},{1;3},"x")"#);
+    model.set_a1("C18", r#"=LINEST({1;2},{1;3}&"")"#);
     model.evaluate();
     // One point: its x is dropped (coefficient and se 0), exact fit, no degree of freedom.
     let block = [
@@ -422,17 +422,17 @@ fn test_linest_one_point_shapes_and_flags() {
         ["D5", "0"],
     ];
     for [cell, expected] in block {
-        assert_eq!(model._get_text(cell), expected, "{cell}");
+        assert_eq!(model.get_text_a1(cell), expected, "{cell}");
     }
     // A single y against two cells is one point of two variables.
-    assert_eq!(model._get_text("C10"), "0");
-    assert_eq!(model._get_text("D10"), "0");
-    assert_eq!(model._get_text("E10"), "5");
+    assert_eq!(model.get_text_a1("C10"), "0");
+    assert_eq!(model.get_text_a1("D10"), "0");
+    assert_eq!(model.get_text_a1("E10"), "5");
     // Row arrays are read element by element; a row y against a column x is #REF!.
-    assert_eq!(model._get_text("C12"), "2");
-    assert_eq!(model._get_text("C14"), "#REF!");
-    assert_eq!(model._get_text("C16"), "#VALUE!");
-    assert_eq!(model._get_text("C18"), "#VALUE!");
+    assert_eq!(model.get_text_a1("C12"), "2");
+    assert_eq!(model.get_text_a1("C14"), "#REF!");
+    assert_eq!(model.get_text_a1("C16"), "#VALUE!");
+    assert_eq!(model.get_text_a1("C18"), "#VALUE!");
 }
 
 #[test]
@@ -446,18 +446,18 @@ fn test_linest_drops_a_collinear_column() {
         .enumerate()
     {
         let row = i + 1;
-        model._set(&format!("A{row}"), &format!("{row}"));
-        model._set(&format!("B{row}"), &format!("{c}"));
-        model._set(&format!("C{row}"), &(2 * row).to_string());
-        model._set(&format!("D{row}"), &format!("{y}"));
+        model.set_a1(&format!("A{row}"), &format!("{row}"));
+        model.set_a1(&format!("B{row}"), &format!("{c}"));
+        model.set_a1(&format!("C{row}"), &(2 * row).to_string());
+        model.set_a1(&format!("D{row}"), &format!("{y}"));
     }
-    model._set("F1", "=LINEST(D1:D5,A1:C5,TRUE,TRUE)");
+    model.set_a1("F1", "=LINEST(D1:D5,A1:C5,TRUE,TRUE)");
     model.evaluate();
     // Output order: C, B, A, intercept.
-    assert_eq!(model._get_text("H1"), "0");
-    assert_eq!(model._get_text("H2"), "0");
+    assert_eq!(model.get_text_a1("H1"), "0");
+    assert_eq!(model.get_text_a1("H2"), "0");
     // df = 5 points - 2 kept columns - intercept.
-    assert_eq!(model._get_text("G4"), "2");
+    assert_eq!(model.get_text_a1("G4"), "2");
 }
 
 #[test]
@@ -465,16 +465,16 @@ fn test_linest_text_const_order() {
     // A typed text const is #VALUE! before the shapes; a text cell waits for them (gen-m9
     // a013a45a8fbcab4f A276, f34f66fb7f81e673 A179, bbdfc06cae0e0d71 A324).
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("B1", "2");
-    model._set("C1", "a");
-    model._set("E1", r#"=LINEST(A1:B1,5,TRUE,"1")"#);
-    model._set("E2", "=LINEST(A1:B1,5,TRUE,C1)");
-    model._set("E3", "=LINEST(A1:B1,5,LAMBDA(v,C1)(0))");
+    model.set_a1("A1", "1");
+    model.set_a1("B1", "2");
+    model.set_a1("C1", "a");
+    model.set_a1("E1", r#"=LINEST(A1:B1,5,TRUE,"1")"#);
+    model.set_a1("E2", "=LINEST(A1:B1,5,TRUE,C1)");
+    model.set_a1("E3", "=LINEST(A1:B1,5,LAMBDA(v,C1)(0))");
     model.evaluate();
-    assert_eq!(model._get_text("E1"), "#VALUE!");
-    assert_eq!(model._get_text("E2"), "#REF!");
-    assert_eq!(model._get_text("E3"), "#REF!");
+    assert_eq!(model.get_text_a1("E1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("E2"), "#REF!");
+    assert_eq!(model.get_text_a1("E3"), "#REF!");
 }
 
 // ── TREND ────────────────────────────────────────────────────────────────────
@@ -483,19 +483,19 @@ fn test_linest_text_const_order() {
 fn test_trend_basic() {
     let mut model = new_empty_model();
     // y = 2x + 1
-    model._set("A1", "3");
-    model._set("A2", "5");
-    model._set("A3", "7");
-    model._set("B1", "1");
-    model._set("B2", "2");
-    model._set("B3", "3");
-    model._set("D1", "4");
-    model._set("D2", "5");
-    model._set("C1", "=TREND(A1:A3, B1:B3, D1:D2)");
+    model.set_a1("A1", "3");
+    model.set_a1("A2", "5");
+    model.set_a1("A3", "7");
+    model.set_a1("B1", "1");
+    model.set_a1("B2", "2");
+    model.set_a1("B3", "3");
+    model.set_a1("D1", "4");
+    model.set_a1("D2", "5");
+    model.set_a1("C1", "=TREND(A1:A3, B1:B3, D1:D2)");
     model.evaluate();
     // TREND(x=4) = 9, TREND(x=5) = 11
-    let v1: f64 = model._get_text("C1").parse().unwrap();
-    let v2: f64 = model._get_text("C2").parse().unwrap();
+    let v1: f64 = model.get_text_a1("C1").parse().unwrap();
+    let v2: f64 = model.get_text_a1("C2").parse().unwrap();
     assert!((v1 - 9.0).abs() < 1e-10);
     assert!((v2 - 11.0).abs() < 1e-10);
 }
@@ -506,17 +506,17 @@ fn test_trend_basic() {
 fn test_growth_basic() {
     let mut model = new_empty_model();
     // y = 2 * 3^x at x=1,2,3: y = 6, 18, 54
-    model._set("A1", "6");
-    model._set("A2", "18");
-    model._set("A3", "54");
-    model._set("B1", "1");
-    model._set("B2", "2");
-    model._set("B3", "3");
-    model._set("D1", "4");
-    model._set("C1", "=GROWTH(A1:A3, B1:B3, D1)");
+    model.set_a1("A1", "6");
+    model.set_a1("A2", "18");
+    model.set_a1("A3", "54");
+    model.set_a1("B1", "1");
+    model.set_a1("B2", "2");
+    model.set_a1("B3", "3");
+    model.set_a1("D1", "4");
+    model.set_a1("C1", "=GROWTH(A1:A3, B1:B3, D1)");
     model.evaluate();
     // GROWTH(x=4) ≈ 2 * 3^4 = 162
-    let v: f64 = model._get_text("C1").parse().unwrap();
+    let v: f64 = model.get_text_a1("C1").parse().unwrap();
     assert!(
         (v - 162.0).abs() < 0.01,
         "GROWTH(4) should be ~162, got {v}"
@@ -529,17 +529,17 @@ fn test_growth_basic() {
 fn test_logest_basic() {
     let mut model = new_empty_model();
     // y = 2 * 3^x: same data as GROWTH test
-    model._set("A1", "6");
-    model._set("A2", "18");
-    model._set("A3", "54");
-    model._set("B1", "1");
-    model._set("B2", "2");
-    model._set("B3", "3");
-    model._set("C1", "=LOGEST(A1:A3, B1:B3)");
+    model.set_a1("A1", "6");
+    model.set_a1("A2", "18");
+    model.set_a1("A3", "54");
+    model.set_a1("B1", "1");
+    model.set_a1("B2", "2");
+    model.set_a1("B3", "3");
+    model.set_a1("C1", "=LOGEST(A1:A3, B1:B3)");
     model.evaluate();
     // Returns {m, b} where y = b * m^x; m ≈ 3, b ≈ 2
-    let m: f64 = model._get_text("C1").parse().unwrap();
-    let b: f64 = model._get_text("D1").parse().unwrap();
+    let m: f64 = model.get_text_a1("C1").parse().unwrap();
+    let b: f64 = model.get_text_a1("D1").parse().unwrap();
     assert!((m - 3.0).abs() < 0.01, "m should be ≈3, got {m}");
     assert!((b - 2.0).abs() < 0.01, "b should be ≈2, got {b}");
 }
@@ -548,20 +548,20 @@ fn test_logest_basic() {
 #[test]
 fn test_maxa_mina_single_cell_references() {
     let mut model = new_empty_model();
-    model._set("A1", "x");
-    model._set("A2", "y");
-    model._set("A3", "TRUE");
-    model._set("A4", "FALSE");
-    model._set("A5", "534");
-    model._set("B1", "=MAXA(A1,A2)");
-    model._set("B2", "=MINA(A3,A5,A5)");
-    model._set("B3", "=MAXA(A4,A1)");
-    model._set("B4", "=MINA(A5,A4)");
+    model.set_a1("A1", "x");
+    model.set_a1("A2", "y");
+    model.set_a1("A3", "TRUE");
+    model.set_a1("A4", "FALSE");
+    model.set_a1("A5", "534");
+    model.set_a1("B1", "=MAXA(A1,A2)");
+    model.set_a1("B2", "=MINA(A3,A5,A5)");
+    model.set_a1("B3", "=MAXA(A4,A1)");
+    model.set_a1("B4", "=MINA(A5,A4)");
     model.evaluate();
-    assert_eq!(model._get_text("B1"), "0");
-    assert_eq!(model._get_text("B2"), "1");
-    assert_eq!(model._get_text("B3"), "0");
-    assert_eq!(model._get_text("B4"), "0");
+    assert_eq!(model.get_text_a1("B1"), "0");
+    assert_eq!(model.get_text_a1("B2"), "1");
+    assert_eq!(model.get_text_a1("B3"), "0");
+    assert_eq!(model.get_text_a1("B4"), "0");
 }
 
 // ── RANK with a ref of unknown static shape ─────────────────────────────────
@@ -572,28 +572,28 @@ fn rank_of_an_unknown_shape_ref_spills_or_ranks() {
     // static analysis took the RANK call for a scalar while it returned a 1x3 array (a debug
     // assertion). Excel: probes/rank-unknown-shape-ref.
     let mut model = new_empty_model();
-    model._set("C3", "=RANK(5,IF(A1:C1>0,A1:CWWWWWWWWWWWWWWWWWWWWWWWWW1))");
-    model._set("A6", "7");
-    model._set("B6", "1");
-    model._set("C6", "5");
-    model._set("F6", "=RANK(5,IF(A6:C6>0,A6:CWWWW6))");
-    model._set("F8", "=RANK(5,A6:B6:C6)");
-    model._set("F10", "=RANK(5,INDEX(IF(A6:C6>6,NA(),A6:C6),1,0))");
+    model.set_a1("C3", "=RANK(5,IF(A1:C1>0,A1:CWWWWWWWWWWWWWWWWWWWWWWWWW1))");
+    model.set_a1("A6", "7");
+    model.set_a1("B6", "1");
+    model.set_a1("C6", "5");
+    model.set_a1("F6", "=RANK(5,IF(A6:C6>0,A6:CWWWW6))");
+    model.set_a1("F8", "=RANK(5,A6:B6:C6)");
+    model.set_a1("F10", "=RANK(5,INDEX(IF(A6:C6>6,NA(),A6:C6),1,0))");
     model.evaluate();
 
     for cell in ["C3", "D3", "E3"] {
-        assert_eq!(model._get_text(cell), *"#VALUE!");
+        assert_eq!(model.get_text_a1(cell), *"#VALUE!");
     }
     for cell in ["F6", "G6", "H6"] {
-        assert_eq!(model._get_text(cell), *"#NAME?");
+        assert_eq!(model.get_text_a1(cell), *"#NAME?");
     }
-    assert_eq!(model._get_text("F8"), *"2");
-    assert_eq!(model._get_text("G8"), *"");
+    assert_eq!(model.get_text_a1("F8"), *"2");
+    assert_eq!(model.get_text_a1("G8"), *"");
     // An error element keeps its error; every other element is #VALUE!
     // (probes/rank-nonref-error-elements).
-    assert_eq!(model._get_text("F10"), *"#N/A");
-    assert_eq!(model._get_text("G10"), *"#VALUE!");
-    assert_eq!(model._get_text("H10"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("F10"), *"#N/A");
+    assert_eq!(model.get_text_a1("G10"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("H10"), *"#VALUE!");
 }
 
 // ── COUNTBLANK of an error ──────────────────────────────────────────────────
@@ -607,12 +607,12 @@ fn nested_countblank_of_an_error_reads_each_argument_once() {
     for _ in 0..40 {
         formula = format!("COUNTBLANK(IF(TRUE,{formula}))");
     }
-    model._set("A1", &format!("={formula}"));
-    model._set("B1", "=NA()");
-    model._set("B2", "=COUNTBLANK(CHOOSE(1,B1))");
+    model.set_a1("A1", &format!("={formula}"));
+    model.set_a1("B1", "=NA()");
+    model.set_a1("B2", "=COUNTBLANK(CHOOSE(1,B1))");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#N/A");
-    assert_eq!(model._get_text("B2"), *"0");
+    assert_eq!(model.get_text_a1("A1"), *"#N/A");
+    assert_eq!(model.get_text_a1("B2"), *"0");
 }
 
 #[test]
@@ -623,43 +623,43 @@ fn rank_of_at_prefixed_non_reference_array_is_one_cell() {
     // is FALSE, the undefined name is never picked, and RANK of FALSE is #VALUE!
     // (probes/rank-unknown-shape-ref); with numbers there it is #NAME? (below).
     let mut model = new_empty_model();
-    model._set("C3", "=RANK(5,@IF(A1:B2>0,A1:ANK))");
+    model.set_a1("C3", "=RANK(5,@IF(A1:B2>0,A1:ANK))");
     model.evaluate();
-    assert_eq!(model._get_text("C3"), *"#VALUE!");
-    assert_eq!(model._get_text("D3"), *"");
+    assert_eq!(model.get_text_a1("C3"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("D3"), *"");
 
     let mut model = new_empty_model();
     for (cell, value) in [("A1", "7"), ("B1", "1"), ("A2", "5"), ("B2", "3")] {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
-    model._set("H1", "=RANK(5,@IF(A1:B2>0,A1:B2))");
-    model._set("H4", "=RANK.EQ(5,@IF(A1:B2>0,A1:B2))");
-    model._set("H7", "=RANK.AVG(5,@IF(A1:B2>0,A1:B2))");
-    model._set("C3", "=RANK(5,@IF(A1:B2>0,A1:ANK))");
-    model._set("H19", "=RANK.EQ(5,@IF(A1:B2>0,A1:ANK))");
-    model._set("H22", "=RANK.AVG(5,@IF(A1:B2>0,A1:ANK))");
-    model._set("H28", "=RANK(5,@IF(TRUE,A1:A30))");
-    model._set("H31", "=RANK(5,@IF(A1:B2>0,1/0))");
-    model._set("K1", "=SUM(@(A1:B2*1))");
-    model._set("K7", "=COUNT(@IF(A1:B2>0,A1:B2))");
-    model._set("K25", "=SUM(@{3,4})");
+    model.set_a1("H1", "=RANK(5,@IF(A1:B2>0,A1:B2))");
+    model.set_a1("H4", "=RANK.EQ(5,@IF(A1:B2>0,A1:B2))");
+    model.set_a1("H7", "=RANK.AVG(5,@IF(A1:B2>0,A1:B2))");
+    model.set_a1("C3", "=RANK(5,@IF(A1:B2>0,A1:ANK))");
+    model.set_a1("H19", "=RANK.EQ(5,@IF(A1:B2>0,A1:ANK))");
+    model.set_a1("H22", "=RANK.AVG(5,@IF(A1:B2>0,A1:ANK))");
+    model.set_a1("H28", "=RANK(5,@IF(TRUE,A1:A30))");
+    model.set_a1("H31", "=RANK(5,@IF(A1:B2>0,1/0))");
+    model.set_a1("K1", "=SUM(@(A1:B2*1))");
+    model.set_a1("K7", "=COUNT(@IF(A1:B2>0,A1:B2))");
+    model.set_a1("K25", "=SUM(@{3,4})");
     model.evaluate();
 
     for cell in ["H1", "H4", "H7"] {
-        assert_eq!(model._get_text(cell), *"#VALUE!");
+        assert_eq!(model.get_text_a1(cell), *"#VALUE!");
     }
     for cell in ["C3", "H19", "H22"] {
-        assert_eq!(model._get_text(cell), *"#NAME?");
+        assert_eq!(model.get_text_a1(cell), *"#NAME?");
     }
     for cell in ["D3", "C4", "I1", "H2", "I4", "I7", "I19", "I22"] {
-        assert_eq!(model._get_text(cell), *"");
+        assert_eq!(model.get_text_a1(cell), *"");
     }
     // A picked reference is still one: A28 is blank, so 5 is absent.
-    assert_eq!(model._get_text("H28"), *"#N/A");
-    assert_eq!(model._get_text("H31"), *"#DIV/0!");
-    assert_eq!(model._get_text("K1"), *"7");
-    assert_eq!(model._get_text("K7"), *"1");
-    assert_eq!(model._get_text("K25"), *"3");
+    assert_eq!(model.get_text_a1("H28"), *"#N/A");
+    assert_eq!(model.get_text_a1("H31"), *"#DIV/0!");
+    assert_eq!(model.get_text_a1("K1"), *"7");
+    assert_eq!(model.get_text_a1("K7"), *"1");
+    assert_eq!(model.get_text_a1("K25"), *"3");
 }
 
 // A number or text argument of F.TEST/FTEST is a sample with no points: #DIV/0!, not #VALUE!
@@ -667,13 +667,30 @@ fn rank_of_at_prefixed_non_reference_array_is_one_cell() {
 #[test]
 fn test_f_test_scalar_argument_is_div0() {
     let mut model = new_empty_model();
-    model._set("A1", "=F.TEST(3,4)");
-    model._set("A2", "=F.TEST(\"a\",{1,2,3})");
-    model._set("A3", "=FTEST(1,{1,2,3})");
+    model.set_a1("A1", "=F.TEST(3,4)");
+    model.set_a1("A2", "=F.TEST(\"a\",{1,2,3})");
+    model.set_a1("A3", "=FTEST(1,{1,2,3})");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#DIV/0!");
-    assert_eq!(model._get_text("A2"), "#DIV/0!");
-    assert_eq!(model._get_text("A3"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("A1"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("A2"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("A3"), "#DIV/0!");
+}
+
+// An omitted sample of F.TEST/FTEST is #VALUE! in either position, not the one-value #DIV/0!
+// (probes/t4857-f-kinds A605, A606, A659, A660; T-4882).
+#[test]
+fn test_f_test_omitted_sample_is_value_error() {
+    let mut model = new_empty_model();
+    model.set_a1("A1", "=F.TEST(,{2;3;3;9})");
+    model.set_a1("A2", "=F.TEST({2;3;3;9},)");
+    model.set_a1("A3", "=FTEST(,{2;3;3;9})");
+    model.set_a1("A4", "=FTEST({2;3;3;9},)");
+    model.set_a1("A5", "=F.TEST({2;3;3;9},{1;2;4;8})");
+    model.evaluate();
+    for cell in ["A1", "A2", "A3", "A4"] {
+        assert_eq!(model.get_text_a1(cell), "#VALUE!", "{cell}");
+    }
+    assert_ne!(model.get_text_a1("A5"), "#VALUE!");
 }
 
 // ── LINEST / LOGEST / QUARTILE argument order (T-2455) ─────────────────────
@@ -683,31 +700,31 @@ fn test_f_test_scalar_argument_is_div0() {
 #[test]
 fn linest_reports_error_values_first() {
     let mut model = new_empty_model();
-    model._set("A1", "=LINEST(5,{1;2},NA())");
-    model._set("A2", "=LINEST(IFERROR(B10,1),1/0)");
-    model._set("A3", "=LINEST(B10,1/0)");
-    model._set("A4", r#"=LINEST({1;2},1/0,UNIQUE(1,"1"))"#);
-    model._set("A5", r#"=LOGEST(1/0,{1;3},"x")"#);
-    model._set("A6", r#"=LINEST("abc",1/0)"#);
+    model.set_a1("A1", "=LINEST(5,{1;2},NA())");
+    model.set_a1("A2", "=LINEST(IFERROR(B10,1),1/0)");
+    model.set_a1("A3", "=LINEST(B10,1/0)");
+    model.set_a1("A4", r#"=LINEST({1;2},1/0,UNIQUE(1,"1"))"#);
+    model.set_a1("A5", r#"=LOGEST(1/0,{1;3},"x")"#);
+    model.set_a1("A6", r#"=LINEST("abc",1/0)"#);
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#N/A");
-    assert_eq!(model._get_text("A2"), "#VALUE!");
-    assert_eq!(model._get_text("A3"), "#DIV/0!");
-    assert_eq!(model._get_text("A4"), "#DIV/0!");
-    assert_eq!(model._get_text("A5"), "#DIV/0!");
-    assert_eq!(model._get_text("A6"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("A1"), "#N/A");
+    assert_eq!(model.get_text_a1("A2"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A3"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("A4"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("A5"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("A6"), "#DIV/0!");
 }
 
 // quart's error comes before the empty-data `#NUM!` (probes/t2455-transpose-single-value A59, A60).
 #[test]
 fn quartile_reports_quart_error_before_empty_data() {
     let mut model = new_empty_model();
-    model._set("B5", " x ");
-    model._set("A1", "=QUARTILE(B5:B6,SUMIFS(C1:E1,B11:D12,1))");
-    model._set("A2", "=QUARTILE(B5:B6,1)");
+    model.set_a1("B5", " x ");
+    model.set_a1("A1", "=QUARTILE(B5:B6,SUMIFS(C1:E1,B11:D12,1))");
+    model.set_a1("A2", "=QUARTILE(B5:B6,1)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#VALUE!");
-    assert_eq!(model._get_text("A2"), "#NUM!");
+    assert_eq!(model.get_text_a1("A1"), "#VALUE!");
+    assert_eq!(model.get_text_a1("A2"), "#NUM!");
 }
 
 // The scalar argument's error comes before the no-number result, and PERCENTRANK's `#N/A` for an x
@@ -716,7 +733,7 @@ fn quartile_reports_quart_error_before_empty_data() {
 #[test]
 fn order_statistics_report_scalar_error_before_no_number_and_bad_significance() {
     let mut model = new_empty_model();
-    model._set("B1", "abc");
+    model.set_a1("B1", "abc");
     for (i, a) in [
         "=QUARTILE(Z1,1/0)",
         "=PERCENTILE.INC(B1:B2,1/0)",
@@ -726,20 +743,20 @@ fn order_statistics_report_scalar_error_before_no_number_and_bad_significance() 
     .iter()
     .enumerate()
     {
-        model._set(&format!("A{}", i + 1), a);
+        model.set_a1(&format!("A{}", i + 1), a);
     }
     for (i, v) in [1.0, 2.0, 3.0, 4.0, 5.0].iter().enumerate() {
-        model._set(&format!("C{}", i + 1), &v.to_string());
+        model.set_a1(&format!("C{}", i + 1), &v.to_string());
     }
-    model._set("A5", "=PERCENTRANK(C1:C5,1963,-2.5)");
-    model._set("A6", "=PERCENTRANK(C1:C5,3,-2.5)");
-    model._set("A7", "=PERCENTRANK.EXC(C1:C5,-1,0)");
+    model.set_a1("A5", "=PERCENTRANK(C1:C5,1963,-2.5)");
+    model.set_a1("A6", "=PERCENTRANK(C1:C5,3,-2.5)");
+    model.set_a1("A7", "=PERCENTRANK.EXC(C1:C5,-1,0)");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), "#DIV/0!");
-    assert_eq!(model._get_text("A2"), "#DIV/0!");
-    assert_eq!(model._get_text("A3"), "#N/A");
-    assert_eq!(model._get_text("A4"), "#NUM!");
-    assert_eq!(model._get_text("A5"), "#N/A");
-    assert_eq!(model._get_text("A6"), "#NUM!");
-    assert_eq!(model._get_text("A7"), "#N/A");
+    assert_eq!(model.get_text_a1("A1"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("A2"), "#DIV/0!");
+    assert_eq!(model.get_text_a1("A3"), "#N/A");
+    assert_eq!(model.get_text_a1("A4"), "#NUM!");
+    assert_eq!(model.get_text_a1("A5"), "#N/A");
+    assert_eq!(model.get_text_a1("A6"), "#NUM!");
+    assert_eq!(model.get_text_a1("A7"), "#N/A");
 }

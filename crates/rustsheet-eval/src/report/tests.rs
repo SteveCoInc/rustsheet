@@ -21,6 +21,7 @@ pub(crate) fn case(id: &str, millis: u64) -> CaseResult {
         arguments: Vec::new(),
         reference_forms: crate::poi_m8_subset::ReferenceFormCells::default(),
         pivot_layout: Vec::new(),
+        layout_checked: None,
         pivot_freshness: Vec::new(),
         pivot_features: Vec::new(),
         pivot_cells: crate::pivot_features::PivotCellTally::default(),
@@ -251,6 +252,7 @@ fn evidence_counts_only_excel_sourced_cells_and_lists_unevidenced_functions() {
 fn out_of_scope_functions_leave_parity_counts_and_list_with_their_reason() {
     use crate::catalog::{CatalogFunction, OracleSupport, Scope};
     let entry = |name: &str, scope, reason: Option<&str>, oracle| CatalogFunction {
+        usage: crate::catalog::Usage::default(),
         name: name.into(),
         category: "math".into(),
         milestone: "M5".into(),

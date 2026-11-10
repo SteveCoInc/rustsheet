@@ -85,10 +85,10 @@ fn collect_xlsx(
     results: &mut Vec<(String, String)>,
 ) {
     let mut entries: Vec<_> = match fs::read_dir(current) {
-        Ok(rd) => rd.filter_map(|e| e.ok()).collect(),
+        Ok(rd) => rd.filter_map(std::result::Result::ok).collect(),
         Err(_) => return,
     };
-    entries.sort_by_key(|e| e.file_name());
+    entries.sort_by_key(std::fs::DirEntry::file_name);
 
     for entry in entries {
         let path = entry.path();

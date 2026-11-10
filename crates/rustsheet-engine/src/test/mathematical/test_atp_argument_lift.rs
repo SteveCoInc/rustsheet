@@ -12,15 +12,15 @@ use crate::test::util::new_empty_model;
 fn check(setup: &[(&str, &str)], cases: &[(&str, &str)]) {
     let mut model = new_empty_model();
     for (cell, value) in setup {
-        model._set(cell, value);
+        model.set_a1(cell, value);
     }
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("C{}", row + 1), formula);
+        model.set_a1(&format!("C{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("C{}", row + 1)),
+            model.get_text_a1(&format!("C{}", row + 1)),
             *expected,
             "{formula}"
         );
@@ -131,8 +131,8 @@ fn a_multi_cell_range_is_refused() {
 #[test]
 fn a_boolean_scalar_is_refused() {
     let mut model = new_empty_model();
-    model._set("D1", "TRUE");
-    model._set("D2", "'5");
+    model.set_a1("D1", "TRUE");
+    model.set_a1("D2", "'5");
     let cases = [
         // probes/math-atp-array-lift-b E1-E7, E11-E15: FACTDOUBLE read TRUE as 1 before T-1802.
         ("=FACTDOUBLE(TRUE)", "#VALUE!"),
@@ -151,12 +151,12 @@ fn a_boolean_scalar_is_refused() {
         ("=ROWS(FACTDOUBLE(D1:D2))", "#VALUE!"),
     ];
     for (row, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("E{}", row + 1), formula);
+        model.set_a1(&format!("E{}", row + 1), formula);
     }
     model.evaluate();
     for (row, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("E{}", row + 1)),
+            model.get_text_a1(&format!("E{}", row + 1)),
             *expected,
             "{formula}"
         );
@@ -185,16 +185,16 @@ fn multinomial_gcd_and_lcm_give_one_value_over_an_array() {
 fn a_lifted_seriessum_is_charged_its_coefficients_per_element() {
     let mut model = new_empty_model();
     for row in 1..=3 {
-        model._set(&format!("A{row}"), "1");
+        model.set_a1(&format!("A{row}"), "1");
     }
     // 1,000 elements × 200,000 coefficient cells = 2·10^8 > 2^27.
-    model._set("C1", "=ROWS(SERIESSUM(SEQUENCE(1000),0,1,A1:A200000))");
+    model.set_a1("C1", "=ROWS(SERIESSUM(SEQUENCE(1000),0,1,A1:A200000))");
     // 10 × 200,000 = 2·10^6 runs: x = 0.5 gives 1 + 0.5 + 0.25 (the blank cells add 0).
-    model._set(
+    model.set_a1(
         "C2",
         "=INDEX(SERIESSUM(SEQUENCE(10,1,0.5,0),0,1,A1:A200000),2)",
     );
     model.evaluate();
-    assert_eq!(model._get_text("C1"), *"#ERROR!");
-    assert_eq!(model._get_text("C2"), *"1.75");
+    assert_eq!(model.get_text_a1("C1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("C2"), *"1.75");
 }

@@ -1,3 +1,12 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::default_trait_access,
+    clippy::struct_excessive_bools,
+    clippy::trivially_copy_pass_by_ref,
+    clippy::unreadable_literal,
+    elided_lifetimes_in_paths
+)]
+// LINT-DEBT-END
 use bitcode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display};
@@ -265,7 +274,10 @@ pub enum Link {
 
 /// A rectangular range of cells that is displayed as a single cell. The anchor (top-left) cell
 /// holds the content and is the only cell of the range users can edit; every other cell of the
-/// range is "covered" and must stay empty of content, although it can hold styles.
+/// range is "covered". A covered cell can hold styles and, as in Excel, content: a workbook can
+/// store values and formulas there, which formulas read and a save writes back
+/// (docs/excel-semantics/xlsx-storage.md "A merged range keeps the values of its covered cells";
+/// docs/specs/SPEC-0036 lists what each operation does with it). Merging clears it.
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone, Copy)]
 pub struct MergedCell {
     /// Row of the anchor (top-left) cell

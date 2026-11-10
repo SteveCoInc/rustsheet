@@ -44,8 +44,10 @@ PROTECTED = (
 
 
 def is_deviations_file(path: str) -> bool:
-    """A suite's accepted-deviations list (decision 0036): each line hides a cell from bit-exact."""
-    return path.startswith("eval/suites/") and path.endswith("/deviations")
+    """A suite file that changes what a cell is scored against: the accepted-deviations list
+    (decision 0036), where each line hides a cell from bit-exact, and the superseded list (decision
+    0358), where each line scores a cell against a later Excel fill."""
+    return path.startswith("eval/suites/") and path.endswith(("/deviations", "/superseded.tsv"))
 
 
 def is_protected(path: str) -> bool:

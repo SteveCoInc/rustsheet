@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 use crate::{
     calc_result::CalcResult,
     expressions::{
@@ -280,7 +283,7 @@ impl Model {
         // An empty slot, `(1,)` or `(,2)`, is omitted like a missing argument (arrays.md
         // ISOMITTED, A24-A25 and A34), and a variable bound to an omitted parameter hands the
         // omission on, so ISOMITTED of a LET name for it stays TRUE as before T-2649.
-        if self.is_empty_argument(node) {
+        if self.is_empty_argument(node, cell) {
             return Binding::Omitted;
         }
         let is_span = matches!(node, Node::SheetSpanKind { .. });

@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss
+)]
+// LINT-DEBT-END
 use crate::tz::Tz;
 use chrono::Datelike;
 
@@ -82,7 +90,7 @@ fn days360_us(start: (i32, u32, u32), end: (i32, u32, u32)) -> f64 {
     if day2 == 31 && day1 == 30 {
         day2 = 30;
     }
-    (360 * (y2 - y1) + 30 * (m2 as i32 - m1 as i32) + (day2 - day1)) as f64
+    f64::from(360 * (y2 - y1) + 30 * (m2 as i32 - m1 as i32) + (day2 - day1))
 }
 
 // Days d1→d2 via the European 30/360 convention used by DAYS360 (method = TRUE):
@@ -92,7 +100,7 @@ fn days360_eu(start: (i32, u32, u32), end: (i32, u32, u32)) -> f64 {
     let (y2, m2, day2) = end;
     let day1 = (day1 as i32).min(30);
     let day2 = (day2 as i32).min(30);
-    (360 * (y2 - y1) + 30 * (m2 as i32 - m1 as i32) + (day2 - day1)) as f64
+    f64::from(360 * (y2 - y1) + 30 * (m2 as i32 - m1 as i32) + (day2 - day1))
 }
 
 /// Maps a date to the WEEKDAY number for the given `return_type`.
@@ -110,7 +118,7 @@ fn weekday_number(date: chrono::NaiveDate, return_type: i32) -> Result<f64, Erro
         }
         _ => return Err(Error::NUM), // return_type 0 too (probes/weekday-serial-zero A1)
     };
-    Ok(num as f64)
+    Ok(f64::from(num))
 }
 
 // Port of `isFeb29BetweenConsecutiveYears` from ExcelFinancialFunctions. Only
@@ -155,6 +163,7 @@ use crate::cast::{calc_result_to_string, number_text_too_long};
 use crate::constants::MAXIMUM_DATE_SERIAL_NUMBER;
 use crate::constants::MINIMUM_DATE_SERIAL_NUMBER;
 use crate::expressions::types::CellReferenceIndex;
+use crate::expressions::utils::boolean_text;
 use crate::formatter::date_text::parse_date;
 use crate::formatter::dates::date_month_and_day;
 use crate::formatter::dates::permissive_date_to_serial_number;
@@ -420,7 +429,7 @@ impl Model {
         };
         WeekendPattern::try_from(code)
             .map(WeekendPattern::to_mask)
-            .map_err(|_| invalid(Error::NUM))
+            .map_err(|()| invalid(Error::NUM))
     }
 
     /// The serial of the model clock's now in the optional timezone argument of TODAY / NOW (the
@@ -714,7 +723,7 @@ impl Model {
             // Excel accepts any serial in 0..=MAXIMUM (a 0 serial is 1900-01-00) and
             // reports #NUM! otherwise. DAYS works directly on serials, so the dates
             // themselves are never materialised.
-            let range = 0..=MAXIMUM_DATE_SERIAL_NUMBER as i64;
+            let range = 0..=i64::from(MAXIMUM_DATE_SERIAL_NUMBER);
             let [end, start] = read;
             // Then the arguments left to right: unreadable text is #VALUE!, a number off the
             // calendar #NUM! (`DAYS(-1,"abc")` #NUM!, `DAYS("abc",-1)` #VALUE!).
@@ -748,9 +757,9 @@ impl Model {
                     let method = match values.get(2) {
                         // Text is TRUE or FALSE in any case, else #VALUE! with no message (SPEC-0011
                         // kernels); read borrowed, so a lifted text method allocates nothing.
-                        Some(CalcResult::String(s)) if s.eq_ignore_ascii_case("true") => Ok(true),
-                        Some(CalcResult::String(s)) if s.eq_ignore_ascii_case("false") => Ok(false),
-                        Some(CalcResult::String(_)) => Err(value_error(cell)),
+                        Some(CalcResult::String(s)) => {
+                            boolean_text(s).ok_or_else(|| value_error(cell))
+                        }
                         Some(m) => Self::cast_bool_ref(m, cell),
                         None => Ok(false),
                     };

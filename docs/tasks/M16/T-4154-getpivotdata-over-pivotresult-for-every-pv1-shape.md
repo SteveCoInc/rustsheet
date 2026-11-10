@@ -31,9 +31,29 @@ answers `#REF!` for a group, an ungrouped item or a pair where Excel answers the
 the grand total already agree; web.md "GETPIVOTDATA on manual groups and date levels"):
 - probes/t4170-pivot-manual-groups Calc!B1:B5, Calc!B8:B10, Calc!B12, Calc!B14
 
+Owner of these visibly-off cells (decision 0245; T-4177, the same causes on the engine's exports of the probes above
+and on API-built pivots, pivots.md "Excel for the web opens engine-exported pivot parts"): an item of a field on an
+axis that holds two or more fields (SPEC-0015 unknown 10); a boolean or number item (`TRUE`, 7, 2.5: Excel 8, 32 and
+256, the engine `#REF!`); and the grand total of a pivot collapsed to `#SPILL!` (Excel `#REF!`, the engine
+`#SPILL!`):
+- pivot-export/t4177-date-levels.export.json Calc!B1:B3, Calc!B5:B6, Calc!B8:B9, Calc!B11:B14
+- pivot-export/t4177-manual-groups.export.json Calc!B1:B5, Calc!B8:B10, Calc!B12, Calc!B14
+- pivot-export/t4177-grouped-cache.export.json Calc!B1:B3, Calc!B7:B9
+- pivot-export/t4177-api-items.export.json Calc!B3, Calc!B5:B6
+- pivot-export/t4177-api-items-refresh.export.json Calc!B3, Calc!B5:B6
+- pivot-export/t4177-api-spill-refresh.export.json Calc!B2
+
 ## Acceptance criteria
 - [ ] probes/getpivotdata-* pass; the SPEC-0015 unknowns T-2085 resolved are implemented.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Show-as values in GETPIVOTDATA (PV2).
+
+## Progress
+The M6 probe-cell PR moved GETPIVOTDATA onto the `PivotResult` (`pivot_index.rs`, `getpivotdata.rs`). Fixed:
+probes/t4130-pivot-spill-getpivotdata Q!B1:B2, Q!B4, Q!B6; probes/t4170-pivot-date-levels and -manual-groups every
+listed cell; every listed pivot-export cell of t4177-date-levels, -manual-groups, -grouped-cache, -api-items, -api-items-refresh
+and -api-spill-refresh. Decision 0356 hands eight t4177-date-flags-needed cells, which passed only by accident, to
+T-4941. Left: GETPIVOTDATA on a saved render (T-4806).
+

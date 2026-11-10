@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 use std::fmt;
 
 use bitcode::{Decode, Encode};
@@ -116,7 +119,7 @@ const GETTING_DATA_LITERAL: &str = "#GETTING_DATA";
 
 /// Whether `text` starts with the `#GETTING_DATA` literal, ignoring ASCII case
 /// (`=#getting_data` parses in Excel; probes/error-literals-new A11).
-pub(crate) fn starts_with_getting_data(text: &str) -> bool {
+fn starts_with_getting_data(text: &str) -> bool {
     text.get(..GETTING_DATA_LITERAL.len())
         .is_some_and(|head| head.eq_ignore_ascii_case(GETTING_DATA_LITERAL))
 }
@@ -127,9 +130,9 @@ impl fmt::Display for Error {
     }
 }
 impl Error {
-    /// Every kind, in declaration order; the first twelve are `error_index`'s order. For tests
-    /// that must cover each kind.
-    #[cfg(test)]
+    /// Every kind, in declaration order; the first twelve are `error_index`'s order and the
+    /// older kinds a `Language` names. The English name lookups below walk it, so
+    /// [`Error::english_literal`] is the one en-US literal table.
     pub(crate) const ALL: [Error; 17] = [
         Error::REF,
         Error::NAME,
@@ -150,8 +153,10 @@ impl Error {
         Error::BUSY,
     ];
 
-    /// The en-US literal of this error, as `Display` writes it.
-    fn english_literal(&self) -> &'static str {
+    /// The en-US literal of this error, as `Display` writes it and xlsx stores it: the one table
+    /// that printing ([`fmt::Display`]), parsing ([`get_error_by_english_name`]) and criteria
+    /// ([`english_criterion_error`]) share, and the `rustsheet` facade maps onto.
+    pub fn english_literal(&self) -> &'static str {
         match self {
             Error::NULL => "#NULL!",
             Error::REF => "#REF!",
@@ -161,7 +166,7 @@ impl Error {
             Error::NA => "#N/A",
             Error::NUM => "#NUM!",
             Error::ERROR => "#ERROR!",
-            Error::NIMPL => "#N/IMPL",
+            Error::NIMPL => "#N/IMPL!",
             Error::SPILL => "#SPILL!",
             Error::CALC => "#CALC!",
             Error::CIRC => "#CIRC!",
@@ -203,18 +208,18 @@ impl Error {
 
     pub fn to_localized_error_string(&self, language: &Language) -> String {
         match self {
-            Error::NULL => language.errors.null.to_string(),
-            Error::REF => language.errors.r#ref.to_string(),
-            Error::NAME => language.errors.name.to_string(),
-            Error::VALUE => language.errors.value.to_string(),
-            Error::DIV => language.errors.div.to_string(),
-            Error::NA => language.errors.na.to_string(),
-            Error::NUM => language.errors.num.to_string(),
-            Error::ERROR => language.errors.error.to_string(),
-            Error::NIMPL => language.errors.nimpl.to_string(),
-            Error::SPILL => language.errors.spill.to_string(),
-            Error::CALC => language.errors.calc.to_string(),
-            Error::CIRC => language.errors.circ.to_string(),
+            Error::NULL => language.errors.null.clone(),
+            Error::REF => language.errors.r#ref.clone(),
+            Error::NAME => language.errors.name.clone(),
+            Error::VALUE => language.errors.value.clone(),
+            Error::DIV => language.errors.div.clone(),
+            Error::NA => language.errors.na.clone(),
+            Error::NUM => language.errors.num.clone(),
+            Error::ERROR => language.errors.error.clone(),
+            Error::NIMPL => language.errors.nimpl.clone(),
+            Error::SPILL => language.errors.spill.clone(),
+            Error::CALC => language.errors.calc.clone(),
+            Error::CIRC => language.errors.circ.clone(),
             // Not in `Language` (SPEC-0003): the en-US names in every language.
             Error::GETTINGDATA | Error::CONNECT | Error::BLOCKED | Error::FIELD | Error::BUSY => {
                 self.to_string()
@@ -248,88 +253,80 @@ impl Error {
     }
 }
 
-pub fn get_error_by_name(name: &str, language: &Language) -> Option<Error> {
+/// The twelve errors a [`Language`] names, with their localized literals, in the order the lexer
+/// tries them as prefixes.
+fn localized_names(language: &Language) -> [(&str, Error); 12] {
     let errors = &language.errors;
-    if name == errors.r#ref {
-        return Some(Error::REF);
-    } else if name == errors.name {
-        return Some(Error::NAME);
-    } else if name == errors.value {
-        return Some(Error::VALUE);
-    } else if name == errors.div {
-        return Some(Error::DIV);
-    } else if name == errors.na {
-        return Some(Error::NA);
-    } else if name == errors.num {
-        return Some(Error::NUM);
-    } else if name == errors.error {
-        return Some(Error::ERROR);
-    } else if name == errors.nimpl {
-        return Some(Error::NIMPL);
-    } else if name == errors.spill {
-        return Some(Error::SPILL);
-    } else if name == errors.calc {
-        return Some(Error::CALC);
-    } else if name == errors.circ {
-        return Some(Error::CIRC);
-    } else if name == errors.null {
-        return Some(Error::NULL);
-    } else if name.eq_ignore_ascii_case(GETTING_DATA_LITERAL) {
-        // Only #GETTING_DATA of the newer errors is a formula/input literal (SPEC-0003).
-        return Some(Error::GETTINGDATA);
-    }
-    None
+    [
+        (errors.r#ref.as_str(), Error::REF),
+        (errors.name.as_str(), Error::NAME),
+        (errors.value.as_str(), Error::VALUE),
+        (errors.div.as_str(), Error::DIV),
+        (errors.na.as_str(), Error::NA),
+        (errors.num.as_str(), Error::NUM),
+        (errors.error.as_str(), Error::ERROR),
+        (errors.nimpl.as_str(), Error::NIMPL),
+        (errors.spill.as_str(), Error::SPILL),
+        (errors.calc.as_str(), Error::CALC),
+        (errors.null.as_str(), Error::NULL),
+        (errors.circ.as_str(), Error::CIRC),
+    ]
 }
 
+/// Whether two error names are the same ignoring case. Excel reads an error name in any case,
+/// typed as a constant, as a formula literal or as a COUNTIF criterion (`#n/a`, `#Div/0!`,
+/// `#getting_data`; probes/t4852-error-name-case, docs/excel-semantics/syntax.md "Error names
+/// are read in any case").
+fn same_error_name(a: &str, b: &str) -> bool {
+    a.eq_ignore_ascii_case(b) || (!a.is_ascii() && a.to_uppercase() == b.to_uppercase())
+}
+
+/// The error a typed constant names in `language`, in any case (probes/t4852-error-name-case
+/// A1:D14). Of Excel's newer errors only `#GETTING_DATA` is an input literal (SPEC-0003).
+pub fn get_error_by_name(name: &str, language: &Language) -> Option<Error> {
+    localized_names(language)
+        .into_iter()
+        .find(|(literal, _)| same_error_name(literal, name))
+        .map(|(_, error)| error)
+        .or_else(|| same_error_name(name, GETTING_DATA_LITERAL).then_some(Error::GETTINGDATA))
+}
+
+/// The error literal `text` starts with in a formula, read in any case (`=#n/a` is `#N/A`;
+/// probes/t4852-error-name-case E1:G8), and its length in characters. `#BLOCKED!`,
+/// `#CONNECT!` and `#FIELD!` stay unparseable, as Excel refuses them (T-0175).
+pub(crate) fn formula_error_prefix(text: &str, language: &Language) -> Option<(Error, usize)> {
+    localized_names(language)
+        .into_iter()
+        .find_map(|(literal, error)| {
+            let len = literal.chars().count();
+            let head: String = text.chars().take(len).collect();
+            same_error_name(&head, literal).then_some((error, len))
+        })
+        .or_else(|| {
+            starts_with_getting_data(text)
+                .then_some((Error::GETTINGDATA, GETTING_DATA_LITERAL.len()))
+        })
+}
+
+/// The error a stored en-US literal names, matched exactly: xlsx stores the upper-case
+/// literal. Callers reading user text upper-case it first (the `rustsheet` facade's
+/// `ErrorKind::from_literal`).
 pub fn get_error_by_english_name(name: &str) -> Option<Error> {
-    if name == "#REF!" {
-        return Some(Error::REF);
-    } else if name == "#NAME?" {
-        return Some(Error::NAME);
-    } else if name == "#VALUE!" {
-        return Some(Error::VALUE);
-    } else if name == "#DIV/0!" {
-        return Some(Error::DIV);
-    } else if name == "#N/A" {
-        return Some(Error::NA);
-    } else if name == "#NUM!" {
-        return Some(Error::NUM);
-    } else if name == "#ERROR!" {
-        return Some(Error::ERROR);
-    } else if name == "#N/IMPL!" {
-        return Some(Error::NIMPL);
-    } else if name == "#SPILL!" {
-        return Some(Error::SPILL);
-    } else if name == "#CALC!" {
-        return Some(Error::CALC);
-    } else if name == "#CIRC!" {
-        return Some(Error::CIRC);
-    } else if name == "#NULL!" {
-        return Some(Error::NULL);
-    } else if name == GETTING_DATA_LITERAL {
-        return Some(Error::GETTINGDATA);
-    } else if name == "#CONNECT!" {
-        return Some(Error::CONNECT);
-    } else if name == "#BLOCKED!" {
-        return Some(Error::BLOCKED);
-    } else if name == "#FIELD!" {
-        return Some(Error::FIELD);
-    } else if name == "#BUSY!" {
-        return Some(Error::BUSY);
-    }
-    None
+    Error::ALL
+        .into_iter()
+        .find(|error| error.english_literal() == name)
 }
 
-/// Whether a COUNTIF-family criterion names an error. Deliberately only the twelve older names:
+/// The error a COUNTIF-family criterion names, in any case (`"#n/a"` counts `#N/A` cells;
+/// probes/t4852-error-name-case I1:I6). Deliberately only the twelve older names:
 /// COUNTIF with `"#BLOCKED!"`, `"#CONNECT!"` or `"#FIELD!"` counts 0 even over a cell holding
 /// that error (T-1012, information.md), so they stay text criteria. `"#BUSY!"` is assumed to
 /// behave the same (UNVERIFIED, T-1228).
-pub fn is_english_error_string(name: &str) -> bool {
-    let names = [
-        "#REF!", "#NAME?", "#VALUE!", "#DIV/0!", "#N/A", "#NUM!", "#ERROR!", "#N/IMPL!", "#SPILL!",
-        "#CALC!", "#CIRC!", "#NULL!",
-    ];
-    names.contains(&name)
+pub fn english_criterion_error(name: &str) -> Option<Error> {
+    Error::ALL[..12]
+        .iter()
+        .find(|error| same_error_name(error.english_literal(), name))
+        .cloned()
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -475,8 +472,50 @@ mod tests {
     fn criteria_error_names_are_unchanged() {
         // COUNTIF with "#BLOCKED!" counts 0 over a #BLOCKED! cell (T-1012, information.md).
         for (_, literal, _) in NEWER {
-            assert!(!is_english_error_string(literal), "{literal}");
+            assert_eq!(english_criterion_error(literal), None, "{literal}");
         }
-        assert!(is_english_error_string("#N/A"));
+        assert_eq!(english_criterion_error("#N/A"), Some(Error::NA));
+        // Any case (probes/t4852-error-name-case I1, I3, I6).
+        assert_eq!(english_criterion_error("#n/a"), Some(Error::NA));
+        assert_eq!(english_criterion_error("#div/0!"), Some(Error::DIV));
+    }
+
+    #[test]
+    fn one_english_literal_table() {
+        // Every kind prints the literal its English lookup reads back, `#N/IMPL!` included.
+        for error in Error::ALL {
+            assert_eq!(get_error_by_english_name(&error.to_string()), Some(error));
+        }
+        assert_eq!(Error::NIMPL.to_string(), "#N/IMPL!");
+        // Stored literals are upper case; lower case is the caller's to fold.
+        assert_eq!(get_error_by_english_name("#n/a"), None);
+    }
+
+    #[test]
+    fn typed_and_formula_error_names_read_in_any_case() {
+        // probes/t4852-error-name-case A1:A14 (typed) and E1:E8 (formula literals).
+        let language = get_default_language();
+        for (name, error) in [
+            ("#n/a", Error::NA),
+            ("#N/a", Error::NA),
+            ("#Ref!", Error::REF),
+            ("#spill!", Error::SPILL),
+            ("#calc!", Error::CALC),
+        ] {
+            assert_eq!(get_error_by_name(name, language), Some(error), "{name}");
+        }
+        assert_eq!(
+            formula_error_prefix("#Div/0!+1", language),
+            Some((Error::DIV, 7))
+        );
+        assert_eq!(
+            formula_error_prefix("#null!", language),
+            Some((Error::NULL, 6))
+        );
+        assert_eq!(
+            formula_error_prefix("#getting_data", language),
+            Some((Error::GETTINGDATA, 13))
+        );
+        assert_eq!(formula_error_prefix("#blocked!", language), None);
     }
 }

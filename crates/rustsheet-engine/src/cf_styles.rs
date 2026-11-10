@@ -7,6 +7,9 @@
 //! sheet's used area. So a read costs the rules over that cell plus, once, the statistics over
 //! the used area: an expression rule over a million rows costs one formula per read, not a
 //! million (corpus-bench 41978).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::manual_let_else)]
+// LINT-DEBT-END
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;

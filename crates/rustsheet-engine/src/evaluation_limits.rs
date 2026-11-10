@@ -16,7 +16,7 @@ pub(crate) const DEFAULT_MAX_STACK: usize = 256 * 1024;
 #[inline(never)]
 pub(crate) fn stack_address() -> usize {
     let marker = 0u8;
-    std::hint::black_box(&marker) as *const u8 as usize
+    std::ptr::from_ref::<u8>(std::hint::black_box(&marker)) as usize
 }
 
 /// The limit a new model starts with. Under test it can be set from outside,

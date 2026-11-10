@@ -1,6 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp, elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 use std::fmt;
 
-use crate::number_format::{complex_part_to_text, to_precision};
+use crate::decimal_round::cut_to_15_digits;
+use crate::number_format::complex_part_to_text;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub(super) enum Suffix {
@@ -47,7 +51,10 @@ impl fmt::Display for Complex {
         // A154), and `IMSEC("1.5+711i")` "0".
         let round15 = |v: f64| {
             let v = if v.is_subnormal() { 0.0 } else { v };
-            Some(to_precision(v, 15))
+            // A 16th-digit tie goes away from zero, unlike number-to-text: `COMPLEX(1E+15+25,0)` is
+            // "1000000000000030" and `IMREAL(COMPLEX(1E+14+2.5,1))` 100000000000003
+            // (probes/t4848-tie-complex-part, T-4848).
+            Some(cut_to_15_digits(v, true))
                 .filter(|r| r.is_finite())
                 .unwrap_or(v)
         };

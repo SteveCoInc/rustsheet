@@ -1,6 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::match_same_arms)]
+// LINT-DEBT-END
 use std::cmp::Ordering;
 
 use crate::expressions::{parser::ArrayNode, token::Error, types::CellReferenceIndex};
+use crate::functions::util::collation::cmp_text;
 use crate::number_format::cmp_excel_precision;
 use crate::text::Text;
 
@@ -189,11 +193,9 @@ impl Ord for CalcResult {
             }
             (CalcResult::Number(_value1), CalcResult::String(_value2)) => Ordering::Less,
             (CalcResult::Number(_value1), CalcResult::Boolean(_value2)) => Ordering::Less,
-            (CalcResult::String(value1), CalcResult::String(value2)) => {
-                let value1 = value1.to_uppercase();
-                let value2 = value2.to_uppercase();
-                value1.cmp(&value2)
-            }
+            // Text orders by Excel's collation, the total form so that a sort with this `Ord`
+            // stays consistent (T-4847; docs/excel-semantics/coercion.md "Not a total order").
+            (CalcResult::String(value1), CalcResult::String(value2)) => cmp_text(value1, value2),
             (CalcResult::String(_value1), CalcResult::Boolean(_value2)) => Ordering::Less,
             (CalcResult::Boolean(value1), CalcResult::Boolean(value2)) => {
                 if value1 == value2 {

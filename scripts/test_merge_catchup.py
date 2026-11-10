@@ -185,6 +185,49 @@ class CatchUp(TempOrigin):
             merge_catchup.catch_up(self.clone, "agent/x", self.record(0, "F\tprobes/a\tA1\n"))
         self.assertEqual(self.remote("agent/x"), before)
 
+    def test_a_usage_tier_lock_conflict_takes_mains_side_and_is_re_recorded(self) -> None:
+        # T-5096 (decision 0355 item 6): the tier lock is resolved like the cell baselines, main's
+        # side first, then the re-record writes the branch's state.
+        tiers = merge_catchup.USAGE_GATES
+        self.write(tiers, "# h\nfoundational\tunmet\nexpert\tunmet\n")
+        self.base = self.commit("tier lock")
+        self.git("push", "-q", "origin", "main")
+        self.branch({tiers: "# h\nfoundational\tunmet\nexpert\tmet\n"})
+        self.move_main({tiers: "# h\nfoundational\tmet\nexpert\tunmet\n"})
+        seen: list[str] = []
+
+        def record(root: Path, new_cases: Path) -> int:
+            seen.append((root / tiers).read_text())  # what the re-record starts from
+            (root / tiers).write_text("# h\nfoundational\tmet\nexpert\tmet\n")
+            return 0
+
+        head = merge_catchup.catch_up(self.clone, "agent/x", record)
+        self.assertEqual(seen, ["# h\nfoundational\tmet\nexpert\tunmet\n"])
+        self.assertEqual(
+            run("git", "show", f"{head}:{tiers}", cwd=self.origin), "# h\nfoundational\tmet\nexpert\tmet"
+        )
+
+    def test_a_branch_that_turns_a_tier_unmet_is_refused(self) -> None:
+        # Decision 0355 item 6: met -> unmet needs `update-baseline --allow-regressions`, which a
+        # catch-up never passes; the pushed tree is held to main's met tiers whatever the re-record did.
+        tiers = merge_catchup.USAGE_GATES
+        self.write(tiers, "# h\nfoundational\tmet\nexpert\tunmet\n")
+        self.base = self.commit("tier lock")
+        self.git("push", "-q", "origin", "main")
+        before = self.branch({tiers: "# h\nfoundational\tunmet\nexpert\tunmet\n"})
+        self.move_main({tiers: "# h\nfoundational\tmet\nexpert\tmet\n"})
+        unmet = "# h\nfoundational\tunmet\nexpert\tmet\n"
+        with self.assertRaisesRegex(Refused, "usage-gates.txt has foundational unmet where main has it met"):
+            merge_catchup.catch_up(self.clone, "agent/x", self.record(0, unmet, tiers))
+        self.assertEqual(self.remote("agent/x"), before)
+
+    def test_tier_flips(self) -> None:
+        main = "# h\nfoundational\tmet\nexpert\tunmet\n"
+        self.assertEqual(merge_catchup.tier_flips("foundational\tmet\nexpert\tunmet\n", main), [])
+        self.assertEqual(merge_catchup.tier_flips("foundational\tunmet\nexpert\tmet\n", main), ["foundational"])
+        self.assertEqual(merge_catchup.tier_flips("expert\tmet\n", main), ["foundational"])  # a dropped line too
+        self.assertEqual(merge_catchup.tier_flips("", ""), [])
+
     def test_the_re_record_lists_only_the_case_files_the_pr_adds(self) -> None:
         # Decision 0219: after the merge the PR's cases are in the tree's baseline, so only this
         # list lets the re-record write their visible-parity lines, and never main's.

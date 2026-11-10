@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use std::fmt::Write as _;
 
 use quick_xml::escape::escape;
-use rustsheet_engine::pivot::{Aggregate, MAX_RECORD_VALUES};
+use rustsheet_engine::pivot::{Aggregate, ShowDataAs, MAX_RECORD_VALUES};
 use serde_json::{Map, Value as Json};
 
 use crate::case::{split_qualified, CaseSpec, CellInput, PivotTableSpec, SheetSpec};
@@ -51,33 +51,6 @@ const MAX_LIST: usize = 256;
 const SUBTOTALS: [&str; 11] = [
     "sum", "countA", "avg", "max", "min", "product", "count", "stdDev", "stdDevP", "var", "varP",
 ];
-/// The Excel 2010 show-as modes (`SHOW_AS_X14`), written as the x14 data field extension's
-/// `pivotShowAs` with no `showDataAs`.
-const SHOW_AS_X14: [&str; 6] = [
-    "percentOfParent",
-    "percentOfParentRow",
-    "percentOfParentCol",
-    "percentOfRunningTotal",
-    "rankAscending",
-    "rankDescending",
-];
-const X14_NS: &str = "http://schemas.microsoft.com/office/spreadsheetml/2009/9/main";
-/// The x14 dataField extension's uri (`X14_DATA_FIELD_URI`).
-const X14_DATA_FIELD_URI: &str = "{E15A36E0-9728-4e99-A89B-3F7291B0FE68}";
-/// `ST_ShowDataAs`, the modes the builder writes as `showDataAs` (`SHOW_DATA_AS` less
-/// [`SHOW_AS_X14`]).
-const SHOW_DATA_AS: [&str; 9] = [
-    "normal",
-    "difference",
-    "percent",
-    "percentDiff",
-    "runTotal",
-    "percentOfRow",
-    "percentOfCol",
-    "percentOfTotal",
-    "index",
-];
-
 /// The three parts of a defined pivot: its cache definition and records, and its table.
 pub(crate) struct Parts {
     pub(crate) cache_definition: String,
@@ -593,7 +566,7 @@ impl<'a> DefinedPivot<'a> {
                 let _ = write!(
                     fields,
                     r#"<cacheField name="{name}" numFmtId="0" databaseField="0">{}</cacheField>"#,
-                    f.group_xml
+                    raw_cache::group_items(f, &f.group_xml)?
                 );
                 continue;
             }
@@ -614,8 +587,9 @@ impl<'a> DefinedPivot<'a> {
             }
             let _ = write!(
                 fields,
-                r#"<cacheField name="{name}" numFmtId="0">{}{group}</cacheField>"#,
-                f.shared_items()?
+                r#"<cacheField name="{name}" numFmtId="0">{}{}</cacheField>"#,
+                f.shared_items()?,
+                raw_cache::group_items(f, &group)?
             );
         }
         let extra = attrs(self.d.get("cache"))?;
@@ -634,10 +608,21 @@ impl<'a> DefinedPivot<'a> {
         } else {
             ""
         };
+        // A named source is saved as Excel saves a defined name's or a Table's: `name` alone
+        // (`_source_attrs`, T-4506).
+        let source = match self.d.get("source_name") {
+            None => format!(r#"ref="{source_ref}" sheet="{}""#, escape(source_sheet)),
+            Some(Json::String(name)) if !name.is_empty() => format!(r#"name="{}""#, escape(name)),
+            Some(_) => {
+                return Err(format!(
+                    "pivot {}: source_name is a non-empty text",
+                    self.name
+                ))
+            }
+        };
         Ok(format!(
-            r#"<pivotCacheDefinition xmlns="{MAIN_NS}" xmlns:r="{REL_NS}" r:id="rId1"{refresh} createdVersion="6" refreshedVersion="6" minRefreshableVersion="3" recordCount="{}"{extra}><cacheSource type="worksheet"><worksheetSource ref="{source_ref}" sheet="{}"/></cacheSource><cacheFields count="{}">{fields}</cacheFields>{calculated}</pivotCacheDefinition>"#,
+            r#"<pivotCacheDefinition xmlns="{MAIN_NS}" xmlns:r="{REL_NS}" r:id="rId1"{refresh} createdVersion="6" refreshedVersion="6" minRefreshableVersion="3" recordCount="{}"{extra}><cacheSource type="worksheet"><worksheetSource {source}/></cacheSource><cacheFields count="{}">{fields}</cacheFields>{calculated}</pivotCacheDefinition>"#,
             self.records,
-            escape(source_sheet),
             self.fields.len()
         ))
     }
@@ -657,12 +642,16 @@ impl<'a> DefinedPivot<'a> {
                 f.listed().then(|| keys.collect())
             })
             .collect();
+        let names: Vec<&str> = database.iter().map(|f| f.name.as_str()).collect();
+        let raw = self.records_xml(&names)?;
         let mut rows = String::new();
         for r in 0..self.records {
             rows.push_str("<r>");
-            for (f, at) in database.iter().zip(&index) {
+            for (k, (f, at)) in database.iter().zip(&index).enumerate() {
                 let value = f.values.get(r).and_then(Option::as_ref);
-                if let Some(k) = at.as_ref().and_then(|at| at.get(&key(value))) {
+                if let Some(xml) = raw.get(&(r, k)) {
+                    rows.push_str(xml);
+                } else if let Some(k) = at.as_ref().and_then(|at| at.get(&key(value))) {
                     let _ = write!(rows, r#"<x v="{k}"/>"#);
                 } else if let (true, Some(Cached::Number(n))) = (f.role == Role::Dates, value) {
                     let _ = write!(rows, r#"<d v="{}"/>"#, groups::iso_date(*n)?);
@@ -696,15 +685,15 @@ impl<'a> DefinedPivot<'a> {
             let _ = write!(attrs, r#" subtotal="{}""#, e.subtotal);
         }
         let mut ext = String::new();
+        // The builder's `SHOW_DATA_AS` is the engine's one name table: an x14 mode
+        // (`SHOW_AS_X14`) is the x14 dataField extension's `pivotShowAs`, with no `showDataAs`.
         if let Some(show) = e.raw.get("showDataAs").and_then(Json::as_str) {
-            if SHOW_AS_X14.contains(&show) {
-                ext = format!(
-                    r#"<extLst><ext uri="{X14_DATA_FIELD_URI}" xmlns:x14="{X14_NS}"><x14:dataField pivotShowAs="{show}"/></ext></extLst>"#
-                );
-            } else if SHOW_DATA_AS.contains(&show) {
-                let _ = write!(attrs, r#" showDataAs="{show}""#);
-            } else {
-                return Err(format!("showDataAs {show:?}"));
+            let mode = ShowDataAs::from_name(show).ok_or_else(|| format!("showDataAs {show:?}"))?;
+            match mode.x14_data_field_extension("") {
+                Some(extension) => ext = format!("<extLst>{extension}</extLst>"),
+                None => {
+                    let _ = write!(attrs, r#" showDataAs="{}""#, mode.name());
+                }
             }
         }
         let base = match e.raw.get("baseField") {
@@ -914,5 +903,7 @@ mod export_tests;
 mod groups;
 mod item_order;
 mod pivot_field;
+mod raw_cache;
+pub(crate) mod slicers;
 #[cfg(test)]
 mod tests;

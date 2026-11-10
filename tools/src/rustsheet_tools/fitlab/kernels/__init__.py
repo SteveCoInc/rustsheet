@@ -18,9 +18,11 @@ from rustsheet_tools.fitlab.kernels import (
     gamma,
     geomean,
     im_hyperbolic,
+    irr_driver,
     irr_fallback,
     irr_secant_d,
     mirr,
+    moments,
     norm_inv,
     power,
     solvers,
@@ -37,6 +39,7 @@ MODULES = [
     solvers,
     irr_secant_d,
     irr_fallback,
+    irr_driver,
     beta,
     norm_inv,
     beta_inv,
@@ -51,6 +54,7 @@ MODULES = [
     im_hyperbolic,
     cumulative,
     devsq,
+    moments,
 ]
 
 

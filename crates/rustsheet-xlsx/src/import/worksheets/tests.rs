@@ -1,4 +1,7 @@
 //! Unit tests of the worksheet importer.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(test, expect(clippy::items_after_statements))]
+// LINT-DEBT-END
 
 use std::collections::HashMap;
 
@@ -457,7 +460,7 @@ fn template_keys_match_a_fresh_lex_on_random_text() {
     assert_eq!(check("R:B!C1", &at(1, 3), &[(1, 2)]), 0);
     assert_eq!(check("1.A1", &at(1, 3), &[(1, 7)]), 0);
     // A plain template is taken (the check can pass).
-    assert!(check("A1+B$2", &at(3, 3), &[(4, 3), (3, 4)]) == 2);
+    assert_eq!(check("A1+B$2", &at(3, 3), &[(4, 3), (3, 4)]), 2);
 
     const PIECES: [&str; 40] = [
         "A1",

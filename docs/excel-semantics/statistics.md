@@ -918,6 +918,8 @@ Rule: RANK, RANK.EQ and RANK.AVG need a reference as their second argument. An a
 `RANK(5,{7,1,5})`, `RANK.AVG(5,{7,1,5})`, `RANK.EQ(5,{7,1,5})`, `RANK(5,5)`, `RANK(5,"5")` or `RANK(5,TRUE)` (HTTP 501
 `unsupportedWorkbook`; `RANK(5,SORT(A1:C1))` as well), so their values are not observable through the web oracle (M14 desktop question, decision 0039).
 Evidence: probes/rank-nonref-06..08 (references), rank-nonref-12..14 (arrays), probes/multiarea-order-stats H14:J14 (excel-graph, 2026-10-09, T-1203).
+Lifted OFFSET/INDIRECT reference grids rank per element against their own ranges (docs/excel-semantics/lookup.md, probes/t4801,
+verified; ours matches).
 Ours: matches since T-1203: the RANK family returns a `#VALUE!` array of the argument's shape, and static analysis
 makes such a formula a dynamic-array anchor so it spills (since T-1999 the `ref` is `ArgKind::ReferenceByCaller`: static
 analysis broadcasts the array's shape with the lifted `number` and `order`, and the driver broadcasts its errors).
@@ -1608,8 +1610,8 @@ about 50 near 100 and 317 at `POISSON(16,510,TRUE)`). Over the 32 adjacent doubl
 drifts about 2 ulp a step and jumps by 64 ulp, one ulp of a number near |ln Q| = 92.
 
 Excel's far upper tail (T-3269; its subnormal results are flushed except at df 2 / k = 0, numbers.md "Subnormal results become 0", T-3638). Rule: at shapes 3/2 to 11 (POISSON's cdf at k from 1 to 10, CHISQ.DIST.RT and
-CHIDIST at df 3 to 22), for 30 < x <= 600, Excel's Q(a, x) is Stirling's ratio prefactor, sqrt(a / 2 pi) exp(a ln(x/a)
-+ (a - x) - correction(a)), the form T-2638 found above shape 20 away from the mode, times the continued fraction; at
+CHIDIST at df 3 to 22), for 30 < x <= 600, Excel's Q(a, x) is Stirling's prefactor, sqrt(a / 2 pi) exp(-B -
+correction(a)) with Loader's direct deviance B = a ln(a/x) + (x - a) (corrected by T-3469, below), times the continued fraction; at
 and below x = 30 it is the accurate Q at integer shapes. Above shape 11 Excel is not this form next to x = 30 (where it
 switches there is open, T-3469), and past x = 600 it is unmeasured.
 - The switch: probes-numeric/t3269-gamma-tail-switch (x from 26 to 40 by 0.5 at shapes 2 to 4) has Excel correctly
@@ -1655,6 +1657,113 @@ switches there is open, T-3469), and past x = 600 it is unmeasured.
   `CHISQ.DIST.RT(390,39)` +245) though within 5 at others (shapes 1.5, 4.5, 6, 7.5, 9, 10.5, 15.5); no ln(x/a) variant
   tried (Excel's LN, ln x - ln a, x87 ops, -a rlog) changes it. Half-integer shapes below x = 30 are none of the forms
   tried (T-3285).
+- Correction (T-3469): the exponent is not the ratio form a ln(x/a) + (a - x) T-3269 took but -B, Loader's direct
+  deviance B = a ln(a/x) + (x - a) (`density::direct_deviance`, as the far-above-the-mean cdf at shapes 31 to 301,
+  T-4302, and the density at shape 20 and above, T-4308, take it). The two are the same number, but x/a and a/x round differently before the log, and |ln Q| of 30 to 90
+  magnifies that. With B, at the same switch and shape range: gen-m9/43c6227e0ff368c7 A108 `POISSON(5,42,-1)` 25 to
+  0 ulp, gen-m9/5919660b7bb4d195 A80 `POISSON(9,100,..)` and its twin probes-numeric/t1049-chisqdistrt A28 72 to 0,
+  t3269-shape6-misses A46 `POISSON(5,38,TRUE)` 26 to 0, A67 and A68 (and their twins t2561-chisq-dist-rt-past-edge
+  R!A73, A75) 129 and 189 to 2, t3284-gamma-deep-upper-tail A165 and A166 (x / a = 10) 90 to 1, A69 and A70
+  `POISSON(3,40,TRUE)` 28 to 0. So the shape-6 spikes and the x / a = 10 misses were this one rounding, not
+  something tied to that shape or that x. On the whole eval (main a300350e against the change, per cell) 13 cells
+  are fixed, 29 more are closer and none is farther. Still off and not this form's rounding: t3269-shape6-misses A69
+  `POISSON(4,42,TRUE)` (shape 5, 6 ulp), t3269-fresh-sweep-2 A173 `CHISQ.DIST.RT(69.988,3)` and A233
+  `CHISQ.DIST.RT(61.3502,3)` (shape 3/2, 17 and 21 ulp), and gen-m9/caa1eed48b1883fe A59 `CHIDIST(100,9)` (1 ulp).
+  The x / a = 10 cells above shape 11 (A183, A184, 5 ulp) are outside the form's range. Decision 0188 R4 (the
+  T-3469 Outcome): on T-3269's hold-out 27 cells closer and none farther than the ratio form, and on a fresh sweep
+  (probes-numeric/t3469-fresh-sweep-3, 200 cells) 4 closer and none farther; every cell inside the Gate A envelope.
+  That sweep adds shape-3/2 misses at x 30.9 to 33.3 (A29, A144, A174, 18 to 28 ulp; T-4954) and cells past x = 600
+  and above shape 11 where Excel is not the accurate kernel (12 to 901 ulp; T-3640).
+- Quirk (T-3469): at shapes 3 to 11 past x = 30 Excel's Q and its density take different exponents for the same
+  Stirling prefactor. Q's far tail (shapes 3/2 to 11, 30 < x <= 600) is -B, the direct deviance, above; the density
+  below shape 20 above the mode (x > 1.4a) keeps the ratio form a ln(x/a) + (a - x) (`density::density_with`,
+  `excel_ratio_exponent`): `CHISQ.DIST(40,10,FALSE)` is Excel's 6.870512074795199E-6 bit for bit with the ratio
+  form, and in T-3147's fit Loader's saddle point (R's `dpois_raw`, whose deviance far from the mode is this direct
+  one) was never more often exact than the ratio form ("Found in T-3147" above). Only at shape 20 and above does
+  the density take the direct deviance too (T-4308). So at shapes 3 to 11 above 1.4a and past x = 30 Excel's pdf and
+  Q are not one prefactor's two uses; the density's T-3147 evidence predates this correction and was not re-scored
+  with the direct deviance (UNVERIFIED for the density).
+
+## Incomplete gamma at a small x: three rounded factors (T-3219)
+Rule: at a shape a above 1 and y = x/beta at most 1, Excel's GAMMA.DIST, GAMMADIST and CHISQ.DIST (cdf and
+density) build the prefactor from three separately rounded doubles: `power = EXP(a*LN(y))`,
+`norm = EXP(GAMMALN(a+1))` and `decay = EXP(-y)`.
+- cdf: `P = (power*decay/norm)*series`, the series 1 + y/(a+1) + y^2/((a+1)(a+2)) + ...; CHISQ.DIST.RT and CHIDIST
+  take 1 - P there.
+- density: `(power/norm)*a/x*EXP(-y)`.
+- Region, a finding the engine does not implement (T-4975): the y <= 1 cut is wrong (T-4974 probe
+  t4974-gamma-small-x-prefactor-boundary: every y up to 1.001 at shapes 8 to 170 is within 5 ulp of the factors, e.g.
+  `GAMMA.DIST(1.001,30,1,TRUE)` = 1.4752762130359831E-33, and visibly off the stable prefactor). Excel keeps the
+  factors past y = 1, but the edge is not a bound on y: it fits a cap on the exponent a*LN(y), bracketed in
+  (2.97, 4.38) for the cdf (`CHISQ.DIST.RT(3.87,9)` and `CHIDIST(5,6)` are on the factors; `CHIDIST(7,7)` and
+  `GAMMA.DIST(1.5,50,1,TRUE)`, 231 ulp off them, are not) and in (0.30, 2.29) for the density
+  (`GAMMA.DIST(1.08895,3.5,1,FALSE)` on them; `CHISQ.DIST(5,5,FALSE)`, `GAMMA.DIST(2.33347,3,1,FALSE)` and
+  `CHISQ.DIST(3,20,FALSE)` off them). The mechanism behind the cap is unknown. Taking caps of 3.5 and 1 moved about
+  180 gated cells to Excel's bits and 49 off them, all last-digit and within 12 digits either way; it is not shipped
+  because the cuts are fitted with no hold-out (decision 0188 R4).
+- The order is observable at 1 ulp: `CHISQ.DIST(1.5,6,TRUE)` = 0.04050543974481387 (gen-m9/35e8168aae2b00f8 A119)
+  needs the decay before the normalization, and `CHISQ.DIST(1.5,5,TRUE)` = 0.08693018545560456 (probes/
+  stat-argument-modes H152) and `GAMMA.DIST(200000,2,1000000,TRUE)` = 0.017523096306421772 (probes-numeric/
+  m9-gamma-dist-a2 A21) rule out the series before it.
+Excel is the less accurate side here, reproducibly: `GAMMA.DIST(2,8,10,TRUE)` = 5.316161131057619E-11 (ironcalc-calc
+BETA_GAMMA.xlsx BETA_DIST!L3), `GAMMA.DIST(1E-5,9,2,TRUE)` = 5.38226469068969E-54 (GAMMA.xlsx E16), P(30, 0.3) =
+5.806457425277688E-49 (gen-m9/68d8ffb69ff739d8 A341) and `CHISQ.DIST(1E-10,8,FALSE)` = 1.0416666666145884E-32
+(gen-m9/984cba67bbe6972b A49); the accurate prefactor `powf * exp / tgamma` was 17, 6, 118 and 37 ulp from them.
+On the factors they are 1, 0, 5 and 2 ulp off, all within 15 digits: the engine's EXP, LN and GAMMALN leave a residue
+of a few ulp where |a LN(y)| is large (36 at A341, 95 at A49). The research prototype measured 77/77 small-shape
+small-x literal cdfs within 2 ulp and 170/170 densities within 4 ulp (docs/research/excel-parity-findings-2026-11-07.md
+item 5).
+The quantiles do not take this form: the inverse's own cdf (`excel_form_lower`) normalizes before the decay, which
+gives Excel's first Newton iterate at `CHISQ.INV.RT(1-1E-16,3)` (gen-m9/ecc87f80077959e0 A301), and the
+leading-factor root's residual check (`excel_tiny_quantile`) stays on the accurate exponent it was fitted with.
+Where a factor is not a normal double (y^a underflows, Gamma(a+1) overflows past 170) or the result is not normal,
+the stable prefactor applies.
+Engine eval against main 317e3567f (every suite, per cell, ulps of Excel): 469 cells closer, 96 farther; 216 cells
+newly within 15 digits, 21 newly visibly off. All 21 are in probes-numeric/t3311-gamma-inv-lower-tail-cdf
+(ungated), deep lower-tail cdfs where an ulp of the double exponent a LN(y) moves P by tens of ulp and the
+engine's LN lands on a different double (the staircase of "Deep lower tail at a shape above 1"); that case has 292
+cells closer and 85 farther. No gated cell regresses (gen-m9 1766 to 1756 known failures, ironcalc-calc 266 to 263,
+probes 6854 to 6848), and Gate A is unchanged.
+Ours: `incomplete_gamma/mod.rs` `LogSeriesFactors`, `small_x_factors`, used by `pair_with` (`Exponent::Excel`) and
+`density.rs` `density_with`.
+Status: VERIFIED (excel-graph)
+Tasks: T-3219, T-4975
+
+## Small gamma quantiles: Halley steps on Excel's cdf (T-3146)
+Rule: at shapes 1 to 20 where the unit quantile is at most 1/2, Excel's CHISQ.INV, CHISQ.INV.RT, CHIINV and
+GAMMA.INV start from the leading-factor root `EXP((LN(p_low)+GAMMALN(a)+LN(a))/a)` of the lower-tail probability
+p_low (p, or 1 - p for a right-tail p) and take Halley steps `x -= t/(1 - t*((a-1)/x - 1)/2)` on the leading-factor
+series form of P (`EXP(a*LN(x))/EXP(GAMMALN(a+1))*EXP(-x)*series`) and Excel's density, with t = (p - Q)/f for a
+right-tail search and (P - p)/f for a lower-tail one. The upper tail there is `(0.5 - P) + 0.5`, each operation a
+double, not `1 - P`: exact on 51/51 cells of probes-numeric/t3148-gamma-quantile-flat-band against 45/51 for 1 - P
+(research prototype, docs/research/excel-parity-findings-2026-11-07.md item 6). That makes Q flat for up to 0.75 ulp
+of p, which is where Excel lands. When the rounded cdf cycles, the first iterate with the smallest residual is kept.
+Evidence (excel-graph), all bit-exact on the rule:
+- `CHIINV(0.975,5)` = 0.8312116134866638, 10 ulp above the true quantile (gen-m9/285d87cea1aaa73c A261,
+  4ab2ba98d26c8a5e A85). Through MOD it also fixes gen-m9/73f053591a54bc43 A108.
+- `CHISQ.INV.RT(((-0.0001)+1),3)` = 0.005214832329030269, 3,084 ulp from the true quantile
+  (gen-m9/4250f880ab640c49 A371).
+- `CHISQ.INV(1E-20,10)` = 0.0005210568413974334 (gen-m9/c2974c061384fdd9 A355).
+The switch between searching Q and searching P at 1 - p for a right-tail p is bracketed: somewhere in
+(0.9999, 0.9999 + 2E-6] (probes/t4974-chisq-inv-rt-q-to-p-switch). A Q search at 0.9999 + 2^-53 (A38) is 473 to 3,140
+ulp off Excel at all five shapes there and the P search 0 to 7, so the switch is at 0.9999 itself unless Excel's own
+search differs there (UNVERIFIED; T-4996). Above it, the engine now takes the same Halley steps for the P search
+(T-4975, T-5089), as the findings' rule does; before, it kept T-3311's Newton steps. Against
+the rule as implemented, that variant moved 43 cells closer and 9 farther (13 gen-m9 cells such as
+`CHIINV(1-1E-16,8)`, 6 to 0 ulp), but it regresses one gated cell: `CHIINV(1-1E-10,7)` = 0.005605668625082421
+(gen-m9/eced4bb6a0234c9e A265) is bit-exact on Newton and 1 ulp off on Halley. Both are within 15 digits there;
+T-4974's probe outweighs it: on Halley its A38:A41 come within 1 ulp of Excel, and A265 is the one gated cell given up.
+GAMMA.INV takes the rule too: Excel's `CHISQ.INV(p,2a)` is twice `GAMMA.INV(p,a,1)` (T-3311 sheet W).
+Engine eval against item 5's head (every suite, per cell, ulps of Excel): 431 closer, 55 farther; 136 cells newly
+within 15 digits, 7 newly visibly off. Those 7 are all GAMMA.INV-derived cells of the ungated
+probes-numeric/t3311-gamma-inv-lower-tail-cdf and t3311-fresh-sweep-2, such as `GAMMA.INV(1E-8,1.5,1)`, 4 to 9 ulp.
+By function: GAMMA.INV 190 closer / 20 farther, CHISQ.INV 107 / 8, CHISQ.INV.RT 32 / 0, CHIINV 9 / 0.
+t3148-gamma-quantile-flat-band goes from 167 to 206 of 361 cells passing, and from 68 to 51 visibly off.
+Gated, with item 5 against main: gen-m9 1766 to 1736 known failures, ironcalc-calc 266 to 262, no regression. Gate A is unchanged.
+Ours: `incomplete_gamma/closed_form.rs` `excel_halley_quantile`, taken in `gamma_quantile_within` after
+`excel_tiny_quantile` and before `excel_newton_quantile`.
+Status: VERIFIED (excel-graph) for the cells above; the Q/P switch is UNVERIFIED inside its bracket.
+Tasks: T-3146, T-4975
 
 ## HYPGEOM.DIST: per-call cap and lifting (T-1873)
 Rule: HYPGEOM.DIST and HYPGEOMDIST lift every argument over an array and over a two-cell range on the formula's own rows,
@@ -1851,11 +1960,20 @@ LN, EXP and GAMMALN are Excel's own (`x87_log10.rs`, `x87_exp.rs`, `gammaln.rs`)
   `campaign: visible`; the cdf evidence is mixed (T-3269).
 - Inputs: Excel reads at most 15 significant digits of a typed number, so a probe of `POISSON.DIST(7,1.0999999999999999,FALSE)`
   is a probe at a different mean (the 17-digit cells were dropped from the t2055 probes).
+- The k = 2..5 constants are not Excel's stirlerr, but the exact value is not Excel's pmf either (T-4975 audit 1,
+  engine eval on main 317e3567f plus items 5 and 6). With `stirlerr_exact` at every count, `POISSON.DIST(4,4.8,FALSE)`
+  (t2055-poisson-pmf-sweep A48) becomes Excel's double, but 48 other pmf cells move 1 to 4 ulp
+  off, 46 of them from bit-exact). 9 are gated, the cells listed in `POISSON_STIRLERR_2_TO_5`'s comment: gen-m9 b9a32ce9a1fd0d71 A183,
+  5cebac1f02bf30f2 A362, c7664e494e418395 A370, 91e167cd8d7eb652 A260, 7fd0a98183c6babf A107, a5342a7e24fd803e A47,
+  5919660b7bb4d195 A50, 1b31092a0d79e5f1 A358 and ironcalc-calc POISSON.xlsx D9. A GAMMALN-based Stirling error
+  `GAMMALN(k+1) - (k+0.5)*LN(k) + k - LN(SQRT(2*PI()))` in seven operation orders, on the engine's x87 GAMMALN and LN,
+  is 9 to 458 ulp from the exact value at k = 2 to 6, nowhere near the constants' -13, -12, -29 and -34. So the
+  constants stay until T-3247 finds the cause.
 Evidence: probes-numeric/t2055-poisson-pmf-sweep, t2055-poisson-pmf-switch, t1048-poisson (excel-graph, 2026-10-30 and
 2026-10-14); gen-m9 POISSON and POISSON.DIST cells (excel-graph); ironcalc-calc STATISTICAL/POISSON.xlsx (Excel-cached).
 Ours: `statistical/poisson.rs` `excel_poisson_pmf`, on `loader.rs` `excel_bd0` and `stirlerr_exact`.
 Status: VERIFIED (excel-graph) for the two forms and the switch; the k = 2..5 stirlerr is a fitted proxy
-Tasks: T-2055
+Tasks: T-2055, T-4975
 
 ## Overflowing arguments, PERMUT's limit and argument error order (T-1290)
 Rule: an F.DIST, F.DIST.RT or FDIST call whose `deg_freedom1 * x` overflows a double is `#DIV/0!` for the cdf and the
@@ -2482,12 +2600,23 @@ the double t and at the exact t, so the gap is not in the statistic (probes-nume
   orders and seven ways to form t² all give one y each, yet Excel is 1 to 8 ulp from the exact tail there and on the
   other side of it from ours at A42 (Excel 0.3571628041352982, exact at fl(y) 0.3571628041352981, true
   0.35716280413529768), where one ulp of y moves p by about 27 ulp. That is the tail's noise, not the statistic.
+- The tail at that y is the ported TOMS 708 kernel K(df/2, 1/2, y, fl(1 - y)), the call T.DIST makes, in two regions
+  (T-3730, T-4975): inside t = 1 at df 13 to 16, where the series scaled the tail by Excel's GAMMALN normalization (which
+  belongs to the central probability before it is taken from one), and at Welch's fractional df at every t. The
+  statistic in plain doubles (sequential sums, sum of squared deviations over n - 1, pooled or Welch) is unchanged.
+  Of the nine cells T-3730 lists, gen-m9 928d08e3e1eecb5f A393 (`T.TEST(Data!B3:C11,Data!B4:E6,2,2)` =
+  0.7772031601919551, 18 ulp before), ce312817dc9c7f0b A228, 9bc247733a1ca9fa A254, f82473275380882e A308 and
+  c7664e494e418395 A219 are now Excel's bits; 9bc247733a1ca9fa A139 and afc00c8b70e78baf A238 are 1 ulp off,
+  09b47629f54b9817 A144 and d5fd9e05e9e6f466 A246 within 4 ulp (all within 15 digits). Over gen-m9, probes,
+  probes-numeric and ironcalc-calc 56 T.TEST/TTEST cells move closer to Excel and none moves away (ironcalc-calc
+  `T_TEST.xlsx` F4, F7, F8; probes/stat-argument-modes H535-H542; t1048-ttest A15-B36). Integer df beyond t = 1 and
+  integer df outside 13 to 16 keep the elementary series, which those cells already fit.
 Evidence: probes-numeric `t1048-ttest`, `t1049-ttest`; ironcalc-calc `STATISTICAL/T_TEST.xlsx`. Exact values: mpmath
 `betainc` at 50 digits (T-0969 attempt 5, 2026-10-20; T-2993, 2026-11-05).
 Ours: `student_t.rs` `student_t_tail_at` since T-0969 attempt 5. T.TEST/TTEST visibly-off cells went from 19 to 3:
 t1048-ttest A3/B3 (6 ulp) and t1049-ttest A48 (5 ulp), all Welch.
 Status: VERIFIED (excel-graph)
-Tasks: T-0969, T-2993
+Tasks: T-0969, T-2993, T-3730
 
 ## T.TEST, TTEST, F.TEST and FTEST: Gate A tables (T-4097)
 Rule: on the Gate A tables `accuracy/{T.TEST,TTEST}/s1` (200 points each) and `accuracy/{F.TEST,FTEST}/s1` (120 each),
@@ -3087,6 +3216,21 @@ NEGBINOM.DIST at r = 1 or f = 0); then `bratio/mod.rs::ported_tails` (bpser, w1 
 cdf, F.DIST, F.DIST.RT, FDIST, BINOM.DIST's cdf and NEGBINOM.DIST's cdf (T-2505, T-2506, T-2847), and for F.TEST's
 large shapes and BETA.INV's huge-shape crossing (`bratio/mod.rs::kernel_tails`, T-2977)
 Tasks: T-2502, T-2505, T-2511, T-2977, T-3007
+
+## Incomplete beta (Cephes kernel): an exhausted fraction and an underflowing prefactor (T-4979, T-4975)
+Rule (audit item 5 of the 2026-11-07 findings, reproduced in `incomplete_beta.rs`):
+- Iteration exhaustion. Cephes' continued fraction stops at 300 steps and its last convergent is used
+  (`incbcf(2E5,2E5,0.5)` does not converge). Excel's value is that convergent's to Gate A's envelope where it happens:
+  turning exhaustion into `#NUM!` makes `FDIST(1.09318173579934,49,888336)` (Excel 0.3034459528338627, accuracy/FDIST/s1
+  A176) and 16 BETA.INV/BETAINV Gate A points (Excel 1 - 2^-53 or 2^-53, BETA.INV/s1 A86, A100, BETAINV/s1 A85 and
+  others) errors. So exhaustion is detected but not reported; a better fallback kernel there is open (T-4979).
+- Prefactor underflow. With a + b below MAXGAM the prefactor is exp(a ln x)·exp(b ln y)·Gamma(a+b)/(Gamma(a) Gamma(b)),
+  and a factor underflowing to 0 zeroed a representable tail: `I_1E-4(85,85)` came out 0 where the tail is
+  4.5346145057366762E-291 (mpmath). Where the product underflows or overflows and the Gamma ratio is finite, the
+  prefactor is now taken in log space. Where the Gamma product itself overflows (a shape near DBL_MIN) the 0 stays:
+  BETA.INV reads that tail as its start (accuracy/BETA.INV/s1 A135, Excel 0.5, T-4663).
+Status: VERIFIED (the underflow against mpmath; the exhaustion against Excel's Gate A cells)
+Implemented in: functions/statistical/incomplete_beta.rs `beta_tails`, `cephes_fraction`, `fraction`.
 
 ## Incomplete beta at a shape of 1 outside the closed forms (T-3007)
 Rule: after bratio's swap, at a0 = 1 with y0 > 0.9 (x0 below about 0.1, b0 not 1), Excel computes one tail, w, and
@@ -4251,6 +4395,34 @@ double-double series, a Cephes deep tail, incbcf/incbd from z, and df 2's closed
 Status: VERIFIED (excel-graph) for the call form and bgrat at b = 1/2; the bup arithmetic and the T density UNVERIFIED
 Tasks: T-2509, T-2513, T-0969
 
+## Student t tails at df 1 inside t = 1 and past the series bound inside t = 1 (T-2930)
+Rule: two regions of T.DIST, T.DIST.RT, T.DIST.2T and TDIST outside "Student t tails are one kernel call":
+- df 1 and t <= 1: L is `I_y(1/2, 1/2)`/2 at the worksheet's rounded y = fl(1/fl(1 + fl(t·t))), with complement
+  fl(1 - y), as T.TEST's tail ("T.TEST rounds y = df/(df+t^2) to a double before the tail"), not the exact Cauchy tail
+  at t. `T.DIST.2T(1.005-1,1)` (t = 0.004999999999999893) is 0.9968169276635932 in Excel (gen-m9/928d08e3e1eecb5f
+  A231); the exact tail gives 0.9968169276635881 (23 ulp). The controls `T.DIST.2T(0.1,1)` = 0.9365489651388929,
+  `T.DIST.2T(0.5,1)` = 0.7048327646991335, `T.DIST.2T(1,1)` = 0.5000000000000001, `T.DIST.RT(0.5,1)` and
+  `T.DIST(0.5,1,TRUE)` (probes-numeric m9-t-dist-2t A2-A4, m9-t-dist-rt A3, A4, m9-t-dist-cdf A3) are the same bits
+  either way.
+- an integer df n above 1000 (the integer-df series bound) and t < 0.99: L is the Student-t central fraction on z,
+  t²/n and n/t², never the rounded y. The kernel's bpser prefactor cancels in its logarithm there:
+  `T.DIST.2T(0.5,1E+8)` = 0.6170750785521777 (gen-m9/787ba8d801105a60 A91) is 6 ulp off through the kernel and 2
+  through the fraction. The bound is exclusive: at df 1000 the kernel is Excel's bits (`T.DIST.RT(.5,1000)` =
+  0.30859254041693746, probes-numeric m9-t-dist-rt A123; t0969-t-tail-grid B1553) and the fraction is not, so
+  `n >= 1000` regresses those cells. df 999 keeps the kernel. The probe of df 999/1000/1001
+  (probes/t4974-t-dist-df1000-central-endpoint) confirms the exclusive bound, and shows the region ends short of
+  t = 1: the fraction is Excel's bits at df 1001 for t up to 0.85 (G2, H2, I8 and others), neither form is from
+  t = 0.8513 to 0.95, and from t = 0.999999 the kernel is again Excel's bits at every df from 1001 to 1E10
+  (`T.DIST.2T(0.999999,1001)` = 0.3175526601765737 and F6:F9 of t4974-t-dist-df1-and-large-df-centre;
+  `T.DIST.RT(1-2^-53,1001)` = 0.15877608823825565, G21:I21), where the fraction is 1 to 3 ulp off. So Excel's switch back to the
+  kernel is bracketed in (0.95, 0.999999]. The engine still runs the fraction for every t < 1 (8 last-digit cells
+  of those probes); a cut inside the bracket would be a new fit with no hold-out set (decision 0188 R4), so
+  it is not shipped (T-5089).
+Evidence: the cells above (excel-graph); docs/research/excel-parity-findings-2026-11-07.md item 9.
+Implemented in: functions/statistical/student_t.rs `unflushed_upper_tail` (df 1), `large_df_centre_tail`.
+Status: VERIFIED (excel-graph) at the cited cells; the t cut inside (0.95, 0.999999] is not located
+Tasks: T-2930, T-4975
+
 ## F's incomplete-beta arguments keep r >= 1 (T-3567)
 Rule: F.DIST(x,m,n,TRUE), F.DIST.RT and FDIST (m, n truncated) form mx = fl(m·x) and r = fl(n/mx) when mx <= n, else
 r = fl(mx/n), so r >= 1. The smaller incomplete-beta argument is fl(1/fl(1 + r)) and the larger fl(r/fl(1 + r)):
@@ -4293,11 +4465,91 @@ zeros, not Graph hiding a kept subnormal (decision 0042).
   B751, B824, B848; t3567-r5-fdf1-hold B1003, B1307), all 0 with a TRUE companion. Rows 73-105 at (377, 1.123) were
   solved for the untruncated df, but F truncates it to (377, 1), so their cdf stays at 1.1E-295 to 1.3E-302 and they
   only show the engine within a unit of Excel's 15th digit away from the edge.
-- Unprobed: F.DIST.RT and FDIST at a subnormal right tail away from T-4045's L140 prefactor cut, and BETA.DIST's cdf
-  at a subnormal result. The density keeps a subnormal Y ("F density is not the beta density" below).
+- F.DIST.RT and FDIST flush a subnormal right tail too (T-4857, "F tails at the edges of the double range" below).
+  Unprobed: BETA.DIST's cdf at a subnormal result. The density keeps a subnormal Y ("F density is not the beta density" below).
 Ours: `fisher.rs` `f_dist_of` flushes the cdf with `arithmetic::flush_subnormal`.
 Status: VERIFIED (excel-graph)
 Tasks: T-4026
+
+## F tails at the edges of the double range: a subnormal beta argument gives 0, F.DIST.RT flushes too, a subnormal x is #DIV/0! (T-4857)
+Rule: three cuts of F.DIST's cdf, F.DIST.RT and FDIST at the ends of the double range, found by T-4857's boundary
+points (probes-numeric/t4857-f-classes, excel-graph 2026-11-07; exact doubles in constant cells):
+- **A subnormal beta argument makes the tail 0.** Excel's smaller incomplete-beta argument is fl(1/fl(1 + r)) ("F's
+  incomplete-beta arguments keep r >= 1"). Where r is finite but above 1/DBL_MIN that argument is subnormal, and the
+  tail computed on it is exactly 0, not the small normal number the math gives: at (1, 400),
+  `F.DIST(2.2250738585072014E-306,1,400,TRUE)` is `#NUM!` (r overflows, "The F cdf is #NUM! where df2/(df1 x)
+  overflows"), and one double up, 2.2250738585072017E-306, the cdf is 0 where the math is 1.19E-153 (A1481, A1482;
+  A1483:A1485 to x 2.2272989E-306 are 0 too). The upper side alike: `F.DIST.RT(2.27556092792985E+306,79,1.6063)` is
+  0 (math 5.3E-154; A191) and `FDIST(8.28578930344434E+302,216961.75,2)` is 0 (math 1.2E-303; A339), both with
+  r = fl(df1 x/df2) near DBL_MAX. Where the true tail is itself below the double range the 0 is the same either way
+  (A1530:A1533 at (3, 2000)). Where the band ends (r back below 1/DBL_MIN, x about 4 times the first non-`#NUM!`
+  double) is unprobed.
+- **F.DIST.RT and FDIST flush a subnormal result to 0**, as F.DIST's cdf does (T-4026): `=(F.DIST.RT(..))=0` is TRUE
+  at `F.DIST.RT(8.81984169432969E+123,3,5)`, `F.DIST.RT(5676182.21063918,100,100)` and
+  `F.DIST.RT(3120.25523056629,1,1000)`, whose math tails are 1E-309 (C3187, C3197, C3207); also
+  `FDIST(1.02268409931391,13898982,9559857)` (A375), and A260 and A284 (math 8.9E-310 and 4.0E-314).
+- **A subnormal x is `#DIV/0!`** for the cdf and both tails, as for the density (T-2586 round 5):
+  `F.DIST(EXP(-720),3,7,TRUE)`, `F.DIST.RT(EXP(-720),3,7)` and `FDIST(EXP(-720),3,7)` (A1341, A1379, A1398), though
+  fl(7/(3 x)) overflows there, which elsewhere is `#NUM!`. A typed `1E-308`, `2^-1074` or `2^-1022/2` reads as 0
+  (cdf 0, tails 1; A1339, A1340, A1342 and their F.DIST.RT and FDIST rows).
+Ours: none of the three yet (T-4881): the engine keeps the subnormal argument and the subnormal tail, and returns
+`#NUM!` at a subnormal x.
+Status: VERIFIED (excel-graph) for the cells; the end of the first band UNVERIFIED
+Tasks: T-4857, T-4881
+
+## F family argument kinds, every position (T-4857)
+Rule: every argument of F.DIST, F.DIST.RT, FDIST, F.INV, F.INV.RT and FINV reads a value the same way
+(probes/t4857-f-kinds, 666 cells, excel-graph 2026-11-07; 22 scalar kinds per position):
+- numeric text, padded numeric text `" 2.5 "`, a `TEXT()` result, a one-cell range, a one-element array, a number
+  through a reference and numeric text through a reference are the number;
+- TRUE, FALSE, `(1=1)` and a boolean through a reference are 1 and 0 (so a df of FALSE, of an empty cell or of an
+  omitted argument is `#NUM!`, and F.INV's p of TRUE is `#NUM!`); an empty cell and an omitted argument are 0;
+- non-numeric text and empty text, typed or through a reference, are `#VALUE!`; an error, typed or through a
+  reference (`#N/A`, `#DIV/0!`), is that error;
+- a multi-cell range, an array, `SEQUENCE(3)/2` and a mixed array `{1.5;"2.5";TRUE}` lift element by element, each
+  element read as above (the text element is the number).
+- F.DIST's `cumulative` is different: any nonzero number (2, -1, 0.5, 1E-300) is TRUE; the texts `"TRUE"` and
+  `"FALSE"` are the booleans, but `"1"`, `"0"`, `"abc"`, `""` and numeric text through a reference are `#VALUE!`, and
+  so is the text element `"2.5"` of a lifted array; an empty cell and an omitted flag are FALSE.
+- F.TEST and FTEST: every sample kind of "F.TEST of a single value (T-2455)" and its neighbours holds in both
+  positions; an omitted sample is `#VALUE!` (see that entry).
+Ours: every kind cell has Excel's type and error (the omitted F.TEST sample since T-4882). The values are a
+separate matter: `rustsheet-eval show` passes 514 of the 669 scored cells bit for bit; 125 are within 4 ulp, 26 are
+further off, and the 4 F.TEST omitted-sample cells matched after T-4882. The 26 are quantile values (F.INV, F.INV.RT and FINV at the
+probe's p and df, among them `F.INV(0.3,TRUE,10)` and its reference and `(1=1)` forms, A302, A308, A319, and the
+F.INV.RT and FINV rows from A389), the engine's quantile digits rather than the argument reading (T-4883).
+Status: VERIFIED (excel-graph)
+Tasks: T-4857, T-4882
+
+## F quantiles at a tiny p leave the math abruptly, and at a huge df stay off it (T-4857)
+Rule (excel-graph, probes-numeric/t4857-f-classes, 2026-11-07, against `rustsheet-accuracy`'s 50-digit math):
+- **A jump in p.** `F.INV(1E-k,30,3)` is within 3E-15 of the math on k = 1, 10, ..., 172 (every ninth k; sweep-p
+  A2758:A2777) and 10 orders of magnitude below it on k = 181, 190, ..., 307 (`F.INV(1E-181,30,3)` =
+  3.664905678607796E-24, math 7.76E-14; A2778), the gap growing to about 18 orders at k = 307 (A2792: Excel
+  4.93E-40, math 3.09E-22). The jump lies between 1E-172 and 1E-181; only those k were probed. `F.INV.RT(1E-k,3,30)` is its reciprocal at every k (A2793:A2827). At
+  (5, 7) the sweep stays within 3E-14 of the math to k = 289, 7E-13 off at 298, and 6% (F.INV) and 0.4% (F.INV.RT)
+  off at 1E-307 (A2722, A2757). So the cut depends on the df.
+- **p at DBL_MIN, and a subnormal p.** `F.INV(2.2250738585072014E-308,5,7)` is 6.3% off the math,
+  `F.INV.RT`/`FINV` 5.8%, `FINV(DBL_MIN,30,3)` 24 orders of magnitude (A2219:A2230). A subnormal p made by
+  `EXP(-720)` is not read as 0 by the quantiles (a typed `1E-308` or `2^-1074` is): `F.INV(EXP(-720),5,7)` is
+  1.169307705097078E-124 where the math is 4.5175785832753948E-126 (A1417), `F.INV.RT(EXP(-720),5,7)`
+  2.3991226329524575E+89 where the math is 5.5076272452839048E+89 (A1435, FINV A1453). These math values are an
+  mpmath recompute (50 digits, p = e^-720 = 2.03E-313) done for this entry, not the committed math sidecar:
+  `rustsheet-accuracy` reads `EXP(-720)` as Excel's flushed 0 (numbers.md "Subnormal results become 0"), so the
+  sidecar holds 0 at A1417 and an error ("probability outside (0, 1]") at A1435 and A1453.
+- **Tiny-p `#NUM!`** where the math is a normal number: `F.INV.RT(2.29499489338186E-230,16,80)` (A977),
+  `FINV(2.09953717878393E-16,79,1E10)` (A1092) and `F.INV(0.00149502660982554,1E10,79)` (A1312, the df pair of
+  T-4044's band, through BETA.INV).
+- **At a huge df** (the BETA.INV mapping, "F quantile at a huge df goes through Excel's BETA.INV (T-1538)") Excel is
+  1E-13 to 1E-5 off the math on pairs T-1538 did not probe: `F.INV.RT(0.05,1E10,5)` = 4.364995965811329 against
+  4.364996746946 (1.8E-7; A2063, with A2059, A2067, A2075 the same at df 9999999999 and 1E10 plus a fraction),
+  `FINV(0.5,1E10,21)` 5.4E-8 (A1308). T-4885 owns them.
+- More pairwise cells with Excel over 1E-4 off the math are listed in T-4884; the F.INV.RT saturation at a df2 below 2
+  also holds at a fractional df2 (`F.INV.RT(2.15282544087598E-276,1,1.1375)` = 3.696066238512854E+150, A884).
+Excel is the target here (decisions 0300 and 0267: the R3 ruling of 0267 item 3 does not cover F).
+Ours: the math on most of these cells (T-4884, T-4885); where Excel is on the math and the engine is not, T-4883.
+Status: VERIFIED (excel-graph) for the cells; the mechanism UNVERIFIED
+Tasks: T-4857, T-4883, T-4884, T-4885
 
 ## F density is not the beta density, R's df or a GAMMALN formula (T-2513)
 Rule (PARTIAL): F.DIST(x,d1,d2,FALSE) is its own formula. With m = d1, n = d2, a = m/2, b = n/2, h = a + b and
@@ -4751,6 +5003,144 @@ at all 40 points ((3, 600) and (2, 2.5) on four ranges, five p each).
 Status: VERIFIED (crossing at 155/188); the 11 misses and the solver's start, step and stop are UNVERIFIED
 Tasks: T-1745, T-0974, T-3387
 
+## BETA.INV returns bounded AS 109 Newton stopping points (T-4975)
+Rule: Excel's BETA.INV and BETAINV return the point where AS 109's modified Newton search (with Remarks AS R19 and
+AS R83) *stops*, not the refined crossing of the CDF. The profile that fits:
+- the start's normal deviate is the accurate normal quantile (NORM.S.INV's), where AS 109 has Hastings'
+  approximation;
+- a first estimate at an end of [0, 1] is replaced by 1E-6 or 1 - 1E-6; it is not clamped to [1E-4, 0.9999];
+- the probability residual is divided by Excel's beta density (BETA.DIST's), not flushed;
+- the stop is an absolute correction accuracy `10^(-5/min(a,b)^2 - p^(-0.2) - 13)` (the smaller shape, no integer
+  truncation of the exponent), compared with the step and with the previous step at a sign change, with a 1E-300
+  floor on the squared-step comparison, and the *same* 1E-300 floor on the squared accuracy (AS 109's one `SAE`
+  exponent floors both its FPU and its ACU; T-4975 follow-up, see "BETA.INV and F.INV in the deep tail: the 1E-300
+  accuracy floor, the slope stop and the unconverged #NUM!" below);
+- on an early stop the iterate *before* the step is returned (AS 109 as published, not the later "value = tx"
+  change); where the step no longer moves the iterate, the first iterate with the least residual;
+- the CDF is BETA.DIST's own lower tail; for p above 1/2 the search solves `I_x(beta, alpha) = 1 - p` and returns
+  1 - x.
+Exceptions kept on the converged crossing (contracts of the addendum):
+- an *exhausted* search (no bracket when the cumulative one-third step contractions reach 645, where 3^-n falls
+  below the smallest normal double, or a non-finite step away from an end seed) is not a root: the crossing
+  fallback decides, which is Excel's `#NUM!` at accuracy/BETA.INV/s1 A89, A94, A184 and `BETA.INV(.1,5,1E-14)`.
+  Excel's numeric endpoint results need 11 to 597 contractions and its errors 672 to 1,667 (a hypothesis, probe
+  group G21);
+- an end seed whose first step is not finite is Excel's value at p of 1E-10 and more
+  (`BETA.INV(1E-10,1E+110,1E-100)` = 0.999999, `BETA.INV(0.6,0.5,1.3E+154)` = 1.0000000000287557E-06, probes/t3862)
+  and not at the Gate A points with p of 1E-58 and below (accuracy/BETA.INV/s1 A182, A185, BETAINV/s1 A191, A192:
+  Excel 0.5), which keep the crossing; the cut at p = 1E-15 is fitted;
+- below p = 1E-15 a stop more than 1E-4 relative off the converged crossing returns the crossing (decision 0188 R3),
+  except a stop at the 1E-300 accuracy floor, which is Excel's own value
+  (`BETAINV(1.9007381444303E-262,1.55556651729756,4.38688149845313)` = 1.241262249100565E-189 in Excel and the
+  engine, accuracy/BETAINV/s1 A166, where the math is 1.4958216352616E-169);
+- where bratio takes basym at the result (both shapes large, near the mean) the crossing stays: Excel's round trip
+  `BETA.INV(BETA.DIST(0.576485254488674,59467.806,44281.473,TRUE),59467.806,44281.473)` returns x exactly
+  (probes-numeric/t3443-basym-sweep A101), which an early stop misses (probe group G23 maps the region).
+Evidence:
+- ironcalc-calc BETADIST_BETAINV.xlsx H5 `BETA.INV(0.6734553797493481,3,600,2000,5489582)` = 33587.000000000226,
+  where the crossing gives 33586.99999999992: reproduced bit for bit.
+- gen-m9/4e55500bb8ad3cd8 A360 `BETAINV(1E-200,3.14159,TIME(4,2,1))` = 5.115610690476489E-64, AS 109's first
+  power-law estimate `EXP((LN(p·a) + lnB)/a)` kept on the CDF's log-quantized plateau: reproduced.
+- accuracy/BETA.INV/s1 A111 `BETA.INV(2.22507385850721E-308,16.0270968311551,5.57477023741975)`: a subnormal
+  residual still implies a large correction, so the seed is not a false root (the engine returns the math
+  3.5583236841039E-20; Excel 3.6855664841262965E-20).
+- On the 2,384 literal-argument BETA.INV/BETAINV cells of eval/ (gen-m9, probes, probes-numeric, accuracy tables):
+  bit-exact 1,265 to 1,705, visibly off 481 to 228; Gate A has 0 failing points and 21 stale exemptions removed.
+Not reproduced: H16 (-2.220446049250313E-16, the engine -1.44E-15), H26 (0.2339999999999406, the engine
+0.2339999999992134) and BETA_GAMMA.xlsx BETA_DIST!J3 (1.9999999999999998, the engine 1.9999999999999993): Excel's
+last iterates there are an ulp or a few from the engine's, and finalizing in the original coordinate (iterating
+1 - x itself) scored worse overall (1,500 bit-exact against 1,609 on the same cells).
+Not reproduced either (T-4974's probes, found after merging main; T-5089): probes/t4974-beta-inv-large-shape-round-trip,
+where Excel's `BETA.INV(BETA.DIST(x,a,b,TRUE),a,b)` returns x exactly in 113 of 123 rows, misses 28 cells (P!E6, E12,
+G6, G12 `BETA.INV` 0.7000000000000038 for 0.7, 68 ulp; two more at 35 ulp; the rest a few ulp), which contradicts
+the loop's early stop at large shapes; and t4974-beta-inv-as109-accuracy-exponent misses 42 cells of the accuracy
+exponent `10^(-5/min(a,b)^2 - p^(-0.2) - 13)`.
+Status: UNVERIFIED (a scored fit to the addendum's mechanism; probe groups G21 and G23)
+Implemented in: functions/statistical/inverse_beta/as109.rs `as109_search`, functions/statistical/beta.rs
+`beta_quantile_as109`.
+
+## BETA.INV and F.INV in the deep tail: the 1E-300 accuracy floor, the slope stop and the unconverged #NUM!
+Rule (T-4975 follow-up, measured on main's T-4974 probes as #4087 asked; inverse_beta/as109.rs):
+- **Accuracy floor.** Where `10^(-5/min(a,b)^2 - p^(-0.2) - 13)` squared is below 1E-300, Excel's search stops at
+  the first squared Newton step at or below 1E-300 and returns the iterate before it, however far that is above the
+  root. This is #4087 point 4's endpoint saturation: `BETA.INV(1E-200,0.5,0.5)` = `BETA.INV(1E-300,0.5,0.5)` =
+  2.7055792171147168E-151 is the 1E-6 end seed divided by 3 at each of 303 steps (the step 2x is cut to a third to
+  stay in [0, 1]) until (2x/3)^2 <= 1E-300; it does not depend on p, and at beta 50 it is 2.7053113740149512E-151
+  (probes/t4974-beta-f-inv-endpoint-saturation A4, A5, I4, I5; `F.INV(1E-200,1,1)` = 2.705579217114786E-151 is its
+  back-transform, L4). The engine is within 2E-13 of those (303 slopes' rounding) instead of `#NUM!`. Bit for bit:
+  column J of probes/t4974-beta-inv-dbl-min-residual (`BETA.INV(1E-300,1.5,300)` = 4.0806016627138796E-225),
+  `BETA.INV(1E-300,2,5E9)` (endpoint-saturation K5), `FINV(1E-300,30,3)` and its neighbours (probes-numeric
+  t4857-f-classes A2221:A2251), `F.INV.RT(1E-300,3,3)` (gen-m9/0a9226016e8f5f33 A321) and Gate A's
+  BETAINV/s1 A166. Each of those stops lies below the root (negative residual); such a stop is Excel's value and
+  the tiny-tail R3 check does not replace it. A floor stop above the root is not Excel's (`BETA.INV(1E-300,2,2)`
+  stops at 2.0E-150 where Excel is 7.725445078779648E-164 and the math 5.7735026918962415E-151; dbl-min-residual
+  column C), so it is judged by the R3 check like any other stop and returns the math there, except where the
+  root itself underflows: there Excel keeps the stop above it, as in the saturation above and F.INV at df1 = 1
+  (`F.INV(1E-300,1,9)` = 2.4350018152839236E-150, gen-m9/58e3253bbd3a7a82 A247; endpoint-saturation N4:V5). Where the root
+  underflows (T-2435's `#NUM!` precheck) the floor stop is returned when it is a normal double.
+- **Slope stop at the first estimate.** Where the density at AS 109's first estimate is below the normal doubles (its
+  reciprocal overflows) Excel returns the first estimate: `BETA.INV(2^-1022,30,3)` = 1.5861167524067332E-17 and
+  `BETA.INV(2^-1022,2,2)` = 5.312217141104403E-168 (dbl-min-residual H7, C7; the cdf underflows there),
+  `BETA.INV(1E-200,1000,1)` = 0.2064 (the estimate 1 - 2/(t+1); R3-marked probes-numeric/t1543 A86), Gate A's
+  BETA.INV/s1 A169, the R3-marked F.INV/s1 A126 and A171 and Student t's R3-marked tiny-p cells (t3349, t1531, gen-m9
+  7980ffb6095a340d A160) are each that estimate bit for bit (measured by letting the engine return it). This explains
+  the "grossly wrong" tiny-p quantiles of "Tiny-p quantiles: Excel is grossly wrong" as a mechanism, but since most
+  such points are R3-marked and the rule cannot tell them from unmarked ones (dbl-min-residual columns C and H), the
+  engine applies the R3 check to this stop (the math where it is more than 1E-4 off), and above p = 1E-15 keeps the
+  crossing (`BETA.INV(0.1,0.5,1.34078079299426E+154)`, probes/t3862 E4, is near the crossing in Excel).
+- **Unconverged search.** Where the steps run out with the last residual larger than the target, the quantile is
+  `#NUM!`: `F.INV(1E-300,11,3)` and `F.INV(1E-250,11,3)` (probes/t4974-f-inv-tiny-tail-neighbourhood E7, E11; #4087
+  point 7): the first estimate lies below the root where the cdf underflows, its tiny density sends the first step to
+  0.32, and the iterate then shrinks by 1 - 1/5.5 a step, short of the root 3E-56 after 512 steps, while df2 2 and 4
+  converge (E6, E8, E10, E12). Excel's step cap is between 304 (the 303-step saturation above) and about 620.
+- **Overflowing normal estimate.** Where AS 109's `exp(2w)` overflows (both shapes above 1, p near DBL_MIN) Excel does
+  not start from the 1E-6 end seed: `BETA.INV(2.22507385850721E-308,1.12049449852741,2.10175380918621)` =
+  9.192367895421942E-151 (accuracy/BETA.INV/s1 A131, a floor stop) is 9.192367895408647E-151 from a seed of 0.5 and
+  5.04E-151 from 1E-6, so Excel seems to start at 0.5. That iterate is not Excel's to 15 digits, so the engine keeps
+  the converged crossing (the math) there.
+Not explained: the rest of dbl-min-residual (columns A, B, D, G: Excel stops early, e.g. `BETA.INV(2^-1022,
+16.0270968311551,5.57477023741975)` = 3.685566484126281E-20, forward cdf 1.76 p) and `BETA.INV(1E-300,3,1)`.
+Measured against #4087's other BETA.INV recommendation (crossing by default, AS 109 only where evidenced): returning
+the crossing everywhere fixes 158 cells and loses 933 on the T-4975 tree (gated suites: 84 fixed, 540 lost); no per-point rule found
+(steps, stop kind, the ulp distance, acu/ulp, a flipped p) separates the two, and AS 109's classic slope
+`EXP(lnB + (1-a) LN x + (1-b) LN(1-x))` instead of BETA.DIST's density scores worse (-121, +34). The crossing for p
+above 1/2 alone would put t4974-f-inv-back-transform C6/D6 (`BETA.INV(0.999,1/2,1/2)` 1 ulp off, amplified by
+x/(1-x)) back on Excel, but loses 271 cells and fixes 104.
+Status: UNVERIFIED (each rule is reproduced on the cells named; no probe was run for this entry)
+Implemented in: functions/statistical/inverse_beta/as109.rs (`STEP_FLOOR`, `As109Outcome::FloorStopped`,
+`SlopeStopped`, `Unconverged`, `first_estimate`), functions/statistical/beta.rs `beta_quantile`,
+functions/statistical/fisher.rs `f_quantile`.
+
+## F.INV, F.INV.RT and FINV map BETA.INV's AS 109 stopping point back (T-4975)
+Rule: Excel's F quantiles are its inverse beta's stopping point (see "BETA.INV returns bounded AS 109 Newton stopping
+points (T-4975)") mapped to F. The search solves `I_x(df1/2, df2/2) = p` on the lower tail, or for a lower-tail
+probability above 1/2 the flipped `I_s(df2/2, df1/2) = q` with q the upper tail itself (F.INV.RT's p, or 1 - p for
+F.INV), so a tiny upper tail keeps its digits. The back-transform is the compensated four-log ratio
+`EXP(LN(x) - LN(1-x) + LN(df2) - LN(df1))` (x and 1 - x trading places when flipped), with Excel's log1p for `LN(1-x)`
+(not `LN(fl(1-x))`), the numerator logs summed first in double-double and the EXP split as `EXP(hi)·(1 + lo)`.
+Kept on the converged crossing:
+- below a tail probability of 1E-15, a stop more than 1E-4 relative off the converged crossing (decision 0188 R3):
+  the five R3-marked points accuracy/F.INV/s1 A112, A126, A146, A160 and A171 follow the math;
+- from a df of 1E5, a stop more than 1E-9 relative off T-1538's mapped crossing: there the stop is up to 1.5E-6 off
+  both Excel and the math (`FINV(2.19035396820536E-152,1266816833,2)`, accuracy/FINV/s1 A143; F.INV/s1 A133, A148,
+  FINV/s1 A150, A160), while within it the stop is Excel's at 108 more literal cells than the crossing.
+Evidence: probes-numeric/t1538-f-quantile-switchover A1 `F.INV(1E-12,99999,5)` = 0.07661785226487351, A8
+`F.INV(1-1E-12,5,99999)` = 13.051797727478313 and A14 `F.INV.RT(1E-12,5,99999)` = 13.05178845973034, each off before
+and bit-exact now. On the 2,076 literal-argument F.INV/F.INV.RT/FINV cells of eval/: bit-exact 619 to 1,571, visibly
+off 476 to 184; Gate A 0 failing, 2 stale exemptions removed (F.INV/s1 A154, F.INV.RT/s1 A112).
+Not reproduced (the addendum's inverse-specific pieces):
+- the inverse-F bpser storage (stored normalization, split EXP argument on every bpser point): taken on its own it
+  scores worse (1,566 bit-exact against 1,571), so the search keeps BETA.DIST's lower tail;
+- the ordered inverse log-beta with stored GAMMALN differences: 1 more F cell bit-exact, 4 more BETA.INV cells
+  visibly off; not taken. `F.INV(1-1E-16,9,5)` stays 4311298.62058159 against Excel's 4311298.620581582;
+- the half-half seed (`F.INV(1E-200,1,1)` = 2.705579217114786E-151, the engine 0) and accuracy/F.INV/s1 A167
+  (`F.INV(4.36982683607437E-189,1,1698856)` = 3.8539086753642276E-145, the engine 0, inside Gate A through the
+  math's 1E-300 floor).
+Also not reproduced (T-4974, T-5089): t4974-f-inv-back-transform misses 17 cells, two at 44 ulp and two at about
+3.1E5 ulp, where the y/(1-y) back-transform amplifies a 1-ulp BETA.INV near 1; t4974-f-inv-as109-tolerance-cap 8.
+Status: UNVERIFIED (a scored fit to the addendum's mechanism)
+Implemented in: functions/statistical/fisher.rs `f_quantile`, `f_quantile_as109`.
+
 ## BETA.INV at a shape of 1 is the closed form to 15 digits for p of 1E-15 or more (T-3664)
 Rule: with alpha = 1 or beta = 1 and 1E-15 <= p < 1, Excel's BETA.INV(p,alpha,beta) (and BETAINV) is within half a
 unit of the 15th significant digit of the closed form p (both 1), -expm1(log1p(-p)/beta) (alpha = 1) or
@@ -4893,7 +5283,7 @@ Evidence: probes-numeric cases `m9-legacy-betadist`, `-betainv`, `-binomdist`, `
 Status: VERIFIED (excel-graph)
 Gate A tables (T-4104, excel-graph 2026-11-06): accuracy/CHIDIST, CHIINV, BETADIST and BETAINV s1 take their modern
 function's definition, and every Excel value and error there (typical, tail, edge, extreme and log-uniform points) is the
-modern rule. The points outside the envelope are the modern siblings' known behaviours: BETAINV T-3351, T-2808 and
+modern rule. The points outside the envelope are the modern siblings' known behaviours: BETAINV T-4865, T-2808 and
 T-3862; BETADIST T-3577; CHIINV A93 T-3364 (R3 case 3, decision 0318).
 Tasks: T-1047
 
@@ -5496,6 +5886,79 @@ Implemented in: functions/statistical/t_dist.rs `t_rounded_y_quantile` (every df
 Ours: this form from df 2 (T-2511); 10 of T-3061's cells and the bit-level remainder are T-3061 and T-3399.
 Tasks: T-3061, T-2511, T-3399
 
+## Student-t quantile in the small-beta tail is a Newton iterate from the power-law seed (T-3363)
+Rule: from df 2, where the beta argument y = df/(df + t^2) of T.INV, T.INV.2T, TINV and CONFIDENCE.T is in the
+power-law tail of `I_y(a, 1/2)` = p (a = df/2, p = 2q, q the one-sided tail), Excel's y is a finite-precision Newton
+iterate, not the correctly rounded root, and t = fl(sqrt(fl(df * fl(fl(1/y) - 1)))) as away from the centre:
+```
+lnB  = ln Γ(a) + ln Γ(1/2) - ln Γ(a + 1/2)
+ln y = (LN(p) + (LN(a) + lnB)) / a          (this grouping; another moves the bits)
+domain: |a(1-b)(2-b)(3-b)/(6(a+3)) · y^3| <= 2^-52 at the seed y = EXP(ln y), b = 1/2  (the omitted third series term)
+if fl(y·y) = 0: y = EXP(ln y), no correction (df 2 at 1E-200)
+y -= (1-b)/(a+1) · y^2                       (first series correction)
+Newton on I_y(a, b) - p with density y^(a-1)(1-y)^(b-1)/B, keeping the iterate of least |residual|;
+the first step is always taken; from the second residual r on, stop when fl(LN(p) + r/p) = LN(p) or r/p changes
+sign; also stop at |r| < 2^-1022 or when the squared step underflows.
+```
+- On gen-m9's cells (excel-graph) this is Excel's value bit for bit at every probed (df, p): `TINV(1E-100,5)` =
+  1.801609952626993E+20 (1db18890916ee643 A144), `TINV(1E-200,8)` = 2.405205857517846E+25 (0620505280d2ea6e A152),
+  `TINV(1E-100,9)` = 333415394242.96606 (139684e68fb2fc3b A90), `TINV(1E-100,10)` = 27485906095.604824
+  (a5342a7e24fd803e A118), `TINV(1E-300,4)` = 1.565084580073275E+75 (41248d1cb153c66e A331),
+  `CONFIDENCE.T(1E-200,0.01,15)` = 1668175619766.5225 (8f2ac25945af87da A289, df 14), `T.INV(1E-20,2)` =
+  -7071067811.865476 (0bbab6206b5c9a07 A315), `TINV(1E-100,2)` = 1E+50 (44a8841352dc48e9 A74), `TINV(1E-200,2)` =
+  1.0000000000000101E+100 (7980ffb6095a340d A312, the logarithmic seed), and the controls `TINV(1E-100,3)`,
+  `TINV(1E-300,9)`, `TINV(1E-200,9)`, `T.INV.2T(1E-200,7)`. The previous closed form (leading term and first correction
+  in log space, "Student-t quantile is SQRT(df*(1/y-1))..." above) was 22 to 221 ulp off on most of these.
+- The first step is observable at df 2: the seed's relative residual there (3E-15 at `T.INV(1E-20,2)`, 9E-15 at
+  `TINV(1E-100,2)`) is below half an ulp of LN(p), and stopping at the seed is 11 and 22 ulp off. At df 3 and above
+  the step lands within the cdf's noise and the least-residual rule keeps the right iterate.
+- EXP is Excel's own (`x87_exp::excel_exp`): libm's exp puts `T.INV.2T(4.46E-308,2)` (probes/t4541-t-inv-2t-tiny-p
+  B8, Excel 4.735137238103876E+153) an ulp low. Open: `T.INV(4.4501477170144E-308,2)` and
+  `T.INV(4.45014771701441E-308,2)` (t4541 K4, K5; Excel -3.3519519824856895E+153) come out an ulp low in the
+  logarithmic-seed region, where the old closed form had them. Rounding sqrt(df·(1/y - 1)) once there fixes K4 and K5
+  but puts ten other t4541 cells (B5, B6, B10, E5, E6, E10, H5, H10, K1, K9) an ulp off, so the chain of doubles stays.
+- The domain comes from the series, not from probed points. The engine takes this form ahead of the old closed form
+  and the rounded-y crossing wherever its domain holds.
+Evidence: the gen-m9 cells above (excel-graph). The rule is the one an independent prototype found
+(docs/research/excel-parity-findings-2026-11-07.md item 8), re-measured on this main.
+Implemented in: functions/statistical/inverse_beta.rs `beta_small_quantile`, `newton_least_residual`;
+t_dist.rs `t_small_beta_quantile`.
+Status: VERIFIED (excel-graph)
+Tasks: T-3363, T-4975
+
+## T.INV.2T, TINV and CONFIDENCE.T: AS 109's Student-t stopping point, and the tiny centre's finite-gamma iterate (T-4975)
+Rule: away from the centre (and from df 2), the Student-t quantile is the AS 109 search's stopping point on
+`I_y(df/2, 1/2) = 2q` (the shared loop of "BETA.INV returns bounded AS 109 Newton stopping points (T-4975)",
+Student-t profile), back-transformed as t = SQRT(df·(1/y - 1)). The profile differs from BETA.INV's in its stop:
+- the absolute (AS R19) accuracy is `10^(-5/pp^2 - p^(-0.2) - 13)` on the first shape pp = df/2, not the smaller
+  shape (1/2, with which the search never stops early);
+- the search stops only when that absolute test *and* a relative test (the step within one epsilon of the iterate)
+  hold; then the iterate before the step is returned.
+The CDF is BETA.DIST's lower tail; T.TEST's tail at the rounded y scores worse. The deep tail keeps T-3363's small-beta
+iterate, the df 1 forms and the centre stay.
+Controls, bit for bit: `T.INV.2T(0.5,df)` at df 5, 7, 8, 9, 28 and 123456789 (0.7266868438004216, 0.7111417780817859,
+0.7063866126448375, 0.7027221467513249, 0.6833528429885039, 0.6744897431508498).
+Tiny centre (addendum B and addendum 2 section G): for a central probability c below the centre cut, the quantile is
+T-3363's small-beta seed and Newton iterate on `I_z(1/2, df/2) = c`, z = t^2/(df + t^2), t = SQRT(df·z/(1 - z)), under
+the same omitted-term applicability rule, with the beta normalization formed from finite gamma values
+(B = GAMMA(1/2)·GAMMA(df/2)/GAMMA((df+1)/2) with Excel's GAMMA, its reciprocal stored before LN) and the CDF bpser with
+that ln B and the split EXP finish. It falls back to the crossing of the centre where a gamma overflows and where the
+first series correction still moves the seed (the centre is not yet tiny enough); the opposite reading of the
+fallback loses 8 cells and fixes 5.
+Evidence: gen-m9/984cba67bbe6972b A128 `CONFIDENCE.T(ERFC(3.14159/Data!C$10),1.999,21)` = 1.9667525376639697E-15
+(Data!C10 = 1E+15), `T.INV.2T(1-1E-10,5)` = 1.3171528710518458E-10 (gen-m9 b9a32ce9a1fd0d71 A58,
+probes-numeric/m9-t-inv-2t A65) and `T.INV.2T(1-1E-16,5)` = 1.4623333233988838E-16 (gen-m9 afc00c8b70e78baf A64), all
+bit for bit. On the 2,243 literal-argument T.INV/T.INV.2T/TINV/CONFIDENCE.T cells of eval/: bit-exact 1,529 to 1,798,
+visibly off 225 to 162.
+Not reproduced: `T.INV(0.2,5)` (gen-m9/0bbab6206b5c9a07 A67) and `T.INV.2T(0.4,5)`/`TINV(0.4,5)`
+(probes/stat-argument-modes H522, H526), Excel 0.9195437802408258, are 6 ulp off (0.9195437802408252): the search stops
+one step before Excel there (residual 2.2E-16, step 1.26E-16 against an iterate of 0.855); stricter stops (half an
+epsilon, a relative residual test, a sign-crossing rule) each score worse overall.
+Status: UNVERIFIED (a scored fit to the addenda's mechanism)
+Implemented in: functions/statistical/inverse_beta/as109.rs `As109Profile::StudentT`, functions/statistical/t_dist.rs
+`t_as109_quantile`, `t_tiny_centre_quantile`, functions/statistical/inverse_beta.rs `beta_small_quantile_with`,
+functions/statistical/bratio/ln_beta.rs `ln_beta_finite_gamma`.
+
 ## Two-tailed Student-t quantile with p near 1 is accurate in Excel (T-3349)
 Rule: for df from 2 up, `T.INV.2T(p,df)` with p just below or above 1 returns the small quantile to the 15th digit of
 the exact value: Excel's result shows no 1 - p/2 cancellation. TINV and CONFIDENCE.T were probed at df 2 (n = 3) only:
@@ -6035,8 +6498,32 @@ it with `uv run rustsheet-fitlab norm-s-inv` (`fitlab/kernels/norm_inv.py`).
 Status: VERIFIED (tails); the central algorithm is UNVERIFIED
 Tasks: T-1746, T-1759, T-0925, T-0968
 
+## NORM.INV's centre keeps the inverse-erf product in a register, and scales sd*sqrt(2) first (T-4975)
+Rule: for |q| <= 0.5 with q = 2p - 1 (exact there), NORM.S.INV(p) is sqrt(2)*u and NORM.INV(p, m, s) and
+NORMINV are `m + (s*sqrt(2))*u`, with u = sign(q)*erfinv(|q|) from the small-argument rational of statrs/Boost,
+`x*(x+10)*(Y + R(x))` (Y = 0.08913147449493408, R a degree-7/9 rational in plain doubles), evaluated in x87
+discipline: x+10 is stored, g = x*(x+10) stays in a register, g*Y and g*R(x) are each stored, and their sum is
+formed in extended precision and stored. Rounding g early, or keeping the shift unrounded, misses the controls.
+The scale multiplies sqrt(2) before u: scaling a stored z instead is one ulp low on the control below, while
+LOGNORM.INV does scale the stored z (next entry). Between |q| = 0.5 and PPND16's split statrs' closed form stays.
+- `NORMINV(NORMDIST(0,-1,3,TRUE),-1,3)` and `NORM.INV(...)` = 8.881784197001252E-16 (2^-50), a cancellation cell
+  where the earlier closed form gave 6.661338147750939E-16.
+- `NORM.INV(0.500001994711402,0,1E6)` = 5.0000000001370815.
+This explains NORMINV's cancellation cell, not the remaining central NORM.S.INV / NORM.INV misses (up to about
+22 ulp; the entry above). Against statrs' closed form (main before T-4975) the rational is Excel's bits on 23 more
+literal central cells of probes-numeric t1746/m9/t1048 and statrs on 14 more, interleaved over the whole region
+(|q| from 0.005 to 0.455; T-4975 follow-up); no region separates them. The best single cut,
+statrs for |q| <= 0.115, nets +12 probes-numeric cells and is a fit to interleaved points, so it is not taken.
+Evidence: calipers roundtrip/formula_stress_test golden.xlsx Statistical!B42, B46 (Excel-saved); ironcalc-calc
+STATISTICAL/NORM_DIST.xlsx 'NORM.DIST NORM.INV'!F28 (Excel-authored cached value); addendum 2 of the 2026-11-07
+parity findings, section F.
+Status: VERIFIED (the controls); the rest of the centre is UNVERIFIED
+Implemented in: functions/statistical/erf.rs `inverse_erf_small`, normal.rs `normal_quantile`
+Tasks: T-4975
+
 ## LOGNORM.INV is EXP of NORM.INV's quantile (T-0925)
-Rule: LOGNORM.INV(p, m, s) and LOGINV are EXP(NORM.INV(p, m, s)), on NORM.INV's hybrid (PPND16 in the tails, see above). In the tails it is EXP(m + z*s), with z
+Rule: LOGNORM.INV(p, m, s) and LOGINV are EXP(m + s*z) of the stored standard-normal quantile z = NORM.S.INV(p)
+(T-4975: not NORM.INV's centre association `m + (s*sqrt(2))*u`, the entry above), on NORM.INV's hybrid (PPND16 in the tails, see above). In the tails it is EXP(m + z*s), with z
 the PPND16 quantile. `LOGNORM.INV(1E-20,0,1)` = 9.493291347224372E-05 (probes-numeric/t1543-inverse-cdf-tiny-p
 A16; statrs' `LogNormal::inverse_cdf` gave ...338E-05). With it, 20 ironcalc-calc LOGNORM.xlsx lines and 17 gen-m9
 LOGNORM.INV, LOGINV, CONFIDENCE.NORM and CONFIDENCE lines pass, and no cell regresses. The central LOGNORM.INV
@@ -6555,6 +7042,21 @@ Ours: since T-2455 (`fn_quartile_inc`, QUARTILE and QUARTILE.INC); QUARTILE.EXC 
 Status: VERIFIED (excel-graph)
 Tasks: T-2455
 
+## F.TEST's bpser at a shape above 8: a balanced gamma-ratio ln B with the split EXP finish (T-4975)
+Rule: on F.TEST's bpser branch with min(a, b) > 1 and max(a, b) > 8, Excel's caller forms ln B as a balanced gamma
+ratio, not the accurate half-integer log-beta: with a the smaller shape, b the larger, c = a + b and
+w = del(b) - del(c) (TOMS algdiv's Stirling correction), h = fl(a + w), h = fl(h - a·LN(c)) (extended product),
+v = fl((b - 1/2)·log1p(-a/c)) and L = fl(h + v + GAMMALN(a)). It pairs with the series' split-exponent finish
+`(EXP(zh)·series)·(1 + zl)`, the low correction applied after the multiplication by the series; changing only ln B was
+the regression trap (gen-m9/a790a4d4a6a82756 A289).
+Evidence: probes/t2829-ftest-ln-beta-grid A4 and A5 (6.812701809757666E-39, 7.59266490026227E-39), off before, are
+bit-exact. On the 767 literal-argument F.TEST/FTEST cells of eval/: bit-exact 477 to 541 (no bit-exact cell lost),
+visibly off 88 to 63; 6 cells of t2829 that were within 15 digits move a few ulp out (A12, A15, A24, A41, A81, A97).
+Gate A unchanged (0 failing).
+Status: UNVERIFIED (the addendum's form, scored)
+Implemented in: functions/statistical/bratio/ln_beta.rs `neg_ln_beta_balanced`, functions/statistical/bratio/bpser.rs
+`ExpFinish`, functions/statistical/f_test_tail.rs `bpser`.
+
 ## F.TEST of a single value (T-2455)
 Rule: F.TEST takes any single value as a sample of at most one, so it is `#DIV/0!` whatever the value's type: `FTEST(5,{1;2;3})`,
 `FTEST({1;2;3},SUM(4))`, `FTEST(TRANSPOSE(5),{1;2;3})`, `FTEST(B1,{1;2;3})` with B1 = 5, `FTEST("5",..)`, `FTEST("abc",..)`,
@@ -6564,8 +7066,9 @@ error is that error (`FTEST(1/0,..)` `#DIV/0!`, A29). A one-cell reference to a 
 blank two-cell range is `#DIV/0!` (`FTEST(B10:B11,{1;2;3})`, A33).
 F.TEST checks its samples in order, each one's error or blank one-cell reference before the next: `FTEST(1/0,B10)` is
 `#DIV/0!` and `FTEST(NA(),B10:B10)` `#N/A` (A77, A78), so for F.TEST the blank does not beat an earlier sample's error; a
-computed blank (`FTEST(IF(TRUE,B10),{1;2;3})`) is `#VALUE!` too (A79). An omitted sample (`FTEST(,{1;2;3})`) is unprobed
-(ours: the one-value `#DIV/0!`).
+computed blank (`FTEST(IF(TRUE,B10),{1;2;3})`) is `#VALUE!` too (A79). An omitted sample is `#VALUE!` in either
+position, for both names: `F.TEST(,{2;3;3;9})`, `F.TEST({2;3;3;9},)`, `FTEST(,{2;3;3;9})` and `FTEST({2;3;3;9},)`
+(probes/t4857-f-kinds A605, A606, A659, A660, excel-graph 2026-11-07); ours matches since T-4882.
 Ours: since T-2455 (`fn_f_test`, `f_test_sample`, `is_blank_one_cell` in functions/statistical/fisher.rs). The paired
 functions' blank-cell `#VALUE!` followed in T-2426.
 Status: VERIFIED (excel-graph)
@@ -6780,6 +7283,35 @@ names sweep, second family"). These are the only probed cells with number_pop = 
   6.403537788576229E-219 (accuracy/HYPGEOMDIST/s1 A93). So it is no fixed underflow threshold on the result; an
   intermediate of Excel's (unpinned, "HYPGEOM.DIST is not exact for small integer arguments") underflows there. Excel is
   kept as the target (decision 0300).
+- Excel's pmf against its own BINOM.DIST factors (probes/val2-hyp-01, probes/val2-hyp-02, excel-graph, 2026-11-09; each
+  row holds x, n, K, N, Excel's `HYPGEOMDIST` in E and the conditional-binomial products built from Excel's own
+  `BINOM.DIST(..,FALSE)` cells). On every row where E is a number (59 of hyp-01, 49 of hyp-02), E equals one of two
+  products bit for bit: K = (H/J)*I, with p = MAX(x, n-x)/N, wherever J = `BINOM.DIST(n,N,p,FALSE)` is not 0 (every
+  hyp-01 row and 27 hyp-02 rows), and Q = (N/P)*O, with p = n/N, where that J is 0 (hyp-02 rows 7 to 14 and 20 to 33).
+  So the deep-tail zeros are the first branch's K being 0 because H underflows: E37:F50 are 0 in all 28 cells (for
+  example `HYPGEOMDIST(37769,41599,59217,67254)`, E37; ours 1.7613284636360493E-167; row 50 is the A95 point above),
+  with H37:H50 and K37:K50 0 and Q37:Q50 numbers (Q37 1.7613284636366138E-167). Where J is 0 as well, H being 0 does
+  not make E 0 (E23 2.695046427587582E-51, E27 0.00020982825889113662, E33 1.1411809907453025E-05). This is an observed
+  fit of two branches on the probed rows, not a confirmed rule: T-5109 scores it against the HYP hypotheses (OPEN).
+- The first branch's zero reaches ordinary outcomes (probes/val4-hyp-03, excel-graph, 2026-11-10; row layout as above,
+  with E `HYPGEOMDIST`, F `HYPGEOM.DIST(..,FALSE)`, P the p = n/N product, T `(E)=0`, and U and V
+  `HYPGEOM.DIST(..,TRUE)` at x and x-1). Where a numerator factor H or I is below 2.2251E-308 and J is not, E and F are
+  both 0 and T is TRUE on every such row, at every probed probability (up to 1.4E-3):
+  - `HYPGEOMDIST(118963786,119356129,1595899582,1601173435)` (E2, exact pmf 2.831465855970326E-04);
+  - E3, E4 and E8:E13, with pmfs from 1.4E-3 (E11) down to 2.2E-13 (E13);
+  - the ladder E14:E18, with pmfs from 5.2E-21 to 4.6E-133.
+  Where J is flushed as well (rows 5 to 7), E is the p = n/N product P bit for bit (E5 2.8745404856319023E-04). The
+  anchors E19 (1.1527525812809706E-165) and E20 (0) repeat the cached values. So the observed fit predicts these zeros
+  (the frozen `rule_extended` of docs/research/val4-hyp-03-predictions.json). Excel's 0 against a pmf of 2.8E-4 is
+  far beyond decision 0188 R3's 1E-4 relative bound, so whether to follow it is an owner ruling for T-5109 (decision
+  0300). Ours: the math (E2 2.831465855970309E-04, E13 2.227593374051108E-13).
+  - The cdf snaps to 0 or 1 on the same rows. U and V are exactly 1 on rows 2 and 8 to 18; the math there runs from
+    0.903800076447881 (V2) up to 1 (U8 0.965623042841267, U9:V12 0.98969 to 0.99997, U13:V18 0.999999999997 to 1). On the mirrored rows 3 and 4 they
+    are exactly 0, where the math is about 0.096 to 0.098 (U3 0.0961999235521186, U4 0.0979117103609510). V5, whose
+    x-1 is row 4's point, is 0 as well (math 0.0979117103609510), while U5 (0.09819916440952194) and U6:V7 are within
+    about 3E-14 absolute (3E-13 relative) of the math. So the "within 1E-10 of the math" of the Gate A tables does not reach this band. Ours: the
+    math. That is inside decision 0355's envelope, so the visible-parity lock does not count these cells, though U2
+    (ours 0.904 against Excel's 1) is visibly off by decision 0083.
 - Elsewhere Excel's pmf and cdf are within 1E-10 relative of the math on all 400 points of the two tables, populations up
   to 2147483646 included, and every Excel error in them is a domain error of the Gate A definition (T-4105).
 - Unprobed (an oracle limit, not an Excel value): the excel-graph oracle's calculate request fails on every retry for a
@@ -6814,6 +7346,7 @@ error (`QUARTILE.EXC(A1,NA())` `#N/A`, `QUARTILE.EXC(A1,1/0)` `#DIV/0!`, `QUARTI
 TRUE stays the one value 1 ("QUARTILE(TRUE,1)", but `QUARTILE.EXC(TRUE,1)` is `#NUM!` for one value). PERCENTRANK of it is
 `#N/A` and `MEDIAN(A1)` `#NUM!`. So `QUARTILE.EXC(Data!D7,HYPGEOMDIST(2,3,7,2^32))` with D7 TRUE is `#NUM!`
 (gen-m9/38e4fc309fe199ea A5).
+T-2605 (probes/t2605-single-boolean-cell, excel-graph, 2026-11-07, 41 cells) confirms FALSE reads the same as TRUE, and for every quart/k tried (`QUARTILE(A1,0/1/4/7)`, `PERCENTILE(A1,0/7)`, `PERCENTILE.EXC(A1,0.5)`): `#NUM!`. PERCENTRANK, `.INC` and `.EXC` of a boolean, an empty or a text cell are `#N/A` with significance 0, 2 or omitted: empty data comes before the significance check.
 Evidence: probes/t2429-quartile-exc-no-number A1-A24 (excel-graph, 2026-10-25).
 Ours: since T-2429 (`percentile_numbers`); `#VALUE!` before.
 Status: VERIFIED (excel-graph)
@@ -6846,10 +7379,68 @@ FALSE)` and `GAMMADIST(2,1.85E+76,1E+10,"TRUE")` are `#NUM!` (2801c1c11c21e134 A
 Ours: matches since T-2435, except the GAMMA.DIST density and cdf at a huge shape (T-2982) and the
 F.INV.RT far tail (T-2808); the rules T-2435 settled are the four sections below. A negative
 BINOM.DIST/BINOMDIST number_s, one in (-1, 0) included (`BINOM.DIST(-0.0125,10,1E-16,FALSE)`), is `#NUM!` since T-2700 (the sign
-is checked before truncation). Since T-2621 a BETA.INV quantile of 0 or 1 is `#NUM!`, which settles
+is checked before truncation). Since T-2621 a BETA.INV quantile of 0 or 1 is `#NUM!` (since T-3351 one that rounds to 1 at
+p above 1/2 is 1 where the flipped tail's y is a normal double: "BETA.INV where the quantile rounds to 1 (T-3351)"), which settles
 `BETAINV(0.025,1E-15,2.5)`, `BETAINV(0.05,0.002,1)`, `BETAINV(1E-200,0.1,1E+5)` and `BETAINV(1-1E-16,2,0.01)`;
 `BETAINV(1E-20,1E-300,30)` stays a number (ours 3.333333333333333E-302, the search's floor rather than an underflow to 0).
 Status: VERIFIED (excel-graph), one cell each
+
+## BETA.INV where the quantile rounds to 1 (T-3351)
+Rule: for p above 1/2, BETA.INV(p, alpha, beta) is 1 - y, y the lower quantile of Beta(beta, alpha) at 1 - p (AS 109's
+flip). Where y is a normal double below half an ulp of 1 the answer is exactly 1, not `#NUM!`: `BETA.INV(1-1E-8,2,0.1)`
+= 1 (y = 3.9E-81), `BETA.INV(1-1E-6,0.5,0.3)` = 1, `BETA.INV(1-1E-16,2,1)` = 1 (y = 5E-17), and 1 - 2^-53 where y is
+above 2^-54 (`BETA.INV(0.999999999999999,6.87566761020923,0.991674132119787)`, accuracy/BETA.INV/s1 A123). Excel
+answers 1 - y at every evidenced point with a normal y and `#NUM!` at none: 130 eval cells move from `#NUM!` to Excel's
+value on this path (129 distinct suite formulas over probes, probes-numeric and gen-m9, counted by building main and
+the T-3351 branch and diffing verdicts, plus Gate A s1 A123). Where y is 0 or subnormal Excel is
+`#NUM!` at 154 points (`BETA.INV(1-1E-8,2,0.01)`, y = 3.7E-801; `BETA.INV(1-1E-10,2,0.03)`, y = 1.7E-334;
+`BETAINV(1-1E-16,2,0.01)`) and still 1 at 8: `BETA.INV(1-6E-10,2,0.03)` (y = 1.5E-308), `BETA.INV(1-5E-10,0.5,0.03)` to
+`BETA.INV(1-3E-10,0.5,0.03)` (y down to 1.4E-317), `BETA.INV(1-6E-10,10,0.03)` (y = 2.4E-309) and three sweep points
+with y far below the subnormals (`BETA.INV(1-4.7838841265984E-10,2.52340266710761,0.0133219075721009)`, y about 1E-700).
+With beta = 0.03 the `#NUM!` starts at 1 - 5E-10 for alpha 2 and 10 but below 1 - 3E-10 for alpha 0.5; no cut in y or
+p separates the two sets. The lower-tail mirror has the same shape: `BETA.INV(6E-10,0.03,2)` is 0 (a subnormal
+quantile shown as 0) and `BETA.INV(5E-10,0.03,2)` `#NUM!`. y values are from 50-digit mpmath.
+At the two other ends Excel is not consistent either:
+- p of 1/2 or less where the quantile rounds to 1 (no flip): Excel is the largest double below 1, 0.9999999999999999,
+  at `BETA.INV(0.5,2,1E-3)`, `BETA.INV(0.1,2,1E-3)`, `BETA.INV(0.5,2,1E-4)` (the root about 1 - 1E-3011),
+  `BETA.INV(0.4998,0.01,1E-4)` and at 13 Gate A points with b from 1.7E-15 to 1.2E-3, but `#NUM!` at
+  `BETA.INV(0.120463618823915,4.85116218981846,3.81506961561941E-15)` and five more Gate A points with b from 3.8E-15
+  to 1.6E-8 (accuracy/BETA.INV/s1 A89, A92, A95, A109; BETAINV/s1 A83, A91).
+- p above 1/2 where the quantile underflows (a tiny alpha): Excel is 2^-53 = 1 - (1 - 2^-53) at
+  `BETA.INV(0.9,1E-4,0.01)`, `BETA.INV(0.862607485568315,2.03167397803437E-09,0.419185520132239)` and 11 more points,
+  but `#NUM!` at `BETA.INV(0.540825862774324,2.11840621275937E-15,0.719272803854574)` (s1 A94, A105; BETAINV/s1 A82).
+- So `BETA.INV(0.51,2,1E-3)` is `#NUM!` (flipped, y = 1E-310) while `BETA.INV(0.49,2,1E-3)` is 0.9999999999999999: the
+  result is not monotone across p = 1/2.
+Neither shape, p nor the root's distance from the end separates the end values from the `#NUM!`s. A simulation of AS
+109 as revised (statrs' port: its start, step control and accuracy exponent) on the ported BETA.DIST kernel ends at
+1 - 2^-53 or 2^-53 at most of Excel's `#NUM!` points, so it does not explain them either; the outcome looks decided by
+the rounding of Excel's own Newton steps next to 0 and 1 (T-4865).
+T-4865 ruled the kernel out: Excel's BETA.DIST at every iterate of an AS 109 replay (AS R19's acu, the published start
+clamp to [1E-4, 0.9999], 50-digit cdf and ln B) for the 30 class 1 and 2 cells of accuracy/BETA.INV/s1 and BETAINV/s1
+(1,154 cells, docs/research/t4865/kernel_probe) is within 3.8E-15 relative of the 50-digit cdf, and the replay on
+Excel's own values takes the same trajectory and ends at 1 - 2^-53 or 2^-53 at all 30, Excel's `#NUM!`s included. So
+Excel's value there is not decided by its cdf next to the end. One pattern was seen and not adopted: over those 30
+cells the replay's total count of step divisions (g /= 3) is at most 714 at every Excel end value and at least 810 at
+every Excel `#NUM!`, but replays of Excel's normal tiny quantiles take up to 38,002 (s1 A82, Excel 5.3E-214), and in
+the subnormal-y class Excel's 1s and `#NUM!`s overlap in every replay count, so no division or iteration budget in this
+replay is Excel's (docs/research/t4865/replay_all.txt).
+At a shape above 1E5 the flipped tail's y follows the same rule: `BETA.INV(1-1E-12,2E5,0.1)` = 1 (y about 3E-126), and
+`BETA.INV(1-1E-12,2E5,1E-3)`, `BETA.INV(1-1E-8,1E6,0.01)`, `BETA.INV(1-1E-6,1E6,1E-3)` and both BETAINV forms are
+`#NUM!` (y underflows); `BETA.INV(1-1E-9,10,0.03,3,5)` = 5 (probes/t4865-beta-inv-huge-alpha-near-one, excel-graph).
+Evidence: probes/t3351-beta-inv-p-near-1 (254 cells: alpha 0.5, 2 and 10, beta 1E-3 to 1, p = 1 - 1E-6 to 1 - 1E-16,
+the underflow boundary at beta 0.03 in A197-A214 with the lower-tail mirror in column B and alpha 10 in C197-C204, p
+at or below 1/2 in D197-D210), probes-numeric/t3351-beta-inv-sweep (200 points, seed 3351), probes-numeric/
+t3566-beta-inv-tiny-shape-and-range, accuracy/BETA.INV/s1 and BETAINV/s1 (excel-graph)
+Ours: until T-3351 every quantile at an end of the doubles in (0, 1) was `#NUM!` (statrs' search stopped near y = 1E-17
+whatever the true y, and the refinement on the upper tail landed on 1). Since T-3351, when the upper-tail search at p
+above 1/2 rounds to 1, the flipped tail is solved on the search's own kernel (`beta.rs` `upper_quantile_near_one`) and
+the answer is 1 - y for a normal y; a y of 0 or a subnormal one stays `#NUM!`, as before (no threshold chosen, so no
+fit). The 8 points above where Excel is 1 at such a y, the two inconsistent classes and the lower-tail mirror stay as
+they were: `#NUM!` (T-4865). At a shape above 1E5 y is T-1538's `beta_lower_crossing` instead, which matches the
+t4865 probe at all 8 cells.
+Status: VERIFIED (excel-graph) for the normal-y rule and the shape above 1E5; the reason for the `#NUM!`s UNVERIFIED
+(T-4865 blocked, time-boxed)
+Tasks: T-3351, T-4865
 
 ## BINOM.DIST's pmf at k = 0 is #NUM! when p = 1 (T-2435)
 Rule: `BINOM.DIST(0,n,1,FALSE)` and `BINOMDIST(0,n,1,FALSE)` are `#NUM!` from one trial on, while the
@@ -6980,7 +7571,7 @@ classes (A123 is listed separately after them), all where the quantile is at or 
   holds only for p up to 1/2.
 - A123 (`BETA.INV(0.999999999999999,6.87566761020923,0.991674132119787)`) is not in the first class: its math
   0.99999999999999989157 rounds to 1 - 2^-53, so Excel's 0.9999999999999999 is the correctly rounded quantile and only
-  the engine's `#NUM!` near 1 fails (T-3351).
+  the engine's `#NUM!` near 1 failed; it matches since T-3351 ("BETA.INV where the quantile rounds to 1").
 - With either shape 2.22507385850721E-308 (DBL_MIN), Excel is exactly 0.5 at p from 0.0023 to 0.82 (A115, A118, A125,
   A128, A138): the midpoint of [0, 1], as at alpha 1E-300 in "BETAINV is #NUM! where its quantile underflows", here
   also for a tiny beta and for p below 1/2.
@@ -6988,9 +7579,9 @@ classes (A123 is listed separately after them), all where the quantile is at or 
   math is exactly 1; A180, A181, A187, A188, A190, A191, A192, A193, A194, A196, A197, A198). Every one has alpha above
   sqrt(DBL_MAX): see "BETA.INV is #NUM! once the square of AS 109's first shape overflows (T-3862)" below.
 Evidence: eval/accuracy/tables/BETA.INV/s1 (oracle and 50-digit math sidecars; `rustsheet-eval accuracy`)
-Ours: `#NUM!` in the first three classes and, since T-3862, in the fourth
+Ours: `#NUM!` in the first three classes (A123 matches since T-3351) and, since T-3862, in the fourth
 Status: VERIFIED (excel-graph) for the cells; the reasons (flip, start) UNVERIFIED
-Tasks: T-3578, T-3351 (classes 1 and 2), T-4663 (class 3, after T-2808), T-3862 (class 4)
+Tasks: T-3578, T-3351 (A123), T-4865 (classes 1 and 2), T-4663 (class 3, after T-2808), T-3862 (class 4)
 
 ## BETA.INV is #NUM! once the square of AS 109's first shape overflows (T-3862)
 Rule: BETA.INV and BETAINV are `#NUM!` exactly where fl(pp*pp) overflows a double, pp AS 109's first shape after its
@@ -7010,7 +7601,7 @@ stays the second shape, is a number on both sides (5.85776711227727E-157) and so
 - It explains all 12 `#NUM!` cells of the Gate A class "`#NUM!` at a huge alpha" (alpha 5.1E+161 to 4.1E+296) and 12
   of the 13 BETAINV/s1 cells (A180:A190, A193; alpha 4.2E+154 to 1.1E+303, beta from 2E-266 to 2.7E+221, so also
   where the true quantile is interior, A188 at about 0.989, or tiny, A187 and A189 near a/(a + b)).
-- Not this rule: with beta above 1 Excel is `#NUM!` far lower. `BETA.INV(1E-10,a,10)` is 0.9999999999999956 at
+- Not this rule: with beta above 1 Excel is `#NUM!` far lower, where Loader's n - k vanishes (T-4713, the next entry). `BETA.INV(1E-10,a,10)` is 0.9999999999999956 at
   a = 1E+16 and `#NUM!` from 1E+18 (where AS 109's start pp/(pp + qq exp(2w)) rounds to 1), but `BETA.INV(0.1,a,2)` is
   `#NUM!` from 1E+16, where that start is 0.9999999999999996 and the quantile about 1 - 3.9E-16, so "the start rounds
   to 1" is refuted as the rule; BETAINV/s1 A179 (alpha 1.55E+145, beta 4.2E+128) is in this class (T-4713).
@@ -7025,9 +7616,77 @@ before each fill (task file). Fills with `BETA.INV(0.1,alpha,1E+100)` at those a
 retries exhausted).
 Ours: `#NUM!` from the cut since T-3862 (functions/statistical/beta.rs `first_shape_square_overflows`); below it
 1 - 2^-53 where Excel has 0.999999 or 1 - 1/e, and 5.888648679911079E-157 where Excel has 5.85776711227727E-157
-(T-4700); a number where beta is above 1 (T-4713).
+(T-4700); `#NUM!` where beta is above 1 and Loader's n - k vanishes since T-4713.
 Status: VERIFIED (excel-graph) for the cut; the expression that squares pp UNVERIFIED
 Tasks: T-3862, T-4713, T-4700
+
+## BETA.INV's search at a tiny alpha and a large beta: Cephes' exact 0 and 1 (T-4866)
+Rule: Excel's BETA.INV is the root at a tiny alpha and a large beta too, where the upper tail it crosses is
+far below 1/2. `BETA.INV(1-1.10491974750915E-14,0.0050070029475036,171.171095424379)` is 0.12939405629301814
+in Excel, and the 50-digit root agrees.
+- This is our own failure, not an Excel quirk. The point is on bratio's direct bgrat branch (a0 = 0.005 < 1,
+  b0 = 171 > 15, x0 < 0.1), which `bratio::ported_tails_with` ports only at a0 = 1/2. The search then fell back to the
+  Cephes kernel (`incomplete_beta::search_tails`), whose tails are exactly 1 and 0 from x = 1E-4 to 0.2 there.
+  The true upper tail is 3.7E-4 at x = 0.01 and 1.1E-14 at the root. So the crossing stopped at
+  2.925059559426143E-5, the edge of that band.
+- Ours since T-4866: where Cephes' tails are an exact 0 and 1 on that branch, the search takes bratio's direct
+  bgrat, `bgrat_increment` (the double-double increment L140 bup + bgrat already takes). That gives
+  0.1293940562930182, 2 ulp from Excel. Elsewhere Cephes stays. Taking bgrat at every point of the branch moves 6
+  other cells of the same sweep further from Excel (A143 from Excel's bits to 16 ulp; A157, A164, A168, A176, A178)
+  and 3 nearer, so it was not taken. Over the 182 BETA.INV/BETAINV cases in eval/ only A200 moves.
+- BETA.DIST's cdf at these points still takes the Cephes kernel: ours is exactly 1 at x = 0.129 and 0 at x = 1E-5
+  (the math is 1 - 1.1E-14 and about 0.97). Excel's value there is UNVERIFIED (T-5066). Moving BETA.DIST onto direct
+  bgrat in general is T-3933 (deferred by decision 0267).
+Evidence: probes-numeric/t3351-beta-inv-sweep A200 (excel-graph; T-3351's fresh sweep)
+Ours: `bratio::search_direct_bgrat` inside `beta_search_tails` (functions/statistical/bratio/mod.rs)
+Status: VERIFIED (excel-graph) for BETA.INV; BETA.DIST UNVERIFIED
+Tasks: T-4866, T-3351, T-3933, T-5066
+
+## BETA.INV at beta 1 caps at 0.999999 where its quantile rounds to 1 (T-4958)
+Rule: at beta = 1 and p up to 1/2, BETA.INV(p, alpha, 1) (and BETAINV) is the closed form p^(1/alpha) while that is
+below 1, and 0.999999 (1 - 1E-6) once it rounds to 1, not 1 - 2^-53 and not `#NUM!`.
+- probes/t4713-beta-inv-beta-above-1-cut F1:F17, `BETA.INV(0.1,a,1)`: for a = 1E+14 to 3.16E+16 (F1:F11) Excel is the
+  closed form, down to 0.9999999999999999 at F10 and F11 (ln(0.1)/a = -1.3E-16 and -7.3E-17, both above half an ulp
+  of 1). For a = 5.62E+16 to 1E+18 (F12:F17, ln(0.1)/a = -4.1E-17 and smaller) the closed form rounds to 1 and Excel
+  is 0.999999.
+- Above p = 1/2 the flip gives 1 instead ("BETA.INV where the quantile rounds to 1 (T-3351)"). The same 0.999999 is
+  T-4700's value at a tiny beta and a huge alpha ("BETA.INV is #NUM! once the square of AS 109's first shape
+  overflows (T-3862)", "Below the cut"). AS 109's start for a second shape of at most 1, 1 - 2/(t + 1), is within
+  1E-6 of 1 at every one of these alphas, so the value looks like a start clamped at 1 - 1E-6 that the search cannot
+  move once the root rounds to 1. That reading is UNVERIFIED, and it does not explain F1:F11, whose start is clamped
+  as well. At small alphas with a tiny beta, Excel's rounded-to-1 quantile is 1 - 2^-53 or `#NUM!` (T-3351's
+  entry), so the cap is not a general rule for a quantile that rounds to 1.
+Evidence: probes/t4713-beta-inv-beta-above-1-cut F1:F17 (excel-graph, 2026-11-07)
+Ours: `shape_one_quantile_cap` (functions/statistical/beta.rs), only at beta = 1, where it is evidenced
+Status: VERIFIED (excel-graph) for beta = 1; the mechanism and other shapes UNVERIFIED (T-4700)
+Tasks: T-4958, T-4713, T-4700
+
+## BETA.INV and BETA.DIST's density are #NUM! where Loader's n - k is not positive (T-4713)
+Rule: with both shapes above 1, BETA.DIST(x, a, b, FALSE) is `#NUM!` at every x where its Loader counts
+k = fl(a - 1), n = fl(fl(a + b) - 2) leave nk = fl(n - k) at 0 or below (its LN(nk) has no value); BETA.INV and
+BETAINV are `#NUM!` at every p on exactly those shapes after AS 109's flip ((alpha, beta) for p up to 1/2,
+(beta, alpha) above it), as their Newton step takes that density. nk only vanishes from a = 2^53, where a - 1 and
+a + b - 2 round onto the same double (or past each other: nk = -4 at `BETA.INV(0.4,2.23872113856835E+16,1.5)`), so
+the cut in alpha is ragged: `BETA.INV(0.1,a,2)` is `#NUM!` at a = 9.12E+15, 9.33E+15 and from 1E+16 to 1.78E+16 but
+a number at 9.55E+15, 9.77E+15 and 1.82E+16 to 1.91E+16, row for row where `BETA.DIST(1-2^-51,a,2,FALSE)` is.
+- Evidence: probes/t4713-beta-inv-cut-pieces (H1:H41 against K1:K41, alpha 10^15.9 to 10^16.3 by 10^0.01; A to D
+  above the first `#NUM!`), probes/t4713-beta-inv-beta-above-1-cut (40 rows a decade at four (p, beta) pairs, the
+  flipped p = 0.9, beta = 1), probes/t3862-beta-inv-sqrt-dbl-max G1:H25 and t3862-beta-inv-huge-alpha D1:D11
+  (excel-graph, 2026-11-07; predictions committed before each fill, task file). nk at or below 0 predicts `#NUM!` on
+  469 of the 469 BETA.INV cells of these cases with both shapes above 1 below the sqrt(DBL_MAX) cut, and on 41 of 41
+  densities; Gate A accuracy/BETAINV/s1 A179 (alpha 1.55E+145, beta 4.23E+128: fl(a + b) = a) is the same rule.
+- Refuted on the way: the true quantile's 1 - x below a threshold (`BETA.INV(0.1,a,2)` is the same double
+  1 - 2^-51 at a = 8.4E+15, 9.4E+15 and the `#NUM!` 1E+16); the start rounding to 1 (T-3862).
+- The flipped orientation is Excel's: `BETA.INV(0.9,a,2)` (k = 1, nk about a) is a number at every a from 1E+15 to
+  1E+16, where the unflipped counts vanish on most rows.
+- In passing: below the cut Excel's BETA.INV at these shapes is often AS 109's start pp/(pp + qq exp(2w)) unmoved,
+  bit for bit (every row of t4713-beta-inv-beta-above-1-cut A and C), and the moved root elsewhere (most of B and D);
+  ours is the crossing, within an ulp or two near 1. `BETA.INV(0.1,a,1)` is 0.999999 from a = 5.6E+16 (F12:F17, the
+  1 - 1E-6 cap T-4700 has at a tiny beta) and `BETA.INV(0.9,1E+16,2)` is 1 where ours is `#NUM!` (E41): T-4958.
+Ours: functions/statistical/loader.rs `beta_density_counts_vanish`, taken by beta.rs's density and by
+`beta_quantile` (`newton_density_vanishes`).
+Status: VERIFIED (excel-graph)
+Tasks: T-4713, T-4958
 
 ## F.INV.RT saturates at 3.696066238512854E+150/df1 in the far tail (T-2435)
 Rule: for a probability far in the tail and a df2 below 2, Excel's F quantile search stops at a
@@ -7291,14 +7950,26 @@ probes/t2435-dist-extremes A100:A102. A workbook of 34 cdf and density cells at 
 A cdf that is not 0 keeps its value: at a shape of 1E+300, x = 1E+300 is 0.5 (probes/incomplete-gamma-cap E3), and a huge
 x at a huge shape keeps its density of 0 (`GAMMA.DIST(1E+307,1E+10,0.5,FALSE)` is 0, t2435-dist-extremes A31).
 `GAMMA.DIST(1E+10,1E+10,1,TRUE)` is Excel's 0.5000013298076014 since T-1891 (Temme's expansion).
-Ours: rule 1 exactly (T-3316). For rule 2 the engine keeps T-3271's shape cut of 1.85E+76 for the cdf of a positive x and,
-since T-3316, for the density at an x/beta below 1 as well; it replaces T-3271's (shape - 1)·(-LN(x/beta)) density cut,
-which the fit audit refuted. Below 1.85E+76 the engine is 0 where Excel is `#NUM!` (and, from there up, `#NUM!` where Excel
-is 0 at beta = 1).
+Rule 2's edges, from the same cells (113 probed points at a shape from 1E+40, T-4975 audit 2):
+- at an x/beta of 1 or more Excel is 0 at all 16 probed points (shapes 1E+56 to 1E+200), so the `#NUM!` needs
+  x/beta below 1 in the cdf as well as in the density;
+- below 1E+56 every probed point is 0 (6);
+- at an x/beta below 1 Excel is still `#NUM!` at 1.853468349736796E+76 (x/beta 2E-10: gen-m9/40425341c5034eed A265,
+  `GAMMADIST(2,123456789.123*42^42,10000000000.5,TRUE)`) and 0 at 1E+100 and 1E+200 (x/beta 1E-100: fit-audit A36,
+  A39), so the upper edge is in (1.8535E+76, 1E+100), unprobed inside;
+- inside [1E+56, 1.85E+76], at an x/beta below 1, 47 of the 89 points are `#NUM!` and 42 are 0, unexplained.
+Ours: rule 1 exactly (T-3316). For rule 2 the engine returns `#NUM!` for a computed 0 of the cdf or the density at an
+x/beta below 1 and a shape in [1E+56, 1E+77] (`HUGE_SHAPE_NUM_BAND`, T-4975 audit 2; 1E+77 is a choice inside the
+upper bracket). That is right at 72 of the 114 points (the 113 probed and gen-m9 A265): all 24 outside the band or at an
+x/beta of 1 or more and 48 inside it, where Excel's 0 points stay wrong until T-3855 finds the arithmetic. T-3271's
+interim cut, `#NUM!` for every cdf of a positive x from 1.85E+76 up and for the density there at an x/beta below 1, was
+right at 60: it gave 0 at all 87 points of the band below 1.85E+76 and `#NUM!` at the 9 zeros past it or at an
+x/beta of 1 or more (fit-audit A28, A29, A32, A34:A39). It had replaced T-3271's (shape - 1)·(-LN(x/beta)) density cut,
+which the fit audit refuted.
 Status: VERIFIED (excel-graph) for rule 1, its cut pinned to 2 parts in 1E+5; rule 2 VERIFIED at the probed cells, its
 mechanism UNVERIFIED
 Tasks: T-2435, T-1891, T-2982, T-3271, T-3316, T-3530, T-3855
-Implemented in: `gamma_dist_of` (rule 1), `huge_shape_num_error` and `HUGE_SHAPE_CDF_CUT` (rule 2, interim)
+Implemented in: `gamma_dist_of` (rule 1), `huge_shape_num_error` and `HUGE_SHAPE_NUM_BAND` (rule 2, interim)
 (crates/rustsheet-engine/src/functions/statistical/gamma.rs)
 
 ## LINEST and LOGEST: shapes, one point, collinear columns, exact fits and check order (T-1741)
@@ -7975,9 +8646,12 @@ Rule (probes/t2475-stat-subexpressions, excel-graph, 2026-10-24; each from the p
   `COMBINA(-0.5,-0.0001)` is 1 (P!A35, 11eb3ab4f4f8104c A90), so number truncates toward zero, but with a number of 1 or
   more a number_chosen in (-1, 0) is `#NUM!` (`COMBINA(7,1-1.005)`, gen-m5 c688ca172fe533dc A118; `COMBINA(24,-0.0001)`,
   gen-m6 44194b2fefa30de2 A222; `COMBINA(16,SIN(..))`, `COMBINA(10,TAN(..))`, gen-m5 989a3d6036b5fef3 A210, gen-m6
-  9e6a1b733ee1e1e0 A124). Ours truncates number_chosen only when number truncates to 0 and floors it otherwise; why
-  Excel lets the n = 0 case through is UNVERIFIED (no cell has a number in (0, 1) or a number_chosen of -1 or less with
-  n = 0).
+  9e6a1b733ee1e1e0 A124). VERIFIED by probes/t2789-combina-number-chosen (excel-graph, T-2789): when number truncates
+  to 0 (any number in (-1, 1)), number_chosen truncates toward zero too, so `COMBINA(0,-0.0001)`, `COMBINA(0.5,-0.5)`,
+  `COMBINA(-0.5,-0.5)` and `COMBINA(0,-0.5)` are 1 while `COMBINA(0,-1)`, `COMBINA(0,-1.5)`, `COMBINA(0.5,-1)` and
+  `COMBINA(-0.5,-1.5)` are `#NUM!`; with number 1 or more number_chosen floors, so `COMBINA(1,-0.5)`,
+  `COMBINA(1,-0.0001)` and `COMBINA(2,-0.5)` are `#NUM!`. COMBIN has no such leniency: every negative number_chosen,
+  even -0.0001 with number 0, is `#NUM!`. `fn_combina` matches all 48 probe cells.
 - T.TEST and TTEST: a first sample that is itself an error value comes before a bad tails or type, and before the
   other arguments' errors: `T.TEST(<#VALUE!>,42,1,-1)` is `#VALUE!` (P!A58, 11eb3ab4f4f8104c A169) and
   `TTEST(<#VALUE!>,<#REF!>,2,<#REF!>)` is `#VALUE!` (P!A222, 5cebac1f02bf30f2 A311). A blank one-cell first sample does
@@ -8120,6 +8794,15 @@ Region (T-3386, decision 0311: the R3-marked eval cells, each with its committed
 - gen-m9/7980ffb6095a340d: `TINV(1E-200,1E+10)` at A160 (Excel 58.193, math 30.2285087720; the engine is 3.7E-10
   relative off, inside ε).
 
+Region (T-5089, owner ruling of 2026-11-08 recorded in decision 0351's addendum): BETA.INV(p, alpha, beta) and
+F.INV(p, d1, d2) at p < 1E-15 in either tail, not only below 1e-150 in the left tail. Where the engine's
+reproduction of Excel's AS 109 stop is more than G = 1e-4 relative off the converged crossing, the engine returns the
+crossing, the 50-digit math within ε (beta.rs `BETA_QUANTILE_STATRS_P_MIN`, fisher.rs `F_QUANTILE_REFINE_P_MIN`).
+This holds even where that stop is Excel's value bit for bit: `BETA.INV` at accuracy/BETA.INV/s1 A169 stops at
+Excel's 2.657957500039701E-25 and the engine returns the math 6.89E-21; probes/t4974-beta-inv-dbl-min-residual
+H7 and C7 are the same. Excel's errors are still matched (an unconverged deep-tail search is `#NUM!`), and the
+floor stop that is Excel's value is kept below the root (statistics.md "BETA.INV and F.INV in the deep tail").
+
 Not marked, and why (T-3386):
 - t1531 A84 and A108, `CONFIDENCE.T(1E-300,1,100000)` and `CONFIDENCE.T(1E-300,1,100001)` (Excel 0.2502, engine
   0.11762, which is T.INV.2T's math divided by √n): CONFIDENCE.T had no Gate A definition then, so the cells had no
@@ -8200,7 +8883,7 @@ Status: MATH-OVER-EXCEL (decision 0188)
 Ours: the engine returns the math within ε at every marked point (Gate A's R3 check). Such cells stay F
 lines of eval/baseline and count as passing in Gate B and the R1(c) rows (T-3359, T-3427). The math path
 keeps directive 5's caps.
-Tasks: T-3358, T-3359, T-3363, T-3386, T-3337
+Tasks: T-3358, T-3359, T-3363, T-3386, T-3337, T-5089
 
 ## GAMMA.INV at a huge shape, closed-form branch: Excel is about 2.7e-4 off, RustSheet returns the math (MATH-OVER-EXCEL)
 Rule: on the Wilson-Hilferty closed-form branch of "GAMMA.INV and CHISQ.INV at a huge shape" above (the gamma density
@@ -8639,3 +9322,196 @@ probes/t1942-ztest-numeric-edges (excel-graph, 2026-11-07): `Z.TEST({1,2},1,2^-1
 doubles (n = 4, 5, 9; A8:A10), as is the 2024*2^-1074 control at n = 4: Excel has no `#DIV/0!` for an underflowing
 sigma/sqrt(n), and the engine's fork guard for it was removed. 36 held-out cells (random data, n not a perfect square, sigma
 given and omitted, x zero and not) match the z formula of "Engine (T-1929)" at the p level; in plain doubles `fl(mean-x)*sqrt(n)/sigma` and `(mean-x)/(sigma/sqrt(n))` differ in z on 15 of the 36.
+
+## Standardized moments use stored x87 operations (T-4328)
+Rule: SKEW, SKEW.P and KURT behave as if every operation were an x87 operation in extended precision stored to a
+double: each sum, difference, product, quotient and square root rounds first to a 64-bit significand and then to a
+double (numbers.md "Division rounds twice"). The order is a two-pass mean and m2 = Σ(x - mean)² in input order,
+s = sqrt(m2/d) (d = n - 1 for SKEW and KURT, n for SKEW.P), z = (x - mean)/s, the cube (z·z)·z and the fourth power
+(z·z)·(z·z) (square and square, not ((z·z)·z)·z), summed in input order. SKEW is (n/((n-1)(n-2)))·Σz³, SKEW.P Σz³/n and
+KURT (n(n+1)/((n-1)(n-2)(n-3)))·Σz⁴ - 3(n-1)²/((n-2)(n-3)), the bias factor formed before it scales the sum. Two effects
+are visible, not only last-digit:
+- The twice-rounded root: `SKEW({1E-15,1,2})` (variance 0.999999999999999, whose twice-rounded root is
+  0.9999999999999996 against 0.9999999999999994 once rounded) is 2.4980018054066022E-15 (gen-m9/d208bbafc3bc1997 A262,
+  probes/t2475-stat-subexpressions P!A520); the nearly symmetric data amplifies the one-ulp root.
+- The power order: in `KURT({0.1,42,123456789.123,0.1})` z = 1.4999999999999234 and z² rounds twice to one ulp below the
+  once-rounded square; the bias subtraction magnifies it and KURT is 3.9999999999979536 (gen-m9/27601819397dd56e A200).
+  `KURT({0.2,7,3.14159,-2.5})` is -0.7628272385808703 (the numbers of gen-m9/7bd219ec0c0c5e22 A279) and a 9-value KURT
+  0.734384233823282 (gen-m9/c2974c061384fdd9 A55); both separate (z²)² from the chained product.
+Hold-out and fresh sweep (T-4328, decision 0188 R4): the fit lab's `moments-skew`, `moments-skew-p` and `moments-kurt`
+fits (rustsheet-fitlab, `rustsheet-fitlab-holdout/v1` split) accept the rule at 100% bit-exact on train and test for all
+three, against 19.0%, 14.8% and 19.4% test bit-exact for the correctly rounded moment; Gate A's fresh log-uniform batches
+eval/accuracy/tables/{SKEW,SKEW.P,KURT}/r4-T-4328 (360 points, filled after the freeze) are 360 of 360 bit-exact. An
+external replay (reported with the fix, not re-run here) also ruled out compensated summation, a reciprocal
+normalization, VAR/STDEV's one-pass variance, raw moments and an unstored extended accumulator.
+Evidence: gen-m9 and probes/t2475-stat-subexpressions (excel-graph); the eval cells of KURT (295 of 295) and SKEW
+(335 of 335).
+More cells exact under the rule: KURT(-0.0001,100,2,0.1,42) 1.51497677145435 (gen-m9/27601819397dd56e A108),
+`KURT({1,..,10})` -1.2000000000000002 (gen-m9/a013a45a8fbcab4f A2, a54c738c697617c3 A41) and KURT(3,5,2,8,9,4,7,1,TRUE)
+-1.4331834319526635 (probes/stats-evidence-floor-t1623). T-4975 (docs/research/excel-parity-findings-2026-11-07.md
+item 2: 465 cached calls, train/holdout by case and cell hash) reached the same rule independently.
+Ours: as Excel since T-4328 (`standardized_moment` in count_and_average.rs, shared by `fn_skew`, `fn_skew_p` and
+`fn_kurt`; tests in test_fn_moments.rs). The zero or overflowing m2 stays `#DIV/0!` ("Overflowing squares (T-2432)").
+Status: VERIFIED (excel-graph)
+Tasks: T-4328, T-4975
+
+## The PR 4002 validation probes (T-4974)
+Rule: the 24 probe groups PR #4002 proposed for the 2026-11-07 Excel-parity fixes (probes/t4974-*, excel-graph, 2026-11-07)
+settle these points; each compares Excel with that PR's prototype prediction.
+- SKEW, SKEW.P and KURT on adversarial data (t4974-moments-x87-adversarial, 204 cells): Excel equals the stored-x87 rule bit
+  for bit in every cell ("Standardized moments use stored x87 operations (T-4328)"), and so does ours.
+- LOGNORM.DIST's density holdout (t4974-lognorm-density-holdout, 148 cells): Excel equals the prototype's four-term chain in
+  every cell; ours misses 17 cells visibly until that fix lands.
+- CHISQ.INV.RT above .9999 (t4974-chisq-inv-rt-q-to-p-switch): at df 3, Excel's `CHISQ.INV.RT(p,3)` equals
+  `CHISQ.INV(1-p,3)` bit for bit for every p from .9999 + 2E-6 to .99999 (A2:A33 = G2:G33) and differs from it at .9999
+  itself (A1 vs G1). The case has no `CHISQ.INV(1-p,3)` cell for the rows within 4 ulps of .9999 (A34:A41), so how
+  Excel's RT relates to it there is not measured; the prototype matches A34:A37 (below .9999) and misses A38:A41
+  (above). Whether the cut is `<=` or `<`, and which solver runs on each side, is for T-4996 to probe.
+- BETA.INV at p near DBL_MIN (t4974-beta-inv-dbl-min-residual): Excel does not flush the first residual. The quantile is
+  smooth through DBL_MIN (A6 `BETA.INV(2.22507385850721E-308,16.0270968311551,..)` 3.6855664841262965E-20, A7 at
+  2^-1022 3.685566484126281E-20) and its forward CDF (K6, K9) is 3.9074971845766525E-308, not 0. This falsifies the
+  prototype's collapse to the start value.
+- BETA.INV round trips at large shapes (t4974-beta-inv-large-shape-round-trip, column F = BETA.INV(BETA.DIST(x)) - x):
+  F is nonzero in 10 of 123 rows (33, 34, 52, 70, 71, 73, 86, 88, 105, 106) and 0 in the others, including both t3443
+  audit rows (F122, F123). That the nonzero rows are early AS 109 iterates is a hypothesis for T-4994.
+- T.DIST.RT at df 1000 (t4974-t-dist-df1000-central-endpoint): `T.DIST.RT(0.5,1000)` is 0.30859254041693746 and
+  `T.DIST.RT(0.8513,1000)` 0.19740326475142156, as the earlier probes gave.
+- The other groups disagree with the prototype only in some cells and settle no rule here: the gamma small-x prefactor
+  (55 cells visibly off) and far upper tail (17), Loader's store chain (3), BETA.INV's tiny-shape `#NUM!` boundary (80) and
+  endpoint saturation (29), and F.INV's tiny tail (9; `F.INV(1E-300,11,3)` and `F.INV(1E-250,11,3)` are `#NUM!` in Excel).
+  What Excel does there is for the owner tasks below to record when they fit it; the cells are the evidence. Where
+  ours is visibly off in these groups (LOGNORM.DIST 17 cells, the gamma, Loader and Student-t groups), R1(c) leaves the
+  cells out as Phase 1b evidence (ours and Excel both within 1E-9 of the 50-digit math, decision 0227), so they need no
+  owner task and stay known failures; only the 325 cells listed in T-4994 to T-4998 are counted.
+Evidence: probes/t4974-* (excel-graph, 2026-11-07). The visibly-off cells against ours are owned by T-4994 (BETA.INV),
+T-4995 (F.INV), T-4996 (CHISQ.INV), T-4997 (IRR) and T-4998 (T.INV.2T).
+Ours: matches every SKEW/SKEW.P/KURT cell; the other groups are known failures (eval/baseline/probes.txt). Since
+T-4975 its models miss 131 cells that main's kernels passed (decision 0351 lists them by group with their ulp; T-5089
+owns them): the AS 109 groups (as109-accuracy-exponent 42, large-shape-round-trip 28, f-inv-back-transform 17,
+tolerance-cap 8, t-inv-* 7) and 29 cells in the CHISQ, gamma, LOGNORM and T.DIST groups.
+Status: VERIFIED (excel-graph)
+Tasks: T-4974
+
+## BINOM.DIST's pmf stores its deviance subtractions on bd0's log form (T-4975)
+Rule: in BINOM.DIST's own interior pmf (BINOMDIST's, and BINOM.DIST.RANGE's one-point range), where either of Loader's
+two deviances bd0(k, np), bd0(n-k, nq) takes its log form, Excel stores R's sequential subtractions
+`lc = fl(fl(S - bd0(k, np)) - bd0(n-k, nq))` (S the stirlerr sum, stored) to doubles before adding the extended -lf/2
+and calling EXP. `BINOM.DIST.RANGE(7,1E-20,6)` is 6.999999999999857E-120 (gen-m9/9cca17438a7e6f8a A360), where the
+unstored extended chain was 154 ulp high (7.000000000000068E-120). The store follows bd0's existing x87 branch
+decision, not a binary64 one: `BINOM.DIST(2,10,0.3,FALSE)` sits on the series side of the x87 cut only and stays
+0.23347444050000005 unstored (storing it there moves it off by one ulp). The scaled callers keep the extended chain:
+BETA.DIST's density and NEGBINOM.DIST's pmf.
+Fit (literal cells of probes-numeric t2513-r3-binom-pmf-a/-hold/-n, t2513-verify-r3-binom-pmf-h,
+t2146-binom-negbinom-pmf-fresh, t2145-binomial-sweep, t2145-binom-range-sweep, t3352-binom-negbinom-sweep,
+m9-legacy-binomdist; exact / within 4 ulp / within 15 digits):
+
+| candidate | BINOM.DIST (13,324) | BINOM.DIST.RANGE (790) |
+|---|---|---|
+| extended chain (before) | 4,315 / 9,811 / 11,062 | 591 / 726 / 762 |
+| store X = fl(-bd0p - bd0q) only | 4,255 / 9,700 / 10,993 | 591 / 723 / 752 |
+| per-branch store, unstored S | 4,863 / 10,305 / 11,365 | 621 / 743 / 770 |
+| **both subtractions stored when either bd0 is log** | 5,039 / 10,408 / 11,445 | 620 / 743 / 770 |
+| both stored always (series too) | 5,099 / 10,412 / 11,456 | 620 / 743 / 770 (breaks the series control) |
+
+The research replay (findings item 3, fixed train/holdout of 2,251 interior pmfs) gave 228/1117 → 469/1117 (train) and
+242/1134 → 471/1134 (holdout) exact.
+Evidence: the cells cited (excel-graph).
+Ours: `LoaderExponent::{Probability, ScaledProbability}` and `Bd0Branch::store` in functions/statistical/loader.rs,
+selected in binom.rs, since T-4975.
+Status: VERIFIED (excel-graph) for the cells cited; the rule is a structural fit (bit-exact on about 38% of the pmf
+cells)
+Open (T-5089 measurement, 2026-11-08): against main's extended chain this store loses 392 probes-numeric BINOM.DIST
+cells while gaining 1,116. The lost cells are dense p-sweeps of a few (k, n) clusters of t2513-r3-binom-pmf-a/-hold/-n
+(`BINOM.DIST(3,10,p≈0.6248)` loses 83 of 96), while other clusters on the same branch pair go the other way ((5,16) gains
+71 of 96). Of about 60 store and rounding variants scored on the 12,745 interior oracle pmfs (572 (case, k, n)
+clusters), none separates the two sets by the x87 or binary64 cut, n, |exponent| or p; by cluster the store beats
+the extended chain 225 to 14. Storing lf as well where k's own bd0 is on its log form nets +871/−465 probes-numeric
+but +8/−5 gated cells, almost all from one sweep, so it is not shipped. The ten t4974-binom-loader-store-chain cells
+#4087 lists (B54, B57, B62, B63, B65–B70) are one-point ranges whose bd0 sits exactly on the cut |k−np| = 0.2(k+np);
+they stay 3–20 ulp off under every store variant, so the gap is bd0's series arithmetic at v = 0.2 (T-2586), which is
+also where the mirrored-range asymmetry comes from, not the range summation.
+Tasks: T-2146, T-4352, T-4975, T-5089
+
+## LOGNORM.DIST's density is a TwoSum chain of its negative log (T-4321)
+Rule: LOGNORM.DIST(x, mean, sigma, FALSE) accumulates the negative log density in a fixed order as a compensated
+(TwoSum) chain, and adds the low-order residuals back with the wrong sign:
+- d = LN(x) - mean (Excel's LN, stored x87 subtraction);
+- half = fl(fl(fl(d·d)/fl(sigma·sigma))·0.5), the squares before the quotient, each stored; where either square is not a
+  normal double, fl(fl(d/sigma)²·0.5);
+- (h, e1) = TwoSum(half, LN(sigma)), (h, e2) = TwoSum(h, ln √(2π)) with the correctly rounded 0.9189385332046728,
+  (h, e3) = TwoSum(h, LN(x));
+- the density is `EXP(-h)·(1 + (e1 + e2 + e3))` with Excel's EXP (the residual kept positive after the head is
+  negated), 0 where `half` overflows.
+So `LOGNORM.DIST(1,0,1,FALSE)` is EXP(-0.9189385332046728) = 0.39894228040143265, one ulp under 1/√(2π)
+(probes-numeric/m9-normpdf-lognorm-dist A4), `LOGNORM.DIST(40,0,0.5,FALSE)` 3.0218137820578166E-14
+(gen-m9/b4173fe25109a238 A48, 34 ulp off the true density), `LOGNORM.DIST(1,1,0.1,FALSE)` 7.694598626706419E-22
+(gen-m9/3a25a03eb94fcfbd A220), `LOGNORM.DIST(37.5,1.5,3.14159,FALSE)` 0.0026942612028169207 (85f48d5cdfb24555 A310)
+and `LOGNORM.DIST(10,0.2,3.14159,FALSE)` 0.010150659136505528 (caa1eed48b1883fe A250).
+Evidence: the cells cited (excel-graph); the research prototype (findings item 10) matched all 120 density-sweep cells of
+m9-normpdf-lognorm-dist and 200 Gate A points.
+Holdout (probes/t4974-lognorm-density-holdout, T-4975 follow-up): the rule as written is 140/148, not the prototype's
+reported 148/148. Seven of the misses are row 4, x = EXP(mean) as a 15-digit literal (d about 1E-15, half about
+1E-30), 1 ulp off (`LOGNORM.DIST(2.71828182845905,1,0.1,FALSE)` Excel 1.4676266317373963, ours ...965; C4, D4, E4, K4,
+L4, Q4, S4); the eighth is U8, `LOGNORM.DIST(2.718281828459045,1,0.5,FALSE)` (d = 0). There the result rests on the
+rounding of LN(sigma) + ln √(2π) + LN(x) alone, and no form tried fits that row and the rest: LN(2.5066282746310007)
+through Excel's LN is the same double as the constant; the one-ulp-lower 0.9189385332046727 fits the seven and loses
+166 others; summing half last, or `EXP(-((LN(sigma) + c) + LN(x)))` for a negligible half, fits the seven and loses
+A4, H4, I4, M4:P4 and T4; regrouping the residuals (`e1 + (e2 + e3)`, `e3 + e2 + e1`, `p + p·e`) changes nothing or
+loses. Main's closed form `EXP(-z²/2)/(x·√(2π)·sigma)` is right on C4, D4, K4 and L4 only.
+Ours: `lognormal_density` (functions/statistical/log_normal.rs) since T-4975.
+Status: VERIFIED (excel-graph)
+Tasks: T-4321, T-4975
+
+## LINEST and LOGEST solve by a centered, pivoted Householder QR (T-2690)
+Rule: Excel's least-squares results (LINEST, LOGEST, TREND, GROWTH) match a Householder QR far better than the normal
+equations; Microsoft documents LINEST as a QR since Excel 2003. The structural model that fits best:
+- With a constant, the x columns and y are centered on their double means (`Σv/n`); the first reflector is the column of
+  ones, then the x columns are pivoted, the remaining column of largest norm first (the later on a tie). The intercept
+  is `ȳ - Σ βj x̄j`: `LINEST(B2:B9,A2:A9)`'s intercept 0.0357142857142847 is that cancellation at 9.025 (linest-modes L1).
+- Each reflector is `v = x - alpha e1`, `alpha = -sign(head)·|x|`, `|v|² = new_head² + tail` with the unchanged tail
+  summed on its own, and each target reflects as `t -= s·v`, the dot `v·t` summed in row order from the head. Every
+  reflector, the constant's column of ones included, divides the doubled dot, `s = (2·(v·t))/|v|²`, and R's
+  diagonal is alpha. The two-point
+  `LINEST(A12:A13,B12:B13)` is still exactly 0.5 and -1.5 (linest-modes K134:L134). In an identity fit, where y as
+  reflected so far is the pivot column itself, the diagonal is the reflected head instead of alpha: Excel's
+  `LINEST(B2:B9,A2:C9,TRUE,TRUE)` with B among the x columns is exactly 0, 1, 0, 0 (linest-modes K85:N85); the alpha
+  diagonal gives 0.9999999999999999 and an intercept of 1.8E-15.
+  T-4975's first model (every reflector `(v·t)·(2/|v|²)`, the reflected pivot head as diagonal) missed one-variable fits
+  without a constant by 1 to 1022 ulp: `LOGEST(D2:D9,A2:A9,FALSE)` 1.9295282207785776 (ours ...778), the
+  t4590-growth-overflow Slope rows (`GROWTH({1.59162664037792E+91,...},{0.3,0.4,0.5},0.4,FALSE)`
+  4.0036392008717847E+121, ours ...2012E+121) and t4765-growth-factor-edges NoConst!A1, A4. The divided scale with the
+  alpha diagonal gives Excel's bits on all of them, on ironcalc TREND_GROWTH.xlsx E2:E4 (which no other form tried
+  fits), and keep t4222-regression-flag-ranges A51 (`LINEST` slope 1.2000000000000002 where `Σxy/Σx²` = 66/55 rounds
+  to 1.2), so Excel's no-constant slope is not `Σxy/Σx²`, correctly rounded or not. Measured on the full eval (T-4975
+  follow-up): +157 / -5 cells against the first model with the identity-fit exception (+162 / -7 without it, which
+  moves K85:N85 off); the same form in the constant's reflector too (shipped
+  after review, T-5089: one rule for every reflector rather than an exception kept for matching cells) adds 44
+  probes cells and Gate A LINEST/s1 A102, with 15 last-digit drifts inside the envelope, among them ironcalc
+  LINEST_LOGEST.xlsx D2:E2 and G2:H2; the alpha diagonal alone +90 / -31; the plain
+  `Σxy/Σx²` slope special case +39 / -10. Still off: ironcalc TREND_GROWTH.xlsx F2, F3, F6 (`TREND(A2:A6)`, 1 ulp,
+  Excel's bits under the first model), growth-modes K169 and t4222 B32.
+- Collinear columns (rest at most 1E-10 of the column's norm, carried over, unprobed: T-2569) are dropped with
+  coefficient 0, standard error 0, and the degrees of freedom count only the kept ones.
+- Statistics: ss_resid is the sum of squares of `Qᵀy` past the rank, ss_reg is ss_tot less it (linest-modes K12
+  167.60023809523813; the fitted part of `Qᵀy` gives ...238), r² = 1 - ss_resid/ss_tot, standard errors from the rows
+  of R⁻¹ and, for b, `var_y·(1/n + |R⁻ᵀx̄|²)`.
+Fit (bit-exact of 761 numeric Gate A points of accuracy/{LINEST,LOGEST,TREND,GROWTH}/s1, scored as literal formulas):
+normal equations (before) 251; centered QR, reflected diagonal, `2·d/|v|²`
+334; plus a ones reflector first and `d·(2/|v|²)` **413**; with the dot accumulated in an x87 register 358; with the
+x reflectors' alpha always positive 350; with the sign flipped only without a constant 378. The const=FALSE subset
+(205 points): normal equations 100, the kept model 120. One-variable evidence cells (python replay): the kept model fits
+linest-modes K134 and K183, LINEST_LOGEST.xlsx D2, G2 and G4 and growth-modes K6/K8 (the GROWTH fit); it misses
+linest-modes K1 (1.9976190476190474; every variant tried gives ...472, ...476 or ...478) and Gate A LINEST A184.
+(These counts predate the follow-up's divided scale; Gate A stays inside the envelope with it, and the known failures
+accuracy/LOGEST/s1 A98 and A110 come inside it.)
+Left open (the model's misses, Excel's arithmetic not identified): the noise coefficients of linest-modes K106:P107 (y in x,
+Excel 1.4E-16 where ours is 0 and F 3.1E+34 where ours is `#NUM!`); Gate A LINEST/s1 A184 (an intercept over x from
+1E-44 to 8.8E+33: Excel 5206016, one ulp of slope off the
+exact fit; ours 5201920, six ulp of slope off; outside the envelope).
+Evidence: probes/linest-modes, logest-modes, growth-modes, regression-trend (excel-graph); ironcalc-calc
+LINEST_LOGEST.xlsx and TREND_GROWTH.xlsx (Excel-cached); eval/accuracy/tables/{LINEST,LOGEST,TREND,GROWTH}/s1.
+Ours: `householder_qr` and `linear_regression` (functions/statistical/linest.rs) since T-4975; GROWTH keeps its
+product of exponential factors (trend.rs) on the new fit. `solve_system`, `invert_matrix` and `independent_columns` are
+gone.
+Status: VERIFIED (excel-graph) for the cells cited; the model is a structural fit, not Excel's code
+Tasks: T-2690, T-2006, T-2569, T-4975

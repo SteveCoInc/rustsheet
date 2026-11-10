@@ -1,12 +1,15 @@
 //! The gamma density, on the prefactor P and Q share ([`gamma_prefactor`]), and Excel's own form
 //! of it above the mode below shape 20 (T-3147).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 
 use super::super::loader::stirlerr_exact;
 use super::{
-    excel_ratio_exponent, gamma_prefactor, stirling_prefactor, Exponent, DIRECT_SHAPE_MAX,
-    NEAR_MODE, RATIO_FORM_MIN,
+    excel_ratio_exponent, gamma_prefactor, small_x_factors, stirling_prefactor, Exponent,
+    DIRECT_SHAPE_MAX, NEAR_MODE, RATIO_FORM_MIN,
 };
-use crate::x87_exp::{dd_div, two_sum};
+use crate::x87_exp::{dd_div, excel_exp, two_sum};
 use crate::x87_log10::ln_double_double_pair;
 
 /// The smallest shape below [`DIRECT_SHAPE_MAX`] at which the density above the mode takes Excel's
@@ -41,6 +44,17 @@ fn density_with(a: f64, x: f64, scale: f64, form: Exponent) -> Option<f64> {
     // the prefactor's y e^-y / x (gen-m9/ecc87f80077959e0 A261 `CHISQ.DIST(1.5,2,FALSE)`).
     if a == 1.0 {
         return Some((-y).exp() / scale);
+    }
+    // At a shape above 1 and y up to 1, Excel's three rounded factors, the power normalized
+    // before the shape over x and the decay (T-3219): `CHISQ.DIST(1E-10,8,FALSE)` is Excel's
+    // 1.0416666666145884E-32 (gen-m9/984cba67bbe6972b A49), 5 ulp from the prefactor's.
+    if form == Exponent::Excel {
+        if let Some(factors) = small_x_factors(a, y) {
+            let density = factors.leading() * a / x * excel_exp(-y);
+            if density.is_normal() {
+                return Some(density);
+            }
+        }
     }
     // Below shape 20, above the mode, Excel's density takes its large-shape ratio form too, with
     // the exact Stirling error (the asymptotic series of `stirling_correction` is 2E-13 off at a

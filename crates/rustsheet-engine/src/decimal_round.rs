@@ -14,6 +14,15 @@
 //!
 //! So `ROUND(1.005,2)` is 1.01 (1.00499999999999989… becomes 1.00500000000000 first) and
 //! `ROUNDDOWN(123456789.123,-5)` is exactly 123400000.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::float_cmp
+)]
+#![cfg_attr(test, expect(clippy::manual_midpoint))]
+// LINT-DEBT-END
 
 use crate::arithmetic::{flush_subnormal, TINY_SUBNORMAL_BELOW};
 use crate::constants::EXCEL_PRECISION;
@@ -190,12 +199,13 @@ fn round_digits(value: f64, num_digits: f64, mode: RoundMode, x87: bool) -> Opti
     Some(magnitude.copysign(value))
 }
 
-/// ROUND's and ROUNDDOWN's kept digits beyond this bound are converted to the nearest double: the
-/// x87 model of [`x87_decimal_to_f64`] was probed for them below 1,000,000 only (T-3931).
-const X87_PROBED_DIGITS: u64 = 1_000_000;
-/// Number text and literals keep at most 15 significant digits, and the x87 model holds for all of
-/// them (probes-numeric/t4077-long-literal-x87, T-4077), so their bound is 10^15.
-const X87_TEXT_DIGITS: u64 = 1_000_000_000_000_000;
+/// The decimals the x87 conversion holds for: at most 15 significant digits, so below 10^15. Number
+/// text and literals keep at most 15 (probes-numeric/t4077-long-literal-x87, 516 cells, T-4077),
+/// and so do ROUND's and ROUNDDOWN's kept digits ([`round_digits`] starts from 15 significant
+/// digits), so one bound serves both. It is the semantic edge of the decimals Excel forms, not a
+/// sampled count: the earlier bound of 1,000,000 for ROUND was only where T-3931 had probed
+/// (findings 2026-11-07 audit item 6).
+const X87_DECIMAL_DIGITS: u64 = 1_000_000_000_000_000;
 /// The largest `n` of `10^-n` the x87 model was probed at.
 const X87_PROBED_PLACES: i64 = 15;
 
@@ -218,10 +228,11 @@ fn strip_trailing_zeros(mut digits: u64, mut place: i64) -> (u64, i64) {
 /// the nearest double for about 1 in 5,000 short decimals: `ROUND(4.91499999999999E-06,8)` is
 /// 4.9100000000000004E-06, not 4.91E-06 (docs/excel-semantics/numbers.md "Decimals reach a double
 /// through an x87 multiply by 10^-n"; probes-numeric/t3658-round-scaling and -fresh, 2,539 and 724
-/// cells, excel-graph). `None` outside the probed range (n = 1..15, `digits` below 1,000,000),
-/// where the caller keeps the nearest double; at n = 0 the conversion is exact either way.
+/// cells, excel-graph). `None` outside n = 1..15 or past 15 significant digits
+/// ([`X87_DECIMAL_DIGITS`]), where the caller keeps the nearest double; at n = 0 the conversion is
+/// exact either way.
 pub(crate) fn x87_decimal_to_f64(digits: u64, place: i64) -> Option<f64> {
-    if digits >= X87_PROBED_DIGITS {
+    if digits >= X87_DECIMAL_DIGITS {
         return None;
     }
     x87_multiply(digits, place)
@@ -236,7 +247,7 @@ pub(crate) fn x87_decimal_to_f64(digits: u64, place: i64) -> Option<f64> {
 /// power comes from x87 tables ([`x87_table_read`], T-4467). `None` at places -15 to 15 outside
 /// n = 1..15 (the positive places 1 to 15 are unprobed and keep the nearest double).
 pub(crate) fn x87_text_to_f64(digits: u64, place: i64) -> Option<f64> {
-    if digits >= X87_TEXT_DIGITS {
+    if digits >= X87_DECIMAL_DIGITS {
         return None;
     }
     x87_table_read(digits, place).or_else(|| x87_multiply(digits, place))
@@ -276,8 +287,10 @@ pub(crate) fn decimal_to_f64(digits: u64, place: i64) -> Option<f64> {
 
 /// `value` cut to 15 significant digits, as the double nearest that decimal: an exact tie at the
 /// 16th digit goes away from zero when `tie_away`, otherwise toward zero. A zero or non-finite
-/// `value` is itself. FLOOR's ratio snap and PERCENTRANK's truncation use it, so that a double
-/// just below a digit boundary counts as on it.
+/// `value` is itself. The engine's one 15-digit cut (T-4848): each caller names the tie rule
+/// Excel evidences for its use (numbers.md "A 16th-digit tie splits by use"), away from zero for
+/// comparisons, the ROUND-family ratio snaps, IM* parts and fraction digits, toward zero for EXACT
+/// and number text.
 pub(crate) fn cut_to_15_digits(value: f64, tie_away: bool) -> f64 {
     if !value.is_finite() || value == 0.0 {
         return value;

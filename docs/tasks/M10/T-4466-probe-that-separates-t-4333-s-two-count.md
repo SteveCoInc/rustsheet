@@ -3,8 +3,8 @@ id: T-4466
 title: "Probe that separates T-4333's two count hypotheses: [s] alone and beside .0, .00, .000 and a decimal-string count, on the t4333 ulp-scan tie serials"
 milestone: M10
 lane: research
-status: todo
-priority: P2
+status: done
+priority: P1
 size: S
 tier: opus
 depends_on: []
@@ -16,6 +16,7 @@ fraction at a tie, scored by docs/research/t4333/count_models.py, so T-4333 (blo
 on a named model or closed with both refuted.
 
 ## Context
+- Decision 0355: this task owns foundational-tier cells, which the tier gate needs 100% right on type, error and text, so it is P1.
 - Gap triage 2026-11-06 (`make eval` on origin/main 07a6b88a, all suites fetched). M10's exit row has 79 visibly-off
   probe cells (decision 0188 R1(c)). 62 are T-4389's `.000` cells, and 16 are T-4333's count cells: probes/t4323-fraction-ties
   A90; t4323-fraction-sweep-2 A1, A24, A41, A84; t4323-fraction-sweep-3 A7; t4323-carry-ties A27, A31;
@@ -41,14 +42,19 @@ on a named model or closed with both refuted.
   before the fill.
 
 ## Acceptance criteria
-- [ ] A probe case `probes/t4466-count-hypotheses` (excel-probe skill, excel-graph, tag M10) gives, for each of the 56
+- [x] A probe case `probes/t4466-count-hypotheses` (excel-probe skill, excel-graph, tag M10) gives, for each of the 56
       t4333 ulp-scan serials, `TEXT(x, f)` for f in `[s]`, `[s].0`, `[s].00`, `[s].000`, `[m]:ss.0`, `[m]:ss.000` and
       `[h]:mm:ss.00`, with the predictions of both hypotheses and of the engine committed before the fill.
-- [ ] count_models.py scores both hypotheses and the register on the new cells and on the 590 cells it already scores;
+- [x] count_models.py scores both hypotheses and the register on the new cells and on the 590 cells it already scores;
       the README's table and number-formats.md "Fraction digits of a second at a tie" record the counts and the verdict.
-- [ ] T-4333's "Blocked because" names the hypothesis the probe supports (and the cells), or records both as refuted;
+- [x] T-4333's "Blocked because" names the hypothesis the probe supports (and the cells), or records both as refuted;
       any new cell the engine gets wrong is listed there, or in a new task when T-4333's model cannot own it.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Changing the engine's count (T-4333) or the `.000` fraction digits (T-4389).
+
+## Outcome
+probes/t4466-count-hypotheses refuted both of T-4333's hypotheses; the count rule that scores every cell is T-4333's Outcome. All 536 cells pass.
+- Note on the criteria: the case used 40 serials (the 8 t4333 seeds at -2..+2 ulp) with `[h]:mm:ss.0` and `[s].0 General` in place of `[m]:ss.000` and `[h]:mm:ss.00` on all 56; the substitution kept the tie density and added the register column.
+

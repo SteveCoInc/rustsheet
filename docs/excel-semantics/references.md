@@ -208,11 +208,19 @@ data is `#BLOCKED!`" below), and not a value, with a link part that caches no ta
 `sheetNames` (empty `sheetData`, no `definedNames`).
 Evidence: corpus-bench/58994/1_58994_input.xlsx Sheet1!F8 (excel-graph sidecar, 2026-10-26, gap triage).
 Whether a link part that *does* cache the table's cells changes it is unprobed.
-Ours: the lexer reads `[1]!Table3[#Data]` as a structured reference whose table name keeps the prefix; no such table exists, so a stored formula is `#REF!`. A typed one is refused, as Excel
+The formula keeps its text: Excel stores it back as written, `<f>VLOOKUP([1]!Table3[[#This Row],[Resource Name]],[1]Data!E:J,6,0)</f>`
+(corpus-bench/33094/1_33094_input.xlsx Sheet1!B5, its link part caching the Data sheet's cells but, as every
+externalLink part, no table definition). Its cached value is 20 and the case has no oracle value: the 20 was
+presumably calculated with the other book open (an inference; nothing in the file says so), so whether Excel gives
+`#REF!` for a link part that caches cells, as 33094's does, is unprobed (T-5036). FORMULATEXT of such a cell is
+unprobed.
+Ours: the lexer reads `[1]!Table3[#Data]` as a structured reference whose table name keeps the prefix; no such table
+exists, so a stored formula evaluates to `#REF!` while keeping its text, which the xlsx export writes as written
+(`is_external_table_name`, T-4144). A typed one is refused, as Excel
 refuses it (Graph PATCH 400, probes/t3213-typed-parse-errors A9; T-3213). The sheet-qualified form `[1]Sheet!Table3[Col]` and
 the empty-bracket `[1]!Table3[]` are unprobed (the latter lexes as an external name; T-0482).
-Status: VERIFIED (excel-graph)
-Tasks: T-0482
+Status: VERIFIED (excel-graph; the stored text from the file)
+Tasks: T-0482, T-4144
 
 ## External reference with no cached data is `#BLOCKED!`
 Rule: `SUM('[link-external-workbook-a.xlsx]Sheet0'!A1:B1)` whose externalBook part holds no cached
@@ -662,17 +670,35 @@ The undo of a delete puts back each name and each conditional format the delete 
 
 ### Relative references in a name (T-4747)
 Status: VERIFIED (excel-graph, 2026-11-07). Predictions were committed before the fill, and they were wrong.
-- **A relative reference in a name does not move, when the name is used from another sheet.** Name `Rel` = `=Data!A5` (anchored at A1), used from Calc!A1 and
+- **A relative reference in a name does not move.** Name `Rel` = `=Data!A5` (anchored at A1), used from Calc!A1 and
   Calc!A3, after `insert_row 4` on Data (Data!An = n*10): A1 40, A3 60, the literal addresses A5 and A7. After
   `delete_row 4`: 60 and 80 (A5, A7 again). The absolute names of T-4702 shift; relative ones are left alone.
   Evidence: probes/sheet-ops/t4747-name-relative-insert-row and -delete-row.
-- The engine shifts them (50/70 both ways), anchoring the name at A1 of the edited sheet: a mismatch, owned by T-4760.
+- **Rule (T-4760): a row edit leaves a name's relative rows alone and a column edit its relative columns; only the
+  absolute parts move.** Status: VERIFIED (excel-graph, 2026-11-08; predictions committed in each case's description
+  before the fill, all right). Evidence, probes/sheet-ops/:
+  - t4760-name-relative-no-edit: the control, Calc!A1 50 and A3 70 (Data!A5, A7) with no edit, so the file text is
+    anchored at A1 and the 40/60 above is the edit, not the anchoring.
+  - t4760-name-relative-own-sheet-insert-row and -delete-row: used from the edited sheet itself, Data!C2 and Data!C20
+    (C20 moves to C21, or C19): after `insert_row 4` C2 50 and C21 240, after `delete_row 4` C2 70 and C19 240. The
+    name is still `Data!A5`, read from wherever the using cell now is.
+  - t4760-name-relative-insert-column and -delete-column: `Rel` = `=Data!E1` from Calc!A1 and A3, after
+    `insert_column C` 401 and 403, after `delete_column C` 601 and 603 (Data!E1 and E3, Data!<col k><row r> = k*100 + r).
+  - t4760-name-mixed-insert-row: after `insert_row 4`, `=Data!$A5` (row relative) reads 104 and 106 from Calc!A1 and
+    A3 (it stays), while `=Data!A$5` (row absolute) reads 105 from Calc!A5 and A7 (it moves to `A$6`).
+  - Consequence (inferred, unprobed): a relative row on a deleted row is not `#REF!`, since it is left alone.
+- The engine matches: `Model::displace_defined_names` sets `Displacement::relative_stays`, and the printer gives a
+  reference or range corner whose moved part is relative no displacement (`Displacement::keeps`). A range with such a
+  corner shrinks or grows corner by corner, not as a whole (unprobed). Before T-4760 the engine shifted them.
 
 Still unprobed (T-4761, the harness cannot express them yet):
 - how Excel spells a rewritten name in Name Manager (the engine stores `#REF!` and `S!$C$1:$C$1`);
 - row and column moves, which leave names alone in the engine;
-- a sheet-scoped name, and an unqualified reference in a name;
-- a relative name used from the edited sheet itself (the using cell moves too), and a no-edit control for the file-text anchoring at A1: run these before T-4760 changes the engine.
+- a sheet-scoped name, and an unqualified reference in a name.
+- (T-4760's inferences) a relative row of a name on a deleted row (the engine leaves it alone, not `#REF!`: e.g.
+  `Rel` = `=Data!A5` and `delete_row 5`); a range with one corner the edit keeps and one it moves (`$A$3:A6`, the
+  engine moves corner by corner); and a mixed reference under a column edit (`$A5`, `A$5` with `insert_column`;
+  only the row-edit mixed case is probed, t4760-name-mixed-insert-row).
 
 ## Characters of a name
 Rule: a name in a formula (a LET or LAMBDA name, or an unbound use) may not start with a mark (`\p{M}`) or an

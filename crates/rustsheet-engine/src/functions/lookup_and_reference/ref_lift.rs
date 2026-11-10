@@ -1,6 +1,9 @@
 //! What OFFSET, INDIRECT and TRIMRANGE share when they lift into an array of references
 //! (SPEC-0014 "Producers"): which argument values lift the call, and their conversion to the
 //! driver's arguments; and where IF, CHOOSE, LET and variables hand such an array on (rule 7).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::match_same_arms)]
+// LINT-DEBT-END
 
 use std::borrow::Cow;
 
@@ -33,6 +36,10 @@ pub(crate) enum ElementCost {
     Cells(u64),
 }
 
+/// A criteria array that broadcasts with the grids of a per-element call: its argument position
+/// and its values ([`PerElement::broadcasts_criteria`]).
+type CriteriaGrid = (usize, Vec<Vec<ArrayNode>>);
+
 /// A consumer that calls itself once per element of an array of references (SPEC-0014 rule 6):
 /// which of its arguments take a reference, and what an element costs.
 #[derive(Clone, Copy)]
@@ -40,6 +47,10 @@ pub(crate) struct PerElement {
     /// Whether the argument at this position takes a reference.
     pub(crate) takes_reference: fn(usize) -> bool,
     cost: ElementCost,
+    /// Whether an array of values in a criteria position broadcasts with the grids instead of
+    /// being handed to every element whole: the criteria functions
+    /// (probes/t4742-countif-array-range-arg A40:C40, T-4826).
+    pub(crate) broadcasts_criteria: bool,
 }
 
 impl Function {
@@ -76,16 +87,28 @@ impl Function {
             }
             _ => return None,
         };
+        let broadcasts_criteria = matches!(
+            self,
+            Function::Countif
+                | Function::Countifs
+                | Function::Sumif
+                | Function::Sumifs
+                | Function::Averageif
+                | Function::Averageifs
+                | Function::Maxifs
+                | Function::Minifs
+        );
         Some(PerElement {
             takes_reference,
             cost,
+            broadcasts_criteria,
         })
     }
 }
 
 /// An absolute reference to `range`, the argument a per-element call reads in place of the
 /// array of references it came from, or of a reference argument read once.
-fn range_node(range: &Range) -> Node {
+pub(crate) fn range_node(range: &Range) -> Node {
     Node::RangeKind {
         sheet_name: None,
         sheet_index: range.left.sheet,
@@ -116,16 +139,17 @@ pub(crate) fn lifts_into_references(node: &Node) -> bool {
 }
 
 /// The arguments a per-element consumer reads ahead of its call (SPEC-0014 rule 6): those of
-/// [`lifts_into_references`], and an XLOOKUP with an `if_not_found`, which a lifted `lookup_value`
-/// and a range `if_not_found` make an array of its hits and that range (SPEC-0014 amendment
+/// [`lifts_into_references`], and an XLOOKUP, which a lifted `lookup_value` makes an array of
+/// its elements, a range `if_not_found` the reference element of each miss (SPEC-0014 amendment
 /// rule 6; `COUNTIF(XLOOKUP({2;9},A1:A3,B1:B3,G1:G2),">0")` spills `#VALUE!`, 2;
-/// probes/t4569-xlookup-ref-element-max-min A26, C24:D34).
+/// probes/t4569-xlookup-ref-element-max-min A26, C24:D34), any other element a value or an
+/// error ([`Model::xlookup_reference_elements`]).
 pub(crate) fn lifts_into_reference_elements(node: &Node) -> bool {
     match node.ungrouped() {
         Node::FunctionKind {
             kind: Function::Xlookup,
-            args,
-        } => args.len() >= 4,
+            ..
+        } => true,
         node => lifts_into_references(node),
     }
 }
@@ -268,7 +292,7 @@ impl Model {
                 Node::FunctionKind {
                     kind: Function::Xlookup,
                     args,
-                } => self.xlookup_reference(args, cell, true),
+                } => self.xlookup_reference_elements(args, cell),
                 _ => self.evaluate_reference_arg(arg, cell),
             };
             if let RefArg::Grid(grid) = read {
@@ -330,13 +354,6 @@ impl Model {
         if grids.is_empty() {
             return implementation(self, &resolved, cell);
         }
-        let (rows, columns) = grids.iter().fold((1, 1), |(rows, columns), (_, grid)| {
-            let (r, c) = grid.dims();
-            (rows.max(r), columns.max(c))
-        });
-        if let Some((error, message)) = check_array_size(rows, columns) {
-            return CalcResult::new_error(error, cell, message);
-        }
         let walks = match per_element.cost {
             ElementCost::Unit => 0,
             ElementCost::Cells(walks) => walks,
@@ -362,6 +379,42 @@ impl Model {
                 cells
             };
             shared = shared.saturating_add(reads);
+        }
+        // A criteria array beside the grids broadcasts with them, each element taking its own
+        // criterion: `COUNTIF(XLOOKUP({2;9},..,"x"),{">0",">5"})` is 2x2 (probes/
+        // t4742-countif-array-range-arg A40:C40, T-4826; probes/t4826-criteria-array-beside-grid
+        // shows the shapes and that every element is `#VALUE!`, so the pairing of grid and
+        // criterion elements is UNVERIFIED).
+        let values: Vec<CriteriaGrid> = if per_element.broadcasts_criteria {
+            element_args
+                .iter()
+                .enumerate()
+                .filter(|(index, _)| !(per_element.takes_reference)(*index))
+                .filter_map(|(index, arg)| match arg {
+                    Node::ArrayKind(rows)
+                        if rows.len() > 1 || rows.first().is_some_and(|r| r.len() > 1) =>
+                    {
+                        Some((index, rows.clone()))
+                    }
+                    _ => None,
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let (rows, columns) = grids
+            .iter()
+            .map(|(_, grid)| grid.dims())
+            .chain(
+                values
+                    .iter()
+                    .map(|(_, rows)| (rows.len(), rows.first().map_or(0, Vec::len))),
+            )
+            .fold((1, 1), |(rows, columns), (r, c)| {
+                (rows.max(r), columns.max(c))
+            });
+        if let Some((error, message)) = check_array_size(rows, columns) {
+            return CalcResult::new_error(error, cell, message);
         }
         let mut visits: u64 = 0;
         for row in 0..rows {
@@ -391,7 +444,7 @@ impl Model {
             for column in 0..columns {
                 output_row.push(self.call_on_element(
                     &mut element_args,
-                    &grids,
+                    (&grids, &values),
                     (row, column),
                     cell,
                     implementation,
@@ -406,11 +459,22 @@ impl Model {
     fn call_on_element(
         &mut self,
         element_args: &mut [Node],
-        grids: &[(usize, RefGrid)],
+        (grids, values): (&[(usize, RefGrid)], &[CriteriaGrid]),
         (row, column): (usize, usize),
         cell: CellReferenceIndex,
         implementation: Implementation,
     ) -> ArrayNode {
+        for (index, array) in values {
+            let at = |i: usize, n: usize| if n == 1 { 0 } else { i };
+            let element = array
+                .get(at(row, array.len()))
+                .and_then(|r| r.get(at(column, r.len())));
+            let (Some(element), Some(slot)) = (element, element_args.get_mut(*index)) else {
+                return ArrayNode::Error(Error::NA);
+            };
+            *slot = value_node(&array_node_to_calc_result(element, cell))
+                .unwrap_or(Node::ErrorKind(Error::VALUE));
+        }
         for (index, grid) in grids {
             let (Some(element), Some(slot)) = (
                 broadcast_element(grid, row, column),

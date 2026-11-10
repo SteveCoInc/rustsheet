@@ -1,3 +1,12 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::needless_pass_by_value,
+    clippy::print_stdout,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use rustsheet_engine::expressions::parser::{
@@ -36,7 +45,10 @@ use super::{
     shared_strings::{decode_xlsx_escapes, SharedStringTable},
     sheet_data::{read_sheet_data, SheetDataXml, SheetPart},
     tables::load_table,
-    util::{get_attribute, get_color, get_number, get_relationship, parse_cell_number},
+    util::{
+        cell_boolean, get_attribute, get_color, get_number, get_relationship,
+        parse_bool_with_default, parse_cell_number,
+    },
     Relationship,
 };
 
@@ -187,11 +199,10 @@ fn load_comments<R: Read + std::io::Seek>(
                 .descendants()
                 .filter(|n| n.has_tag_name("t"))
                 .map(|n| n.text().unwrap_or_default().to_string())
-                .collect::<Vec<String>>()
-                .join("");
+                .collect::<String>();
             let cell_ref = get_attribute(comment, "ref")?.to_string();
             // TODO: Read author_name from the list of authors
-            let author_name = "".to_string();
+            let author_name = String::new();
             comments.push(Comment {
                 text,
                 author_name,
@@ -217,9 +228,9 @@ enum ParseReferenceError {
 // There is a similar named function in rustsheet_engine. We probably should fix both at the same time.
 // NB: Maybe use regexes for this?
 fn parse_reference(s: &str) -> Result<CellReferenceRC, ParseReferenceError> {
-    let mut sheet_name = "".to_string();
-    let mut column = "".to_string();
-    let mut row = "".to_string();
+    let mut sheet_name = String::new();
+    let mut column = String::new();
+    let mut row = String::new();
     let mut state = "sheet"; // "sheet", "col", "row"
     for ch in s.chars() {
         match state {
@@ -387,13 +398,13 @@ pub(super) fn get_cell_from_excel(
             "b" => {
                 if let Some(anchor) = anchor_cell {
                     Cell::SpillCell {
-                        v: SpillValue::Boolean(cell_value == Some("1")),
+                        v: SpillValue::Boolean(cell_boolean(cell_value)),
                         s: cell_style,
                         a: anchor,
                     }
                 } else {
                     Cell::BooleanCell {
-                        v: cell_value == Some("1"),
+                        v: cell_boolean(cell_value),
                         s: cell_style,
                     }
                 }
@@ -501,7 +512,7 @@ pub(super) fn get_cell_from_excel(
             },
         };
         match cell_type {
-            "b" => make_cell(FormulaValue::Boolean(cell_value == Some("1"))),
+            "b" => make_cell(FormulaValue::Boolean(cell_boolean(cell_value))),
             "n" => make_cell(FormulaValue::Number(parse_cell_number(cell_value))),
             "e" => {
                 let error_name = cached_error_name(cell_value, rich_error);
@@ -619,34 +630,32 @@ fn load_hyperlinks(
             parse_range(cell_ref).map_err(XlsxError::Xml)?;
         let tooltip = node.attribute("tooltip").map(str::to_string);
         let rel_id = node.relationship_id();
-        let link = match rel_id {
-            Some(rel_id) => {
-                let target = match hyperlink_rels.get(rel_id) {
-                    Some(target) => target.clone(),
-                    // dangling relationship id, skip the hyperlink
-                    None => continue,
-                };
-                // An external link may also point to a location inside the target
-                // document. We keep it as a fragment of the target.
-                let target = match node.attribute("location") {
-                    Some(location) => format!("{target}#{location}"),
-                    None => target,
-                };
-                Link::External { target, tooltip }
-            }
-            None => {
-                let location = match node.attribute("location") {
-                    Some(location) if !location.is_empty() => location.to_string(),
-                    // a hyperlink with neither r:id nor location is malformed, skip it
-                    _ => continue,
-                };
-                Link::Internal { location, tooltip }
-            }
+        let link = if let Some(rel_id) = rel_id {
+            let target = match hyperlink_rels.get(rel_id) {
+                Some(target) => target.clone(),
+                // dangling relationship id, skip the hyperlink
+                None => continue,
+            };
+            // An external link may also point to a location inside the target
+            // document. We keep it as a fragment of the target.
+            let target = match node.attribute("location") {
+                Some(location) => format!("{target}#{location}"),
+                None => target,
+            };
+            Link::External { target, tooltip }
+        } else {
+            let location = match node.attribute("location") {
+                Some(location) if !location.is_empty() => location.to_string(),
+                // a hyperlink with neither r:id nor location is malformed, skip it
+                _ => continue,
+            };
+            Link::Internal { location, tooltip }
         };
         // The range is expanded to one link per cell. A corrupt or malicious file
         // could use an enormous range (up to the whole sheet); in that case only
         // the top-left cell gets the link instead of exhausting memory.
-        let cell_count = (row_end - row_start + 1) as i64 * (column_end - column_start + 1) as i64;
+        let cell_count =
+            i64::from(row_end - row_start + 1) * i64::from(column_end - column_start + 1);
         if cell_count > MAX_HYPERLINK_RANGE_CELLS {
             links.insert((row_start, column_start), link);
             continue;
@@ -732,8 +741,8 @@ fn get_sheet_view(ws: &XmlNode) -> SheetView {
     }
 
     let sheet_view = sheet_view[0];
-    let is_selected = sheet_view.attribute("tabSelected").unwrap_or("0") == "1";
-    let show_grid_lines = sheet_view.attribute("showGridLines").unwrap_or("1") == "1";
+    let is_selected = parse_bool_with_default(sheet_view.attribute("tabSelected"), false);
+    let show_grid_lines = parse_bool_with_default(sheet_view.attribute("showGridLines"), true);
 
     let pane = sheet_view
         .children()
@@ -785,9 +794,9 @@ fn get_sheet_view(ws: &XmlNode) -> SheetView {
         }
     } else {
         SheetView {
-            frozen_rows,
-            frozen_columns,
             is_selected,
+            frozen_columns,
+            frozen_rows,
             show_grid_lines,
             ..Default::default()
         }
@@ -825,15 +834,15 @@ pub(super) fn load_sheet<R: Read + std::io::Seek>(
 
     let limits = *archive.limits();
     let file = archive.open(path)?;
-    // One parser for the whole sheet: building one clones the defined names
-    // and tables, which is far too much to do once per formula cell.
+    // One parser per sheet (it clones the names and tables), reading `<f>` text as stored.
     let mut parser = new_parser_english(worksheets.to_owned(), defined_names, tables.clone());
     parser.set_loaded(true);
+    parser.set_file_names(true);
     // The cells are streamed; what is left of the worksheet is small and is
     // read as a tree.
     let SheetDataXml {
         worksheet,
-        mut sheet_data,
+        sheet_data,
         rows,
         shared_formulas,
         data_tables,
@@ -855,9 +864,9 @@ pub(super) fn load_sheet<R: Read + std::io::Seek>(
     let cols = load_columns(ws)?;
     let color = load_sheet_color(ws, theme)?;
 
+    // Covered cells keep their content, as Excel's do (xlsx-storage.md "A merged range keeps the
+    // values of its covered cells"; SPEC-0036).
     let merged_cells = load_merge_cells(ws)?;
-
-    merged_cells::clear_covered_cells(&mut sheet_data, &merged_cells);
 
     let links = load_hyperlinks(ws, &settings.hyperlink_rels)?;
 
@@ -900,7 +909,7 @@ pub(super) fn load_sheet<R: Read + std::io::Seek>(
             rows,
             shared_formulas,
             sheet_data,
-            name: sheet_name.to_string(),
+            name: sheet_name.clone(),
             sheet_id,
             // Placeholder: `load_sheets` sets the rank from the sheet's position.
             load_rank: 0,
@@ -964,10 +973,10 @@ pub(super) fn load_sheets<R: Read + std::io::Seek>(
                 .get(rel_id)
                 .ok_or_else(|| XlsxError::Xml("Corrupt XML structure".to_string()))?;
             let settings = SheetSettings {
-                name: sheet_name.to_string(),
+                name: sheet_name.clone(),
                 id: sheet.sheet_id,
                 state: state.clone(),
-                comments: comments.to_vec(),
+                comments: comments.clone(),
                 hyperlink_rels: hyperlink_rels.clone(),
                 date_system: workbook.date_system,
             };

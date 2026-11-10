@@ -160,7 +160,7 @@ fn an_empty_text_items_label_is_an_empty_cell() {
 /// `canonical` of `tools/tests/test_pivot_parts_golden.py`: one line per element, depth-indented,
 /// its local name and its attributes by local name, sorted, values unescaped, namespace
 /// declarations left out; non-blank text on its own `#text` line.
-fn canonical(xml: &str) -> String {
+pub(super) fn canonical(xml: &str) -> String {
     use quick_xml::events::{BytesStart, Event};
     use quick_xml::XmlVersion;
     let local = |name: &str| name.rsplit(':').next().unwrap().to_string();
@@ -332,4 +332,60 @@ fn calculated_items_and_page_attributes_refuse_what_the_builder_refuses() {
     assert!(page
         .table
         .contains(r#"<pageField fld="0" hier="-1" cap="C"/>"#));
+}
+
+/// [`case`] with a second pivot `Pv2` at P!F3 whose definition is `second`.
+fn two_pivots(second: &str) -> CaseSpec {
+    let mut spec = case(r#"{"rows": ["K"], "data": [{"field": "V"}]}"#);
+    let pivot: PivotTableSpec = serde_json::from_str(&format!(
+        r#"{{"name": "Pv2", "source": "D!A1:B5", "location": "F3", "definition": {second}}}"#
+    ))
+    .unwrap();
+    spec.sheets[1].pivot_tables.push(pivot);
+    spec
+}
+
+#[test]
+fn a_named_source_saves_the_name_alone() {
+    // T-4506: `source_name` is written as Excel saves a defined name's or a Table's source.
+    let built = parts_of(&case(
+        r#"{"rows": ["K"], "data": [{"field": "V"}], "source_name": "Src"}"#,
+    ));
+    assert!(built
+        .cache_definition
+        .contains(r#"<cacheSource type="worksheet"><worksheetSource name="Src"/></cacheSource>"#));
+    let spec = case(r#"{"rows": ["K"], "data": [{"field": "V"}], "source_name": ""}"#);
+    let sheet = &spec.sheets[1];
+    let pivot = &sheet.pivot_tables[0];
+    let error = parts(&spec, sheet, pivot, pivot.definition.as_ref().unwrap(), 1).err();
+    assert!(error.unwrap().contains("source_name is a non-empty text"));
+}
+
+#[test]
+fn a_shared_cache_loads_one_cache_under_both_pivots() {
+    // T-4506: the second pivot's table only, over the first pivot's cache; both render it.
+    let spec = two_pivots(
+        r#"{"rows": ["K"], "data": [{"field": "V", "subtotal": "max"}], "shared_cache": "Pv"}"#,
+    );
+    let evaluated = RustSheetEngine.evaluate_spec(&spec, None).unwrap();
+    let cell = |a1: &str| evaluated.value("P", Addr::parse(a1).unwrap());
+    assert_eq!(cell("B7"), Some(Value::Number(10.0)));
+    assert_eq!(cell("G3"), Some(Value::Text("Max of V".into())));
+    assert_eq!(cell("G7"), Some(Value::Number(4.0)));
+    for (refusal, message) in [
+        (r#""Nope""#, "is no earlier defined pivot"),
+        (
+            r#""Pv", "refresh_on_load": false"#,
+            "its cache differs from Pv's",
+        ),
+    ] {
+        let spec = two_pivots(&format!(
+            r#"{{"rows": ["K"], "data": [{{"field": "V"}}], "shared_cache": {refusal}}}"#
+        ));
+        let error = RustSheetEngine.evaluate_spec(&spec, None).err().unwrap();
+        assert!(
+            format!("{error:?}").contains(message),
+            "{refusal}: {error:?}"
+        );
+    }
 }

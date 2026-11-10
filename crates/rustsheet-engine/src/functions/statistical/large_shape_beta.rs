@@ -30,6 +30,10 @@
 //! worst error goes from 5.2E-8 to 1.7E-13. That point and every other past 1E-14 is on a kernel this
 //! change does not touch: L140's port in Excel's arithmetic (to 3.7 units of |ln tail| ulp), or a
 //! lower tail with a moderate a0. The expansion's own worst is 1.6E-14, at b of 100 to 200.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss, clippy::many_single_char_names)]
+#![cfg_attr(test, expect(clippy::float_cmp, clippy::unreadable_literal))]
+// LINT-DEBT-END
 
 use super::bratio::half_complement;
 use super::incomplete_beta::{rlog1, stirling_correction};

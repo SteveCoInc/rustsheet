@@ -94,7 +94,7 @@ impl UserModel {
         diff_list: &mut Vec<Diff>,
     ) -> Result<(), String> {
         let sheet = range.sheet;
-        diff_list.extend(self.covered_cells_clear_diffs(range)?);
+        diff_list.extend(self.covered_cells_clear_diffs(range, None)?);
 
         // Merging moves the content and link of the single covered cell with
         // content to the anchor: capture the anchor's state before so the
@@ -240,14 +240,21 @@ impl UserModel {
     }
 
     // Captures the undo diffs for the content and links that merging `range`
-    // will clear: everything but the anchor.
-    pub(super) fn covered_cells_clear_diffs(&self, range: &Area) -> Result<Vec<Diff>, String> {
+    // will clear: everything but the anchor and the cells of `kept`, which
+    // `Model::merge_cells_keep_styles` leaves as they are.
+    pub(super) fn covered_cells_clear_diffs(
+        &self,
+        range: &Area,
+        kept: Option<&Area>,
+    ) -> Result<Vec<Diff>, String> {
         let sheet = range.sheet;
         let mut diff_list: Vec<Diff> = Vec::new();
         let worksheet = self.model.workbook.worksheet(sheet)?;
         for row in range.row..range.row + range.height {
             for column in range.column..range.column + range.width {
-                if row == range.row && column == range.column {
+                if (row == range.row && column == range.column)
+                    || kept.is_some_and(|k| k.contains(row, column))
+                {
                     continue;
                 }
                 if let Some(link) = worksheet.links.get(&(row, column)) {
@@ -267,7 +274,7 @@ impl UserModel {
                     sheet,
                     row,
                     column,
-                    new_value: "".to_string(),
+                    new_value: String::new(),
                     legacy: false,
                     external: false,
                     old_value: Box::new(old_value),

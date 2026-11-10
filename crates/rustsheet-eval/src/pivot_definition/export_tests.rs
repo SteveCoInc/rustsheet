@@ -55,6 +55,7 @@ fn every_probe_pivot_round_trips_through_the_export() {
                         cache_definition: built.cache_definition.as_bytes(),
                         cache_records: built.cache_records.as_bytes(),
                         cache_id: 1,
+                        slicer_caches: &[],
                     },
                     &[table],
                     0,

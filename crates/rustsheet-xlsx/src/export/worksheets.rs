@@ -1,3 +1,13 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_sign_loss,
+    clippy::if_not_else,
+    clippy::manual_let_else,
+    clippy::ref_option,
+    clippy::too_many_lines
+)]
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
 
@@ -55,7 +65,7 @@ use super::{
 /// probes/subnormal-saved-negative-and-array); desktop Excel's save is unprobed, and `-0.0` keeps
 /// its spelling. A stored positive constant is already 0 once loaded (numbers.md "A subnormal cell constant
 /// reads as 0"), so the constant arm changes nothing observable.
-fn saved_number(v: f64) -> f64 {
+pub(super) fn saved_number(v: f64) -> f64 {
     if v != 0.0 && v.abs() < f64::MIN_POSITIVE {
         0.0
     } else {
@@ -67,7 +77,7 @@ fn saved_number(v: f64) -> f64 {
 /// except the kinds Excel rejects as stored literals, which are saved as `#VALUE!`:
 /// - `#SPILL!`, `#CALC!`, `#CONNECT!`, `#BLOCKED!` and `#FIELD!` (T-0999). Excel keeps the kind in
 ///   `vm` rich-value metadata, which the cell also gets ([`vm_attribute`], T-1014).
-/// - The engine-only `#CIRC!`, `#ERROR!` and `#N/IMPL` (T-1133, docs/excel-semantics/syntax.md).
+/// - The engine-only `#CIRC!`, `#ERROR!` and `#N/IMPL!` (T-1133, docs/excel-semantics/syntax.md).
 ///
 /// The eval harness must not use this fallback: it scores through `Error::stored_literal`.
 pub(crate) fn exported_error_literal(error: &Error) -> &'static str {
@@ -93,7 +103,7 @@ fn get_range_str(row: i32, column: i32, width: i32, height: i32) -> Option<Strin
 
 fn get_cell_style_attribute(s: i32) -> String {
     if s == 0 {
-        "".to_string()
+        String::new()
     } else {
         format!(" s=\"{s}\"")
     }
@@ -127,7 +137,7 @@ fn split_external_target(target: &str) -> (&str, Option<&str>) {
 fn get_hyperlinks_section(worksheet: &Worksheet) -> String {
     let links = get_sorted_links(worksheet);
     if links.is_empty() {
-        return "".to_string();
+        return String::new();
     }
     let mut hyperlinks_str: Vec<String> = vec![];
     let mut rel_id = 0;
@@ -142,7 +152,7 @@ fn get_hyperlinks_section(worksheet: &Worksheet) -> String {
                 rel_id += 1;
                 let location_attribute = match split_external_target(target).1 {
                     Some(location) => format!(" location=\"{}\"", escape_xml(location)),
-                    None => "".to_string(),
+                    None => String::new(),
                 };
                 let tooltip_attribute = get_tooltip_attribute(tooltip);
                 hyperlinks_str.push(format!(
@@ -164,7 +174,7 @@ fn get_hyperlinks_section(worksheet: &Worksheet) -> String {
 fn get_tooltip_attribute(tooltip: &Option<String>) -> String {
     match tooltip {
         Some(tooltip) => format!(" tooltip=\"{}\"", escape_xml(tooltip)),
-        None => "".to_string(),
+        None => String::new(),
     }
 }
 
@@ -178,15 +188,22 @@ fn external_link_count(worksheet: &Worksheet) -> usize {
         .count()
 }
 
+/// The id of the worksheet's first relationship after its external links and its `tables`
+/// table parts, which [`get_worksheet_xml_rels`] numbers `rId1` on.
+pub(crate) fn first_id_after_tables(worksheet: &Worksheet, tables: usize) -> usize {
+    external_link_count(worksheet) + tables + 1
+}
+
 /// The rels part of the worksheet (`xl/worksheets/_rels/sheetN.xml.rels`) holding one
 /// relationship per external link, then one per table part (`tables` are the part numbers of
 /// the sheet's tables), or `None` if the worksheet has neither.
-/// `pivot_tables` are the sheet's relationships to its pivot tables, numbered after its other
-/// ones from the id it is given (`PivotPlan::sheet_relationships`).
+/// `after_tables` are the sheet's relationships to its pivot tables and its kept drawing,
+/// numbered from [`first_id_after_tables`] (`PivotPlan::sheet_relationships`,
+/// `DrawingPlan::sheet_relationship`).
 pub(crate) fn get_worksheet_xml_rels(
     worksheet: &Worksheet,
     tables: std::ops::Range<usize>,
-    pivot_tables: impl FnOnce(usize) -> Vec<String>,
+    after_tables: Vec<String>,
 ) -> Option<String> {
     let mut relationships_str: Vec<String> = vec![];
     let mut rel_id = 0;
@@ -205,7 +222,7 @@ pub(crate) fn get_worksheet_xml_rels(
             "<Relationship Id=\"rId{rel_id}\" Type=\"{TABLE_RELATIONSHIP}\" Target=\"../tables/table{table}.xml\"/>"
         ));
     }
-    relationships_str.extend(pivot_tables(rel_id + 1));
+    relationships_str.extend(after_tables);
     if relationships_str.is_empty() {
         return None;
     }
@@ -253,6 +270,7 @@ pub(crate) fn get_worksheet_xml(
     dimension: &str,
     is_sheet_selected: bool,
     table_count: usize,
+    drawing: Option<&str>,
 ) -> String {
     let mut sheet_data_str: Vec<String> = vec![];
     let mut cols_str: Vec<String> = vec![];
@@ -266,7 +284,7 @@ pub(crate) fn get_worksheet_xml(
         let custom_width = i32::from(col.custom_width);
         let column_style = match col.style {
             Some(s) => format!(" style=\"{s}\""),
-            None => "".to_string(),
+            None => String::new(),
         };
         let hidden = if col.hidden { " hidden=\"1\"" } else { "" };
         cols_str.push(format!(
@@ -326,7 +344,7 @@ pub(crate) fn get_worksheet_xml(
                     hidden_str,
                 )
             }
-            None => "".to_string(),
+            None => String::new(),
         };
         sheet_data_str.push(format!(
             "<row r=\"{row_index}\"{row_style_str}>{}</row>",
@@ -348,7 +366,7 @@ pub(crate) fn get_worksheet_xml(
 
     let cols = cols_str.join("");
     let cols = if cols.is_empty() {
-        "".to_string()
+        String::new()
     } else {
         format!("<cols>{cols}</cols>")
     };
@@ -392,7 +410,7 @@ pub(crate) fn get_worksheet_xml(
             merged_cells_str.join("")
         )
     } else {
-        "".to_string()
+        String::new()
     };
 
     let frozen_rows = worksheet.frozen_rows;
@@ -441,6 +459,9 @@ pub(crate) fn get_worksheet_xml(
     let hyperlinks_section = get_hyperlinks_section(worksheet);
     let table_parts_section =
         get_table_parts_section(table_count, external_link_count(worksheet) + 1);
+    // CT_Worksheet puts `<drawing>` after the hyperlinks and before the table parts.
+    let drawing_section =
+        drawing.map_or_else(String::new, |id| format!("<drawing r:id=\"{id}\"/>"));
 
     format!(
         "{XML_DECLARATION}\
@@ -458,6 +479,7 @@ pub(crate) fn get_worksheet_xml(
   {merge_cells_section}\
   {cf_sections}\
   {hyperlinks_section}\
+  {drawing_section}\
   {table_parts_section}\
   {cf_ext_lst}\
 </worksheet>"

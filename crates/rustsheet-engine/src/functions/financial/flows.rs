@@ -1,4 +1,5 @@
-//! XIRR's and XNPV's cash flows and dates as read, in Excel's checking order (T-3312): split from
+//! XIRR's and XNPV's cash flows and dates as read, in Excel's checking order (T-3312), and the flows of
+//! a range or array as every cash-flow function reads them (T-4976): split from
 //! `financial/mod.rs`, which reads the arguments and runs the lifted kernels.
 
 use crate::{
@@ -233,11 +234,11 @@ impl Model {
                 // serial as given.
                 FlowElement::Number(date)
                     if (index == 0
-                        && (date.floor() < MINIMUM_DATE_SERIAL_NUMBER as f64
-                            || date.floor() > MAXIMUM_DATE_SERIAL_NUMBER as f64))
+                        && (date.floor() < f64::from(MINIMUM_DATE_SERIAL_NUMBER)
+                            || date.floor() > f64::from(MAXIMUM_DATE_SERIAL_NUMBER)))
                         || (index > 0
                             && (date.floor() < first_day
-                                || *date > MAXIMUM_DATE_SERIAL_NUMBER as f64)) =>
+                                || *date > f64::from(MAXIMUM_DATE_SERIAL_NUMBER))) =>
                 {
                     return error(Error::NUM)
                 }
@@ -400,7 +401,7 @@ fn xnpv_dates(values: &[f64], dates: &[f64]) -> Result<Vec<f64>, Error> {
     if dates
         .iter()
         .skip(1)
-        .any(|date| *date > MAXIMUM_DATE_SERIAL_NUMBER as f64)
+        .any(|date| *date > f64::from(MAXIMUM_DATE_SERIAL_NUMBER))
     {
         return Err(Error::NUM);
     }
@@ -412,8 +413,8 @@ fn xnpv_dates(values: &[f64], dates: &[f64]) -> Result<Vec<f64>, Error> {
         // text, FALSE and an empty cell as a later date are `#NUM!` too, in a range, an array
         // constant and a computed array alike (probes/t3815-xnpv-element-reading rows 13-18).
         if date.is_nan()
-            || *date < MINIMUM_DATE_SERIAL_NUMBER as f64
-            || *date > MAXIMUM_DATE_SERIAL_NUMBER as f64
+            || *date < f64::from(MINIMUM_DATE_SERIAL_NUMBER)
+            || *date > f64::from(MAXIMUM_DATE_SERIAL_NUMBER)
             || *date < first_date
         {
             return Err(Error::NUM);
@@ -428,7 +429,7 @@ fn xnpv_dates(values: &[f64], dates: &[f64]) -> Result<Vec<f64>, Error> {
 fn xirr_date_error(date: f64) -> Option<Error> {
     if date.is_nan() {
         Some(Error::VALUE)
-    } else if date.floor() < 0.0 || date.floor() > MAXIMUM_DATE_SERIAL_NUMBER as f64 {
+    } else if date.floor() < 0.0 || date.floor() > f64::from(MAXIMUM_DATE_SERIAL_NUMBER) {
         Some(Error::NUM)
     } else {
         None
@@ -451,10 +452,172 @@ fn xirr_dates(values: &[f64], dates: &[f64]) -> Result<Vec<f64>, Error> {
     let first_value_is_zero = values.first() == Some(&0.0);
     if dates
         .iter()
-        .any(|date| *date < 0.0 || *date > MAXIMUM_DATE_SERIAL_NUMBER as f64)
+        .any(|date| *date < 0.0 || *date > f64::from(MAXIMUM_DATE_SERIAL_NUMBER))
         || (!first_value_is_zero && !dates.iter().any(|date| *date > first_date))
     {
         return Err(Error::NUM);
     }
     Ok(dates)
+}
+
+/// What [`Model::array_of_numbers_from`] does with an empty cell and with a non-number one: a
+/// value to add, nothing, or the call's error.
+type CellHandlers<'a> = (
+    &'a dyn Fn() -> Result<Option<f64>, CalcResult>,
+    &'a dyn Fn() -> Result<Option<f64>, CalcResult>,
+);
+
+impl Model {
+    /// [`Self::get_array_of_numbers_generic`] on an argument already evaluated.
+    pub(super) fn array_of_numbers_from(
+        &mut self,
+        result: CalcResult,
+        cell: &CellReferenceIndex,
+        accept_number_node: bool,
+        text_as_number: bool,
+        handle_empty_cell: impl Fn() -> Result<Option<f64>, CalcResult>,
+        handle_non_number_cell: impl Fn() -> Result<Option<f64>, CalcResult>,
+    ) -> Result<Vec<f64>, CalcResult> {
+        let mut values = Vec::new();
+        match result {
+            CalcResult::Number(value) if accept_number_node => values.push(value),
+            CalcResult::Number(_) => {
+                return Err(CalcResult::new_error(
+                    Error::VALUE,
+                    *cell,
+                    "Expected range of numbers".to_string(),
+                ));
+            }
+            CalcResult::Range { left, right } => {
+                if left.sheet != right.sheet {
+                    return Err(CalcResult::new_error(
+                        Error::VALUE,
+                        *cell,
+                        "Ranges are in different sheets".to_string(),
+                    ));
+                }
+                let sheet = left.sheet;
+                let row1 = left.row;
+                let column1 = left.column;
+                let (row2, column2) = self.flow_range_end(&left, &right).ok_or_else(|| {
+                    CalcResult::new_error(
+                        Error::ERROR,
+                        *cell,
+                        format!("Invalid worksheet index: '{sheet}'"),
+                    )
+                })?;
+                let handlers: CellHandlers<'_> = (&handle_empty_cell, &handle_non_number_cell);
+                if matches!(handle_empty_cell(), Ok(None)) {
+                    // A blank cell adds no flow (IRR, NPV, MIRR): only the stored cells are read,
+                    // in row-major order, so `IRR(B1:XFC1000000)` costs its stored cells, not its
+                    // 1.6E+10 positions, which ran the process out of memory (T-4976, directive 5).
+                    let range = Range {
+                        left,
+                        right: CellReferenceIndex {
+                            sheet,
+                            row: row2,
+                            column: column2,
+                        },
+                    };
+                    self.for_each_existing_cell(&range, *cell, &mut |model, position| {
+                        model.push_flow(position, text_as_number, handlers, &mut values)
+                    })?;
+                } else {
+                    // A blank cell refuses the call (XNPV: the walk ends at the first one, so it
+                    // costs at most the stored cells it passes) or is a flow (XIRR's 0), so every
+                    // position is read. A blank flow is charged first, its area, so a sheet-scale
+                    // walk is refused before it allocates (DEVIATION, directive 5; Excel's result
+                    // there is unprobed, docs/excel-semantics/financial.md "IRR and XIRR over a
+                    // huge blank range").
+                    if matches!(handle_empty_cell(), Ok(Some(_))) {
+                        let rows = u64::try_from(row2 - row1 + 1).unwrap_or(0);
+                        let columns = u64::try_from(column2 - column1 + 1).unwrap_or(0);
+                        if let Some(error) = self.spend_visits(rows.saturating_mul(columns), *cell)
+                        {
+                            return Err(error);
+                        }
+                    }
+                    for row in row1..=row2 {
+                        for column in column1..=column2 {
+                            let position = CellReferenceIndex { sheet, column, row };
+                            self.push_flow(position, text_as_number, handlers, &mut values)?;
+                        }
+                    }
+                }
+                // The clip skips empty cells Excel still walks, so an empty-cell error applies after
+                // the used area: `XNPV(0.1,A:A,B:B)` is #NUM! (probes/xirr-xnpv-whole-column-nogaps A1).
+                if row2 < right.row || column2 < right.column {
+                    handle_empty_cell()?;
+                }
+            }
+            CalcResult::Array(arr) => {
+                for row in arr {
+                    for node in row {
+                        match node {
+                            ArrayNode::Number(f) => values.push(f),
+                            ArrayNode::Error(e) => {
+                                return Err(CalcResult::new_error(
+                                    e,
+                                    *cell,
+                                    "Error in array".to_string(),
+                                ));
+                            }
+                            ArrayNode::Lambda(_) | ArrayNode::Nested(_) => {
+                                return Err(Model::lambda_as_number_error(*cell))
+                            }
+                            ArrayNode::Empty => {
+                                if let Some(value) = handle_empty_cell()? {
+                                    values.push(value);
+                                }
+                            }
+                            ArrayNode::String(text) if text_as_number => {
+                                match self.cast_number(&text) {
+                                    Some(value) => values.push(value),
+                                    None => {
+                                        if let Some(value) = handle_non_number_cell()? {
+                                            values.push(value);
+                                        }
+                                    }
+                                }
+                            }
+                            _ => {
+                                if let Some(value) = handle_non_number_cell()? {
+                                    values.push(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            error @ CalcResult::Error { .. } => return Err(error),
+            _ => {
+                handle_non_number_cell()?;
+            }
+        }
+        Ok(values)
+    }
+
+    /// Reads the cell at `position` as a flow of [`Model::array_of_numbers_from`]: a number is
+    /// added, an error ends the read, and an empty or non-number cell goes to its handler (numeric
+    /// text reads as its number with `text_as_number`).
+    fn push_flow(
+        &mut self,
+        position: CellReferenceIndex,
+        text_as_number: bool,
+        (handle_empty_cell, handle_non_number_cell): CellHandlers<'_>,
+        values: &mut Vec<f64>,
+    ) -> Result<(), CalcResult> {
+        let value = match self.evaluate_cell(position) {
+            CalcResult::Number(value) => Some(value),
+            error @ CalcResult::Error { .. } => return Err(error),
+            CalcResult::EmptyCell => handle_empty_cell()?,
+            CalcResult::String(text) if text_as_number => match self.cast_number(&text) {
+                Some(value) => Some(value),
+                None => handle_non_number_cell()?,
+            },
+            _ => handle_non_number_cell()?,
+        };
+        values.extend(value);
+        Ok(())
+    }
 }

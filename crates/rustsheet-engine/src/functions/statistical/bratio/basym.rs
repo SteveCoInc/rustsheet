@@ -6,6 +6,9 @@
 //! there: `BINOM.DIST(300000000,1000000000,0.3,TRUE)` came out -2.82 where Excel gives
 //! 0.5000156001249112 (probes/t3352-binom-negbinom-large-n A108; statistics.md "BINOM.DIST and
 //! NEGBINOM.DIST at a large n").
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss, clippy::many_single_char_names)]
+// LINT-DEBT-END
 
 use super::super::incomplete_beta::rlog1;
 use super::ln_beta::bcorr;

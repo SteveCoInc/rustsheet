@@ -1,6 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::struct_field_names)]
+// LINT-DEBT-END
 use std::io::Read;
 
 use super::package::Package;
+use super::pivots::MAX_SLICER_CACHES;
+use super::util::xsd_boolean;
 
 use super::sheet_data::{check_stored_length, check_string_literals, MAX_NAME_BODY_UNITS};
 use super::xml::XmlNode;
@@ -27,10 +32,26 @@ pub(crate) struct WorkbookXML {
     /// The `cacheId` and `r:id` of each `<pivotCaches><pivotCache>`, in order; either is `None`
     /// when the element lacks it (the importer skips that cache).
     pub(crate) pivot_caches: Vec<(Option<String>, Option<String>)>,
+    /// The `r:id` of each slicer and timeline cache the workbook's extension list names
+    /// (`x14:slicerCaches/x14:slicerCache`, `x15:slicerCaches` for table slicers, and
+    /// `x15:timelineCacheRefs/x15:timelineCacheRef`), in order, at most
+    /// [`MAX_SLICER_CACHES`] (T-4188).
+    pub(crate) slicer_caches: Vec<String>,
     /// The date system `<workbookPr date1904>` selects.
     pub(crate) date_system: DateSystem,
     /// `calcPr@iterate` and its count and delta.
     pub(crate) iteration: Option<Iteration>,
+}
+
+/// [`WorkbookXML::slicer_caches`] of the workbook part `doc`: only its own extension list's.
+fn slicer_cache_ids(doc: &XmlNode) -> Vec<String> {
+    doc.child("extLst")
+        .into_iter()
+        .flat_map(XmlNode::descendants)
+        .filter(|n| n.has_tag_name("slicerCache") || n.has_tag_name("timelineCacheRef"))
+        .filter_map(|n| n.relationship_id().map(str::to_string))
+        .take(MAX_SLICER_CACHES)
+        .collect()
 }
 
 /// The iteration settings of a `calcPr` element: on when `iterate` is `1` or `true`, with
@@ -39,7 +60,7 @@ pub(crate) struct WorkbookXML {
 /// untrusted).
 fn iteration_from(calc_pr: Option<&XmlNode>) -> Option<Iteration> {
     let node = calc_pr?;
-    if !matches!(node.attribute("iterate"), Some("1" | "true")) {
+    if node.attribute("iterate").and_then(xsd_boolean) != Some(true) {
         return None;
     }
     let default = Iteration::default();
@@ -62,7 +83,7 @@ fn iteration_from(calc_pr: Option<&XmlNode>) -> Option<Iteration> {
 /// `0`, `false` and anything else are 1900, never an error (workbooks are untrusted).
 #[must_use]
 pub fn date_system_from_attribute(value: Option<&str>) -> DateSystem {
-    if matches!(value, Some("1" | "true")) {
+    if value.and_then(xsd_boolean) == Some(true) {
         DateSystem::Excel1904
     } else {
         DateSystem::Excel1900
@@ -176,12 +197,14 @@ pub(super) fn load_workbook<R: Read + std::io::Seek>(
                 .collect()
         })
         .unwrap_or_default();
+    let slicer_caches = slicer_cache_ids(&doc);
     let iteration = iteration_from(doc.descendants().find(|n| n.has_tag_name("calcPr")));
     Ok(WorkbookXML {
         worksheets: sheets,
         defined_names,
         external_references,
         pivot_caches,
+        slicer_caches,
         iteration,
         date_system,
     })
@@ -191,6 +214,24 @@ pub(super) fn load_workbook<R: Read + std::io::Seek>(
 mod tests {
     #![allow(clippy::unwrap_used, reason = "tests")]
     use super::*;
+
+    /// The extension lists probes/t4767-pivot-slicers and -timelines write (T-4188): pivot
+    /// slicer caches, timeline caches and table slicer caches, in order; nothing outside the
+    /// workbook's own `extLst`.
+    #[test]
+    fn slicer_and_timeline_caches_are_read_from_the_extension_list() {
+        let doc = XmlNode::parse_str(concat!(
+            r#"<workbook xmlns="m" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets/><slicerCache r:id="rIdNot"/><extLst>"#,
+            r#"<ext uri="{BBE1A952-AA13-448e-AADC-164F8A28A991}" xmlns:x14="x14"><x14:slicerCaches>"#,
+            r#"<x14:slicerCache r:id="rIdS1"/><x14:slicerCache r:id="rIdS2"/></x14:slicerCaches></ext>"#,
+            r#"<ext uri="{D0CA8CA8-9F24-4464-BF8E-62219DCF47F9}" xmlns:x15="x15"><x15:timelineCacheRefs>"#,
+            r#"<x15:timelineCacheRef r:id="rIdT1"/></x15:timelineCacheRefs></ext>"#,
+            r#"<ext uri="{46BE6895-7355-4a93-B00E-2C351335B9C9}" xmlns:x15="x15"><x15:slicerCaches>"#,
+            r#"<x14:slicerCache xmlns:x14="x14" r:id="rIdS3"/></x15:slicerCaches></ext></extLst></workbook>"#,
+        ))
+        .unwrap();
+        assert_eq!(slicer_cache_ids(&doc), ["rIdS1", "rIdS2", "rIdT1", "rIdS3"]);
+    }
 
     fn iteration(calc_pr: &str) -> Option<Iteration> {
         iteration_from(Some(&XmlNode::parse_str(calc_pr).unwrap()))

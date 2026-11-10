@@ -1,4 +1,7 @@
 //! Renaming a defined name in a parsed formula.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::match_same_arms)]
+// LINT-DEBT-END
 
 use crate::expressions::parser::{for_each_chain_operand_mut, Node};
 

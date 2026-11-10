@@ -43,6 +43,20 @@ pub enum V15 {
     Exempt,
 }
 
+/// A function's usage tier (decision 0355): which Phase 1 gate its cells count toward.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Deserialize, serde::Serialize,
+)]
+#[serde(rename_all = "lowercase")]
+pub enum Usage {
+    /// A common function (catalog prior at least 0.5, or called in at least 6 of the 1,136
+    /// real-world corpus-bench workbooks with formulas): right on every type and error.
+    Foundational,
+    /// Every other function: rare, advanced statistical, financial and engineering functions.
+    #[default]
+    Expert,
+}
+
 /// One catalog entry, as far as the harness needs it.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -72,6 +86,9 @@ pub struct CatalogFunction {
     /// Gate A's missing-table count reads `number` (SPEC-0029, "Gate A holds").
     #[serde(default)]
     pub returns: Option<String>,
+    /// Its usage tier (decision 0355); the view writes `expert` for an entry without `usage:`.
+    #[serde(default)]
+    pub usage: Usage,
     /// The parameters in order, for the argument-coverage census (T-0077).
     #[serde(default)]
     pub params: Vec<CatalogParam>,
@@ -228,6 +245,23 @@ mod tests {
             .functions()
             .filter(|f| f.scope == Scope::Out)
             .all(|f| f.reason.is_some()));
+    }
+
+    #[test]
+    fn committed_view_carries_usage_tiers() {
+        // Decision 0355: 122 foundational functions; an entry without `usage:` is expert.
+        let catalog = Catalog::load(&repo_root()).unwrap_or_else(|e| panic!("{e}"));
+        let tier = |n: &str| catalog.function(n).map(|f| f.usage);
+        assert_eq!(tier("SUM"), Some(Usage::Foundational));
+        assert_eq!(tier("TODAY"), Some(Usage::Foundational));
+        assert_eq!(tier("IRR"), Some(Usage::Expert));
+        let foundational = catalog
+            .functions()
+            .filter(|f| f.usage == Usage::Foundational)
+            .count();
+        assert_eq!(foundational, 122);
+        let bad = r#"{"functions": [{"name": "A", "category": "math", "milestone": "M2", "scope": "in", "usage": "rare"}]}"#;
+        assert!(Catalog::parse(bad).is_err());
     }
 
     #[test]

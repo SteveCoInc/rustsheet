@@ -1,4 +1,12 @@
 //! Area and reference-argument types of the reference operators, and their error helpers.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::needless_pass_by_value
+)]
+// LINT-DEBT-END
 
 use std::{ops::Deref, sync::Arc};
 
@@ -301,6 +309,25 @@ impl RefGrid {
         })
     }
 
+    /// The grid of an array's elements, none of them a reference: an error is an error element,
+    /// anything else a value element (as a lift keeps its scalar results). `None` for an empty or
+    /// ragged array.
+    pub(crate) fn of_values(rows: &[Vec<ArrayNode>]) -> Option<RefGrid> {
+        let columns = rows.first()?.len();
+        if rows.iter().any(|row| row.len() != columns) {
+            return None;
+        }
+        let elements = rows
+            .iter()
+            .flatten()
+            .map(|node| match node {
+                ArrayNode::Error(error) => RefElement::Error(error.clone()),
+                node => RefElement::Value(node.clone()),
+            })
+            .collect();
+        RefGrid::new(rows.len(), columns, elements)
+    }
+
     /// Rows and columns of elements.
     pub(crate) fn dims(&self) -> (usize, usize) {
         (self.rows, self.columns)
@@ -365,7 +392,8 @@ impl RefGrid {
     /// `LARGE(XLOOKUP({9;2},..,Data!I1:I3,Data!G1:G2),1)`, SMALL and MEDIAN of it are `#N/A`,
     /// probes/t4704-mixed-xlookup-grid-readers Calc!A49, A58, A88). A value or error first element
     /// keeps the any-off-sheet rule, with the first error element ahead of `#N/A` (t4697 H14, H15;
-    /// the `{2;9}` order of that grid is `#DIV/0!`, t4704 A46, A52, A55).
+    /// the `{2;9}` order of that grid is `#DIV/0!`, t4704 A46, A52, A55), except that a `#REF!`
+    /// element (a failed INDIRECT) never counts as that first error (t4791 H4:H6).
     pub(crate) fn order_statistic_error(&self, sheet: u32) -> Option<Error> {
         if let Some(RefElement::Reference(first)) = self.elements.first() {
             return (first.left.sheet != sheet).then_some(Error::NA);
@@ -377,7 +405,11 @@ impl RefGrid {
             return None;
         }
         let first_error = self.elements.iter().find_map(|element| match element {
-            RefElement::Error(error) => Some(error.clone()),
+            // Every #REF! element is skipped, by kind: the evidence is only a failed INDIRECT
+            // (bad sheet name), which does not outrank the off-sheet #N/A (probes/t4791-large-
+            // small-median-mixed-first-element H4:H6, excel-graph). A cell-held #REF! is
+            // unevidenced (a #DIV/0! one propagates, t4704).
+            RefElement::Error(error) if *error != Error::REF => Some(error.clone()),
             _ => None,
         });
         Some(first_error.unwrap_or(Error::NA))

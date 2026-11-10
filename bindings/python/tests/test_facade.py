@@ -282,6 +282,15 @@ def test_save_and_open_roundtrip(wb, tmp_path):
     assert again["Sheet1!A2"] == 16.0
 
 
+def test_save_report_lists_what_the_save_left_out(wb, tmp_path):
+    # T-4562 (SPEC-0033 D7): a workbook with no source drops nothing; report=False returns None.
+    path = tmp_path / "book.xlsx"
+    assert wb.save_xlsx(str(path)) is None
+    assert wb.save_xlsx(str(path), report=True) == []
+    reopened = rs.open(str(path))
+    assert reopened.save_xlsx(str(tmp_path / "again.xlsx"), report=True) == []
+
+
 def test_open_missing_file_is_load_error(tmp_path):
     with pytest.raises(rs.LoadError):
         rs.Workbook.open(str(tmp_path / "missing.xlsx"))

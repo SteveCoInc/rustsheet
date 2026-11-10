@@ -307,6 +307,11 @@ pub struct RunReport {
     /// reads the catalog.
     #[serde(default)]
     pub pivot_features: crate::pivot_features::PivotFeatures,
+    /// Per suite with a classified pivot, its fresh and stale pivots, the fresh pivots' render
+    /// scores (check (b)) and the `refreshOnLoad` refresh checks (check (c); T-4906). The M16
+    /// exit row's corpus render measure reads the `pivot-corpus-*` rows.
+    #[serde(default)]
+    pub fresh_pivot_render: Vec<crate::pivot_freshness::FreshRenderSuite>,
     /// The exit measures of decision 0085 per milestone (T-2177); derived from the rows above.
     #[serde(default)]
     pub milestone_exit: Vec<crate::milestone_exit::ExitRow>,
@@ -314,6 +319,11 @@ pub struct RunReport {
     /// knows which suites are generated.
     #[serde(default)]
     pub v15_checkpoint: V15Checkpoint,
+    /// Decision 0355's usage-tier gates, Phase 1's exit measure (SPEC-0037 design 3, T-5092);
+    /// filled by the caller beside `v15_checkpoint`, since both read every cell of the run and
+    /// the Phase 1 exceptions.
+    #[serde(default)]
+    pub usage_gates: crate::usage_gates::UsageGates,
     /// In-scope catalog functions per parity tier ([`attribution::tier_counts`], T-0068).
     #[serde(default)]
     pub tiers: Vec<attribution::TierCount>,
@@ -505,6 +515,7 @@ impl RunReport {
                 .collect(),
             unattributed_off: attribution::unattributed_off(catalog, results),
             attributed_off: attribution::attributed_off(catalog, results),
+            fresh_pivot_render: crate::pivot_freshness::summarize(results),
             // The caller fills the milestone sections, the checkpoint and `run`.
             ..RunReport::default()
         }
@@ -582,7 +593,8 @@ impl RunReport {
             let errors = st(CaseStatus::EngineError)
                 + st(CaseStatus::Panic)
                 + st(CaseStatus::Timeout)
-                + st(CaseStatus::InvalidCase);
+                + st(CaseStatus::InvalidCase)
+                + st(CaseStatus::ExcelRefused);
             let crashes =
                 st(CaseStatus::EngineError) + st(CaseStatus::Panic) + st(CaseStatus::Timeout);
             let _ = writeln!(
@@ -657,6 +669,7 @@ impl RunReport {
         );
         run_meta::write_markdown(&self.run, &mut md);
         self.write_suites_table(&mut md);
+        crate::usage_gates::write_markdown(&self.usage_gates, &mut md);
         crate::milestone_exit::write_markdown(&self.milestone_exit, &mut md);
         if let Some(line) = self.phase1b_evidence.line() {
             let _ = writeln!(md, "\n{line}");
@@ -680,6 +693,7 @@ impl RunReport {
                         | CaseStatus::Panic
                         | CaseStatus::Timeout
                         | CaseStatus::InvalidCase
+                        | CaseStatus::ExcelRefused
                 )
             })
             .collect();

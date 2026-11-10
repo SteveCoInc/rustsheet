@@ -52,6 +52,9 @@
 //! ([`script_order`]) and an astral character weighs its two UTF-16 units, so lone units sort above
 //! U+FFFD and a lone high half sorts before a pair it starts, a lone low half after it
 //! (docs/excel-semantics/text.md "Lone surrogates through CODE, comparisons, ...").
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 use std::cell::Cell;
 use std::cmp::{Ordering, Reverse};
@@ -69,10 +72,10 @@ use accents::{accents, cmp_accent_units};
 pub(crate) use case_fold::{fold_case, fold_char, fold_exact_lookup, fold_final_sigma};
 #[cfg(test)]
 pub(crate) use compared::take_read_ticks;
-use compared::{cmp_text_in, counted, out_of_ticks, KEY_TICKS};
+use compared::{cmp_text_in, counted, KEY_TICKS};
 pub(crate) use compared::{
-    note_compared, restore_compared_ticks, restore_cut_short, set_compared_allowance, stoppable,
-    take_compared_ticks, take_cut_short, BYTE_TICKS, CHAR_TICKS, FOLD_TICKS,
+    note_compared, out_of_ticks, restore_compared_ticks, restore_cut_short, set_compared_allowance,
+    stoppable, take_compared_ticks, take_cut_short, BYTE_TICKS, CHAR_TICKS, FOLD_TICKS,
 };
 use kana::{kana, vowel};
 pub(crate) use lookup_fold::fold_lookup;

@@ -4,7 +4,7 @@
 //! definitions come from the case files through the shared probe harness (`pivot::probe_cases`).
 
 use super::*;
-use crate::pivot::layout::{aggregate, lay_out, record_numbers};
+use crate::pivot::layout::lay_out;
 use crate::pivot::probe_cases::{position, probe_pivot, read};
 use crate::pivot::{compute, Aggregate, AxisField, CacheItem, MAX_PIVOT_WORK};
 
@@ -55,15 +55,19 @@ fn recomputed(table: &PivotTable, cache: &PivotCache, field: usize, records: &[u
     let values: Vec<&CacheItem> = (records.iter())
         .map(|&r| &source.items[source.records[r as usize] as usize])
         .collect();
-    let numbers: Vec<u32> = (records.iter().zip(&values))
-        .filter(|(_, v)| matches!(v, CacheItem::Number(_)))
-        .map(|(&r, _)| r)
+    let numbers: Vec<f64> = (values.iter())
+        .filter_map(|v| match v {
+            CacheItem::Number(n) => Some(*n),
+            _ => None,
+        })
         .collect();
+    let count = |n: usize| f64::from(u32::try_from(n).unwrap());
+    let sum = numbers.iter().fold(0.0, |acc, x| acc + x);
     match data.function {
-        Aggregate::Count => values.iter().filter(|v| ***v != CacheItem::Missing).count() as f64,
-        function @ (Aggregate::Sum | Aggregate::Average) => {
-            aggregate(function, &record_numbers(source, &numbers).unwrap()).unwrap()
-        }
+        Aggregate::Count => count(values.iter().filter(|v| ***v != CacheItem::Missing).count()),
+        Aggregate::Sum => sum,
+        Aggregate::Average if numbers.is_empty() => 0.0,
+        Aggregate::Average => sum / count(numbers.len()),
         other => panic!("aggregate {other:?} is out of scope"),
     }
 }
@@ -94,13 +98,13 @@ fn check(stem: &str, name: &str) -> usize {
                 checked += 1;
             }
             // A number outside the value area: a page or label item; an error is the error's.
-            ("n" | "e", None) | ("e", Some(_)) => {}
+            // So is any other cell no record reaches.
+            ("e", Some(_)) | (_, None) => {}
             // A label, a caption or an empty cell; a value cell no record reaches is empty, or
             // `missingCaption` (t4137 K2).
             (_, Some(records)) => {
                 assert!(records.is_empty(), "{stem} {name} {at}: {records:?}");
             }
-            (_, None) => {}
         }
     }
     // The grand total, the last row and column lines, covers every record the filters keep.

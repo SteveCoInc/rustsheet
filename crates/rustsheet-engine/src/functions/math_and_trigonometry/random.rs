@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::unused_self
+)]
+// LINT-DEBT-END
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{number_result, value_error, LiftCost, LiftOptions};
@@ -7,6 +14,12 @@ use crate::limits::check_array_size;
 use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
 };
+
+/// The functions that draw a new random value at each evaluation, so two evaluations of the same
+/// node in one recalculation may differ: a caller that evaluates a node twice must not trust the
+/// first read to predict the second (`Model::is_empty_argument`, T-4912).
+pub(crate) const RANDOM_DRAWS: [Function; 3] =
+    [Function::Rand, Function::Randbetween, Function::Randarray];
 
 #[cfg(not(target_arch = "wasm32"))]
 fn random() -> f64 {

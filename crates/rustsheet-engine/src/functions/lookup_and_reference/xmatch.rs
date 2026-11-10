@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+// LINT-DEBT-END
 use crate::cast::calc_scalar_to_string;
 use crate::expressions::types::CellReferenceIndex;
 use crate::{
@@ -10,6 +13,7 @@ use crate::functions::{
     binary_search::binary_search_by,
     criteria::wildcard_text_matcher,
     text::{LookupPattern, LookupRegexes},
+    util::collation::stoppable,
     util::near_integer::near_integer_whole,
 };
 
@@ -118,13 +122,18 @@ pub(crate) fn linear_scan<'a>(
                     // (probes/t3161-xmatch-wildcard-regex-near-equal Calc!A1:A10, C1:C10, E1:E10).
                     Box::new(move |x| compare_searched(x, lookup_value) == 0)
                 };
-            indices.into_iter().find(|&idx| {
-                let v = get(idx);
-                if is_blank(v) || blank_lookup {
-                    is_blank(v) && blank_lookup
-                } else {
-                    matches(v)
-                }
+            // The scan's result reaches only this call's value, so the matcher may stop once the
+            // run's work allowance is spent (`stoppable`; the run is then the work budget's error,
+            // audit 2 item 2).
+            stoppable(|| {
+                indices.into_iter().find(|&idx| {
+                    let v = get(idx);
+                    if is_blank(v) || blank_lookup {
+                        is_blank(v) && blank_lookup
+                    } else {
+                        matches(v)
+                    }
+                })
             })
         }
         MatchMode::Regex => None,
@@ -425,7 +434,7 @@ impl Model {
             CalcResult::Array(rows) => {
                 // An array constant must be a single row or single column.
                 let n_rows = rows.len();
-                let n_cols = rows.first().map(|r| r.len()).unwrap_or(0);
+                let n_cols = rows.first().map_or(0, std::vec::Vec::len);
                 let is_row_vec = n_rows == 1;
                 let is_col_vec = n_cols == 1;
                 if n_rows == 0 || n_cols == 0 || (!is_row_vec && !is_col_vec) {

@@ -6,6 +6,9 @@
 //! ([`bup`]), and basym ([`basym`]) for two shapes above 100 near the mean. The line-by-line
 //! model is `docs/research/t2464/r2-bratio/bratio_excel.py` `kernel`; every branch not ported yet
 //! keeps today's kernel (`incomplete_beta.rs`, SPEC-0025's migration).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp, clippy::many_single_char_names)]
+// LINT-DEBT-END
 
 mod basym;
 mod bfrac;
@@ -292,7 +295,9 @@ fn beta_dist_l140_zero(a0: f64, b0: f64, x0: f64, y0: f64) -> bool {
 /// 0.555) to 0.5550000000000002.
 ///
 /// Branches that are not ported fall back to the bounded Cephes `search_tails`; bup + bgrat at
-/// a0 < 1 is ported (T-3665), so the search runs it too.
+/// a0 < 1 is ported (T-3665), so the search runs it too. Where Cephes' tails are an exact 0 and 1
+/// on bratio's direct bgrat branch, the search takes that branch instead ([`search_direct_bgrat`],
+/// T-4866).
 pub(crate) fn beta_search_tails(x: f64, y: f64, a: f64, b: f64) -> (f64, f64) {
     let ported = || {
         let many_terms = dispatch(a, b, x, y)
@@ -305,7 +310,39 @@ pub(crate) fn beta_search_tails(x: f64, y: f64, a: f64, b: f64) -> (f64, f64) {
     };
     closed_form_tails(x, y, a, b)
         .or_else(ported)
-        .unwrap_or_else(|| search_tails(x, y, a, b))
+        .unwrap_or_else(|| {
+            let cephes = search_tails(x, y, a, b);
+            if cephes.0 == 0.0 || cephes.1 == 0.0 {
+                search_direct_bgrat(x, y, a, b).unwrap_or(cephes)
+            } else {
+                cephes
+            }
+        })
+}
+
+/// (w, w1) of bratio's direct bgrat branch, w1 = bgrat(b0, a0, y0, x0, 0) at 0 < a0 < 1 and
+/// a0 != 1/2 (1/2 is [`ported_tails_with`]'s `bgrat_half`), through the accurate
+/// [`bgrat_increment`] that L140 bup + bgrat already takes; `None` off the branch or where the
+/// increment is (z below its fraction's range, the prefactor out of the double range).
+///
+/// BETA.INV's search only, and only where the Cephes kernel's tails are an exact 0 and 1 (T-4866):
+/// it returns those over a band of x at a tiny a0 and a large b0, where the search then stops far
+/// off the root.
+/// `BETA.INV(1-1.10491974750915E-14,0.0050070029475036,171.171095424379)` is Excel's
+/// 0.12939405629301814 (the 50-digit root agrees; probes-numeric t3351-beta-inv-sweep A200,
+/// excel-graph), and Cephes' upper tail is exactly 0 from x = 1E-4 to 0.2 there, so the search
+/// crossed at 2.925059559426143E-5 instead. Where Cephes' tails are numbers the search keeps them:
+/// taking this branch at every point there moves 6 of the sweep's other cells further from Excel
+/// (A143 from Excel's bits to 16 ulp; A157, A164, A168, A176, A178) and 3 nearer. BETA.DIST's cdf
+/// keeps today's kernel on this branch: moving it is T-3933, deferred by decision 0267.
+fn search_direct_bgrat(x: f64, y: f64, a: f64, b: f64) -> Option<(f64, f64)> {
+    let d = dispatch(a, b, x, y)?;
+    if d.branch != Branch::Bgrat || d.a0 == 0.5 {
+        return None;
+    }
+    let w1 = bgrat_increment(d.b0, d.a0, d.y0, d.x0)?.0;
+    let w = half_complement(w1);
+    Some(if d.swapped { (w1, w) } else { (w, w1) })
 }
 
 /// (w, w1) of K(a, b, x, y), x and y formed by the caller per SPEC-0025's caller table:

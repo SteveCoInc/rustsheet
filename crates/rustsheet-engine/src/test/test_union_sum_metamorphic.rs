@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used, reason = "tests")]
 
 //! Metamorphic family (T-1149, SPEC-0004 test plan): `SUM((r1,r2,..))` must equal
@@ -49,9 +52,9 @@ fn union_sum_equals_separate_arguments() {
             let cell = format!("{}{r}", col_name(c));
             match rng.below(8) {
                 0 => {}
-                1 => model._set(&cell, "\"x\""),
-                2 => model._set(&cell, "TRUE"),
-                _ => model._set(&cell, &(rng.below(2000) as i64 - 1000).to_string()),
+                1 => model.set_a1(&cell, "\"x\""),
+                2 => model.set_a1(&cell, "TRUE"),
+                _ => model.set_a1(&cell, &(rng.below(2000) as i64 - 1000).to_string()),
             }
         }
     }
@@ -65,17 +68,17 @@ fn union_sum_equals_separate_arguments() {
         }
         let joined = operands.join(",");
         let (union_cell, plain_cell) = (format!("G{}", i + 1), format!("H{}", i + 1));
-        model._set(&union_cell, &format!("=SUM(({joined}))"));
-        model._set(&plain_cell, &format!("=SUM({joined})"));
+        model.set_a1(&union_cell, &format!("=SUM(({joined}))"));
+        model.set_a1(&plain_cell, &format!("=SUM({joined})"));
         pairs.push((union_cell, plain_cell, joined));
     }
     model.evaluate();
     let mut numeric = 0;
     for (union_cell, plain_cell, joined) in pairs {
-        numeric += usize::from(model._get_text(&plain_cell).parse::<f64>().is_ok());
+        numeric += usize::from(model.get_text_a1(&plain_cell).parse::<f64>().is_ok());
         assert_eq!(
-            model._get_text(&union_cell),
-            model._get_text(&plain_cell),
+            model.get_text_a1(&union_cell),
+            model.get_text_a1(&plain_cell),
             "SUM(({joined})) vs SUM({joined})"
         );
     }

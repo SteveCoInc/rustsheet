@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::float_cmp
+)]
+// LINT-DEBT-END
 use crate::{
     arithmetic::power,
     calc_result::CalcResult,
@@ -147,18 +154,17 @@ fn vdb_switching_between(
             break;
         }
         let offset = f64::from(index) - whole;
-        let charge = match straight_line {
-            Some(charge) => charge,
-            None => {
-                let unclipped = book * rate;
-                let ddb = unclipped.min(book - salvage);
-                let sln = (book - salvage) / (remaining_life - offset);
-                if switches && sln > unclipped {
-                    straight_line = Some(sln);
-                    sln
-                } else {
-                    ddb
-                }
+        let charge = if let Some(charge) = straight_line {
+            charge
+        } else {
+            let unclipped = book * rate;
+            let ddb = unclipped.min(book - salvage);
+            let sln = (book - salvage) / (remaining_life - offset);
+            if switches && sln > unclipped {
+                straight_line = Some(sln);
+                sln
+            } else {
+                ddb
             }
         };
         if offset >= 0.0 {

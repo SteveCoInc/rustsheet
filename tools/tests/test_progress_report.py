@@ -1,7 +1,8 @@
 """The progress report generator (SPEC-0022) on a small synthetic report: the parity block, the
-all-functions page and the charts (T-0081), input validation, the run record (T-0070), and the
-top-functions and evidence blocks (T-0073). test_progress_page.py covers the page and its judgment
-blocks, test_progress_history.py the run history and stale runs (T-0071)."""
+all-functions page and the charts (T-0081), input validation, the run record (T-0070), the
+top-functions and evidence blocks (T-0073), and the usage-tiers block (T-5094).
+test_progress_page.py covers the page and its judgment blocks, test_progress_history.py the run
+history and stale runs (T-0071)."""
 
 from __future__ import annotations
 
@@ -13,7 +14,7 @@ from typing import Any
 import pytest
 
 from rustsheet_tools import progress_report
-from rustsheet_tools.progress_report import evidence, parity
+from rustsheet_tools.progress_report import evidence, history, page, parity, usage
 from rustsheet_tools.progress_report.history import Git
 from rustsheet_tools.progress_report.markdown import md_cell, md_text, pct, table
 from rustsheet_tools.progress_report.model import (
@@ -22,7 +23,9 @@ from rustsheet_tools.progress_report.model import (
     ProgressReportError,
     compute,
     known_failures,
+    load_usage_gates,
     run_of,
+    tasks_of,
 )
 from rustsheet_tools.progress_report.svg import TIER_PALETTE, Bar, bar_chart, nice_step
 
@@ -664,3 +667,272 @@ def test_gate_b_not_measured_names_the_missing_suites() -> None:
     assert "n/a, 0 of 6 functions at rate; not measured, the run did not score poi" in parity.gate_lines(
         data(r)
     )
+
+
+def ufn(
+    name: str, use: str, cells: int, *, wrong: int = 0, outside: int = 0, meets: bool = True
+) -> dict[str, Any]:
+    """A report.json `usage_gates.functions[]` entry (SPEC-0037 design 3)."""
+    rates = {
+        k: (cells - n) / cells if cells else 1.0
+        for k, n in (("type_rate", wrong), ("envelope_rate", outside))
+    }
+    return {
+        "name": name,
+        "usage": use,
+        "cells": cells,
+        "wrong_type": wrong,
+        "outside": outside,
+        **rates,
+        "meets": meets,
+    }
+
+
+def utier(use: str, functions: list[dict[str, Any]], failing: list[str]) -> dict[str, Any]:
+    """A `usage_gates.tiers[]` entry (not met) over `functions`, with decision 0355's bars for `use`."""
+    mine = [f for f in functions if f["usage"] == use]
+    cells, wrong, outside = (sum(f[k] for f in mine) for k in ("cells", "wrong_type", "outside"))
+    top = use == "foundational"
+    return {
+        "usage": use,
+        "functions": len(mine),
+        "cells": cells,
+        "wrong_type": wrong,
+        "outside": outside,
+        "type_rate": (cells - wrong) / cells,
+        "envelope_rate": (cells - outside) / cells,
+        "pooled_bar": {"type": 1.0, "envelope": 0.9999} if top else {"type": 0.999, "envelope": 0.999},
+        "function_bar": {"type": 1.0, "envelope": 0.0} if top else {"type": 0.99, "envelope": 0.99},
+        "failing_functions": failing,
+        "met": False,
+    }
+
+
+def usage_gates() -> dict[str, Any]:
+    """The synthetic report's tier gates: UPPER's 3 wrong-type cells fail the foundational tier
+    (LN's one outside cell counts only pooled); BETA.DIST fails the expert per-function bars."""
+    functions = [
+        ufn("ABS", "foundational", 30),
+        ufn("SUM", "foundational", 23),
+        ufn("LN", "foundational", 28, outside=1),
+        ufn("UPPER", "foundational", 2000, wrong=3, meets=False),
+        ufn("BETA.DIST", "expert", 15, wrong=1, outside=1, meets=False),
+        ufn("INFO", "expert", 0),
+    ]
+    tiers = [utier("foundational", functions, ["UPPER"]), utier("expert", functions, ["BETA.DIST"])]
+    return {"suites": ["probes", "probes-numeric", "s"], "tiers": tiers, "functions": functions, "met": False}
+
+
+def with_usage() -> dict[str, Any]:
+    return {**report(), "usage_gates": usage_gates()}
+
+
+# A `scripts/phase1_exit.py --json` output with the tier lines (SPEC-0037 design 5): each line
+# keyed by `criterion` as today, and the old gates kept as `info`.
+EXIT = {
+    "overall": "not met",
+    "failing": ["foundational", "expert"],
+    "lines": [
+        {"criterion": "run", "verdict": "met", "detail": "at abc12345: every suite ran, clean tree"},
+        {
+            "criterion": "foundational",
+            "verdict": "not met",
+            "detail": "3 wrong type, 1 outside; failing: UPPER",
+        },
+        {"criterion": "expert", "verdict": "not met", "detail": "failing: BETA.DIST"},
+        {"criterion": "gate A", "verdict": "info", "detail": "2 points"},
+        {"criterion": "function rate", "verdict": "info", "detail": "4/6"},
+    ],
+}
+# The last complete history row, with its `usage` object.
+LAST = {
+    "date": "2026-10-18",
+    "usage": {
+        "foundational": {"cells": 2000, "wrong_type": 5, "outside": 1, "failing": 2, "met": False},
+        "expert": {"cells": 15, "wrong_type": 1, "outside": 2, "failing": 1, "met": True},
+    },
+}
+GE, MINUS = "\N{GREATER-THAN OR EQUAL TO}", "\N{MINUS SIGN}"
+USAGE_BLOCK = f"""## Usage tiers
+
+**Tier gates (decision 0355): foundational 3 wrong type, 1 outside, 1 failing function: not met; \
+expert 1 wrong type, 1 outside, 1 failing function: not met.** Both: **not met**. They replace
+Gate A and Gate B (decision 0188 R1 and R2), whose numbers below are information.
+
+| Tier | Functions | Cells | Wrong type | Outside | Type rate | Bar | Envelope rate | Bar | Per-function bars | Met |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Foundational | 4 | 2,081 | 3 | 1 | 99.8558% | 100% | 99.9519% | {GE} 99.99% | type 100% | **not met** |
+| Expert | 2 | 15 | 1 | 1 | 93.3333% | {GE} 99.9% | 93.3333% | {GE} 99.9% | type {GE} 99%, envelope {GE} 99% | **not met** |
+
+Counted on the attributed cells (decision 0118) of probes, probes-numeric, s, without the decision 0134
+exceptions, the deviations, the pivot suites and GETPIVOTDATA (report.json `usage_gates`). A type
+miss is a wrong type, error or text; an envelope miss is a number outside 12 digits of Excel and
+1e-9 of the math. Phase 1 exit tier lines (`make phase1-exit`, which adds the accuracy-table
+points):
+
+- **foundational: not met.** 3 wrong type, 1 outside; failing: UPPER
+- **expert: not met.** failing: BETA.DIST
+
+### Failing functions
+
+Each tier's failing functions as the report lists them, worst first (the most cells wrong on
+either measure), at most 10 per tier.
+
+| Tier | Function | Cells | Wrong type | Outside | Type rate | Envelope rate |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Foundational | UPPER | 2,000 | 3 | 0 | 99.85% | 100.00% |
+| Expert | BETA.DIST | 15 | 1 | 1 | 93.33% | 93.33% |
+
+### Change since the last run
+
+Against the last complete run, **2026-10-18**:
+
+| Tier | Measure | 2026-10-18 | Now | Change |
+| --- | --- | ---: | ---: | ---: |
+| Foundational | Wrong type, error or text | 5 | 3 | {MINUS}2 |
+| Foundational | Outside the envelope | 1 | 1 | 0 |
+| Foundational | Failing functions | 2 | 1 | {MINUS}1 |
+| Foundational | Met | not met | not met | unchanged |
+| Expert | Wrong type, error or text | 1 | 1 | 0 |
+| Expert | Outside the envelope | 2 | 1 | {MINUS}1 |
+| Expert | Failing functions | 1 | 1 | 0 |
+| Expert | Met | met | not met | no longer met |"""
+
+
+def test_the_usage_tiers_block_is_pinned_on_a_fixture_report() -> None:
+    assert usage.block(data(with_usage()).usage, EXIT, LAST) == USAGE_BLOCK
+
+
+def test_a_report_without_usage_gates_shows_not_measured() -> None:
+    assert data().usage is None
+    assert usage.block(None, None, LAST) == (
+        "## Usage tiers\n\n**Tier gates (decision 0355): not measured \\(report.json has no "
+        "&#96;usage\\_gates&#96;: the report predates T-5092\\).** Until the report measures them, "
+        "Gate A and\nGate B (decision 0188) still gate the Phase 1 exit.\n\n"
+        "Phase 1 exit tier lines (`make phase1-exit`):\n\n"
+        "- **foundational: not measured** (no phase1-exit.json beside the report).\n"
+        "- **expert: not measured** (no phase1-exit.json beside the report)."
+    )
+    assert usage.headline(None).startswith("not measured (report.json has no `usage_gates`")
+    # A phase1-exit.json from before T-5092 has no tier lines: each reads not measured.
+    old = {
+        "overall": "not met",
+        "failing": [],
+        "lines": [{"criterion": "gate A", "verdict": "met", "detail": ""}],
+    }
+    assert "- **expert: not measured** (phase1-exit.json has no `expert` line: it predates T-5092)." in (
+        usage.exit_lines(old)
+    )
+
+
+def test_the_change_needs_an_earlier_row_with_the_tiers() -> None:
+    u = data(with_usage()).usage
+    assert u is not None
+    for last in (None, {"date": "2026-10-18"}):
+        assert "No earlier complete run in the history measured the tiers" in usage.since(u, last)
+
+
+def test_failing_functions_are_worst_first_and_at_most_ten_per_tier() -> None:
+    gates = usage_gates()
+    # F01 to F12 have 1 to 12 wrong-type cells; F11B ties F11 on misses with fewer wrong-type cells.
+    extra = [ufn(f"F{n:02}", "expert", 100, wrong=n, meets=False) for n in range(1, 13)]
+    extra.append(ufn("F11B", "expert", 100, wrong=5, outside=6, meets=False))
+    gates["functions"] += extra
+    gates["tiers"][1]["failing_functions"] = ["BETA.DIST", *(f["name"] for f in extra)]
+    gates["tiers"][0]["failing_functions"] = []
+    u = load_usage_gates({"usage_gates": gates})
+    assert u is not None
+    order = [f.name for f in usage.failing(u, u.tiers[1])]
+    assert order[:4] == ["F12", "F11", "F11B", "F10"]
+    # BETA.DIST ties F02 on misses (2) with fewer wrong-type cells.
+    assert order[-3:] == ["F02", "BETA.DIST", "F01"]
+    text = usage.failing_table(u)
+    rows = [line for line in text.splitlines() if line.startswith("| Expert")]
+    assert len(rows) == 11
+    assert rows[-1] == "| Expert | and 4 more |  |  |  |  |  |"
+    assert "| Foundational | none |  |  |  |  |  |" in text
+
+
+def test_failing_function_names_are_escaped_in_the_table() -> None:
+    # T-5098: a name from the report is report text; a `|`, `_` or `*` in it must not break the
+    # table or start emphasis, and `table`'s own md_cell must not escape it twice.
+    gates = usage_gates()
+    odd = ufn("A|B_C*", "expert", 100, wrong=3, meets=False)
+    gates["functions"].append(odd)
+    gates["tiers"][1]["failing_functions"] = ["A|B_C*"]
+    u = load_usage_gates({"usage_gates": gates})
+    assert u is not None
+    row = next(line for line in usage.failing_table(u).splitlines() if "A\\|B" in line)
+    assert "| A\\|B\\_C\\* |" in row
+    assert row.replace("\\|", "").count("|") == 8  # 7 cells, so 8 unescaped pipes
+
+
+@pytest.mark.parametrize(
+    ("mutate", "error"),
+    [
+        (lambda g: g["tiers"].pop(), "has no expert tier"),
+        (lambda g: g["tiers"].append(g["tiers"][0]), "lists foundational twice"),
+        (lambda g: g["tiers"][0].update(usage="common"), "usage is 'common', not one of"),
+        (lambda g: g["tiers"][0]["failing_functions"].append("NOPE"), "names NOPE, which"),
+        (lambda g: g["tiers"][1]["pooled_bar"].update(type=99.9), "is not a share from 0 to 1"),
+        (lambda g: g["functions"][0].pop("wrong_type"), "has no `wrong_type`"),
+        (lambda g: g.pop("met"), "usage_gates has no `met`"),
+    ],
+)
+def test_a_malformed_usage_gates_fails_loudly(mutate: Any, error: str) -> None:
+    r = with_usage()
+    mutate(r["usage_gates"])
+    with pytest.raises(ProgressReportError, match=error):
+        data(r)
+
+
+def test_the_phase1_checklist_leads_with_the_tier_gates() -> None:
+    first, gate_b, gate_a = parity.gate_lines(data(with_usage())).splitlines()[:3]
+    assert first.startswith("- **Tier gates (decision 0355): foundational 3 wrong type, 1 outside")
+    assert "They replace Gate B and Gate A as the Phase 1 gates" in first
+    assert gate_b.startswith(
+        "- **Gate B (decision 0188 R1(b)): n/a (the report predates Gate B).** _Information"
+    )
+    assert gate_a.endswith("_Information, gates nothing (decision 0355 item 5)._")
+    unmeasured = parity.gate_lines(data())
+    assert unmeasured.startswith("- **Tier gates (decision 0355): not measured")
+    assert "Gate B and Gate A below still gate the Phase 1 exit" in unmeasured
+    assert "_Information" not in unmeasured
+
+
+def test_the_history_row_keeps_the_tiers_for_the_next_change() -> None:
+    run, counts = run_of(report()), tasks_of(tasks())
+    row = history.complete_row(run, data(with_usage()), counts, None)
+    assert row["usage"] == {
+        "foundational": {"cells": 2081, "wrong_type": 3, "outside": 1, "failing": 1, "met": False},
+        "expert": {"cells": 15, "wrong_type": 1, "outside": 1, "failing": 1, "met": False},
+    }
+    assert history.parse(history.dump([row])) == [row]
+    assert "usage" not in history.complete_row(run, data(), counts, None)
+    bad = {**row, "usage": {"foundational": row["usage"]["foundational"]}}
+    with pytest.raises(ProgressReportError, match="usage has no `expert`"):
+        history.parse(history.dump([bad]))
+
+
+def test_main_puts_the_usage_tiers_block_after_the_bottom_line(tmp_path: Path, capsys: Any) -> None:
+    out, exit_json = tmp_path / "out", tmp_path / "phase1-exit.json"
+    exit_json.write_text(json.dumps(EXIT))
+    args = [*write_inputs(tmp_path, with_usage()), "--phase1-exit", str(exit_json), "--out-dir", str(out)]
+    progress_report.main(args, GIT)
+    text = (out / "progress.md").read_text()
+    names = list(page.parse(text))
+    assert names[names.index("bottom-line") + 1] == "usage-tiers"
+    assert "- **foundational: not met.** 3 wrong type, 1 outside; failing: UPPER" in text
+    assert "No earlier complete run in the history measured the tiers" in text
+    assert "- **Usage tiers.** report.json `usage_gates`" in text
+    assert (
+        "usage tiers: foundational 3 wrong type, 1 outside, 1 failing function: not met;"
+        in capsys.readouterr().out
+    )
+    # The next day's page shows the change against this run's history row.
+    nxt = with_usage()
+    nxt["run"] = {**nxt["run"], "date": "2026-10-20"}
+    progress_report.main([*write_inputs(tmp_path, nxt), "--out-dir", str(out)], GIT)
+    again = (out / "progress.md").read_text()
+    assert "Against the last complete run, **2026-10-19**:" in again
+    assert "| Expert | Met | not met | not met | unchanged |" in again

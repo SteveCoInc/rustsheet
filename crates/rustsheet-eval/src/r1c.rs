@@ -1,5 +1,6 @@
-//! Decision 0188 R1(c): which visibly-off cells a milestone's probe row and ironcalc-calc row
-//! count, and which are Phase 1b evidence instead (T-3427).
+//! Decision 0188 R1(c), as decision 0355 item 4 amends it: which visibly-off cells a milestone's
+//! probe row and ironcalc-calc row count, and which are Phase 1b evidence instead (T-3427,
+//! T-5092).
 //!
 //! A row counts a visibly-off cell (decision 0083, [`Visible::is_off`]) unless:
 //! - it is a probe-row cell (suite `probes`) that an open M14 task alone owns (R7, decision 0143's
@@ -7,23 +8,19 @@
 //!   R7 names the probe rows only, so an M14-owned ironcalc-calc cell still counts;
 //! - `math-over-excel.tsv` marks it, Excel is more than G = 1e-4 off its math value (R3's evidence,
 //!   checked per cell) and the engine returns the math within ε: it passes ([`R1c::R3Pass`]);
-//! - it is a number inside Gate A's envelope ([`envelope`]: within ε of its 50-digit math value,
-//!   T-3380) and Excel's value is within ε of that math too: it is Phase 1b evidence
-//!   ([`R1c::Phase1b`]), measured and reported every run but not counted.
+//! - it is inside decision 0355's envelope ([`cell_envelope`]: within 12 significant digits of
+//!   Excel, or within ε of its 50-digit math value): it is Phase 1b evidence ([`R1c::Phase1b`]),
+//!   measured and reported every run but not counted.
 //!
-//! Everything else counts ([`R1c::Counts`]): a type, error or text cell; a number outside the
-//! envelope, or with no math value (decision 0188 R1(c): until a cell has a math reference it
-//! counts as failing the envelope); and a number within ε of the math whose Excel value is more
-//! than ε off the math, with no R3 mark.
+//! Everything else counts ([`R1c::Counts`]): a wrong type, error, text or boolean
+//! ([`CellEnvelope::WrongType`], at any number of digits), and a number outside the envelope
+//! ([`CellEnvelope::Outside`]). [`R1cCells::miss`] says which of the two a counted cell is, for
+//! the rows' tier bars (decision 0355 item 4).
 //!
-//! Why ε on Excel's side: R1(c) also counts "cells whose wrong number comes from a semantic rule",
-//! and a rule is not visible in a cell's values. When both the engine and Excel are within ε of
-//! the math, they are within about 2ε of each other, so no Excel rule the engine misses can hide
-//! in the cell beyond that residue: it is last-digit work, Phase 1b. When Excel is more than ε off
-//! the math, the gap may be a rule Excel applies (a semantic miss) or an Excel inaccuracy (an R3
-//! candidate, which needs an owner ruling above G); the classifier cannot tell which, so the cell
-//! counts until an R3 mark says otherwise. This is the strictest reading of R1(c): it moves no
-//! cell out of the count that any reading would keep in.
+//! Before decision 0355 a number within ε of the math also counted when Excel's own value was
+//! more than ε off the math, since the gap might be a rule Excel applies. Decision 0355 item 2
+//! makes a value within ε of the math good whatever Excel says, so that clause is gone
+//! (SPEC-0037 design 2).
 //!
 //! The R3 test ([`r3_math`]) is also what the closeness buckets read: the run marks each such cell
 //! once ([`mark_r3_math`], [`Target::Math`]), so it is `r3_math` rather than visibly off in
@@ -33,7 +30,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::accuracy::envelope::{envelope, excel_off_math, within_math, MathValue};
+use crate::accuracy::envelope::{cell_envelope, envelope, excel_off_math, CellEnvelope};
 use crate::accuracy::lists::R3Marks;
 use crate::closeness::Visible;
 use crate::phase1_exceptions::Phase1Exceptions;
@@ -47,7 +44,7 @@ use crate::value::Value;
 pub enum R1c {
     /// The row counts it.
     Counts,
-    /// Inside Gate A's envelope with Excel within ε of the math too: Phase 1b evidence.
+    /// Inside decision 0355's envelope ([`cell_envelope`]) but not bit-exact: Phase 1b evidence.
     Phase1b,
     /// An R3 cell where the engine returns the math: passing.
     R3Pass,
@@ -63,21 +60,35 @@ pub enum R1c {
 /// never applies to an error, a text or a wrong type.
 #[must_use]
 pub fn r3_math(case: &str, c: &CellResult, r3: &R3Marks) -> bool {
+    r3_marked(case, c, r3)
+        && c.math
+            .as_ref()
+            .is_some_and(|math| envelope(Some(c), &c.actual, Some(math), true).is_inside())
+}
+
+/// Whether cell `c` of case `case` is one decision 0188 R3 holds to the math, passing or not: two
+/// numbers with a math value, `math-over-excel.tsv` marks the cell, and Excel is more than G =
+/// 1e-4 off the math (R3's evidence, checked per cell). [`r3_math`] adds that the engine is
+/// within ε of the math.
+#[must_use]
+pub fn r3_marked(case: &str, c: &CellResult, r3: &R3Marks) -> bool {
     let (Value::Number(_), Value::Number(_), Some(math)) = (&c.expected, &c.actual, &c.math) else {
         return false;
     };
-    r3.contains_key(&cell_id(case, &c.key()))
-        && excel_off_math(&c.expected, math)
-        && envelope(Some(c), &c.actual, Some(math), true).is_inside()
+    r3.contains_key(&cell_id(case, &c.key())) && excel_off_math(&c.expected, math)
 }
 
-/// Sets [`CellResult::target`] on every cell of `results` by [`r3_math`]: once per run, before
-/// the report counts the closeness buckets (decision 0310).
+/// Sets [`CellResult::target`] on every cell of `results`: [`Target::Math`] by [`r3_math`],
+/// [`Target::MathMissed`] for the other cells [`r3_marked`] holds to the math (T-5097), else
+/// [`Target::Excel`]. Once per run, before the report counts the closeness buckets (decision 0310)
+/// and before anything calls `cell_envelope`.
 pub fn mark_r3_math(results: &mut [CaseResult], r3: &R3Marks) {
     for r in results {
         for c in &mut r.cells {
             c.target = if r3_math(&r.id, c, r3) {
                 Target::Math
+            } else if r3_marked(&r.id, c, r3) {
+                Target::MathMissed
             } else {
                 Target::Excel
             };
@@ -108,23 +119,9 @@ pub fn classify(
     if r3_pass {
         return Some(R1c::R3Pass);
     }
-    let (Value::Number(_), Value::Number(_)) = (&c.expected, &c.actual) else {
-        return Some(R1c::Counts);
-    };
-    // Not an R3 pass, so a mark (if any) cannot make the envelope drop Excel's side: a marked
-    // cell with Excel more than G off the math whose engine misses the math is outside either way.
-    if !envelope(Some(c), &c.actual, c.math.as_ref(), false).is_inside() {
-        return Some(R1c::Counts);
-    }
-    // Inside the envelope, so the math is a number; Excel's value must be within ε of it too.
-    let excel_on_math = match (&c.expected, &c.math) {
-        (Value::Number(x), Some(MathValue::Number(m))) => within_math(*x, *m),
-        _ => false,
-    };
-    Some(if excel_on_math {
-        R1c::Phase1b
-    } else {
-        R1c::Counts
+    Some(match cell_envelope(c) {
+        CellEnvelope::Inside => R1c::Phase1b,
+        CellEnvelope::Outside | CellEnvelope::WrongType => R1c::Counts,
     })
 }
 
@@ -132,6 +129,8 @@ pub fn classify(
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct R1cCells {
     cells: BTreeMap<String, R1c>,
+    /// The [`R1c::Counts`] cells' envelope class, `Outside` or `WrongType`.
+    misses: BTreeMap<String, CellEnvelope>,
 }
 
 impl R1cCells {
@@ -139,14 +138,19 @@ impl R1cCells {
     #[must_use]
     pub fn build(results: &[CaseResult], r3: &R3Marks, exceptions: &Phase1Exceptions) -> Self {
         let mut cells = BTreeMap::new();
+        let mut misses = BTreeMap::new();
         for r in results {
             for c in &r.cells {
                 if let Some(class) = classify(&r.id, c, r3, exceptions) {
-                    cells.insert(cell_id(&r.id, &c.key()), class);
+                    let id = cell_id(&r.id, &c.key());
+                    if class == R1c::Counts {
+                        misses.insert(id.clone(), cell_envelope(c));
+                    }
+                    cells.insert(id, class);
                 }
             }
         }
-        Self { cells }
+        Self { cells, misses }
     }
 
     /// Classes given directly, by `case!Sheet!A1`, for tests of the readers.
@@ -157,7 +161,17 @@ impl R1cCells {
                 .into_iter()
                 .map(|(id, c)| (id.to_string(), c))
                 .collect(),
+            misses: BTreeMap::new(),
         }
+    }
+
+    /// These classes with counted cell `id` an [`CellEnvelope::Outside`] number, for tests of the
+    /// tier bars (a counted cell reads as a wrong type otherwise).
+    #[cfg(test)]
+    pub(crate) fn with_outside(mut self, id: &str) -> Self {
+        self.cells.insert(id.to_string(), R1c::Counts);
+        self.misses.insert(id.to_string(), CellEnvelope::Outside);
+        self
     }
 
     /// The class of a visibly-off cell by its `case!Sheet!A1`; [`R1c::Counts`] for a cell the run
@@ -184,8 +198,22 @@ impl R1cCells {
         self.class(id) == R1c::Counts
     }
 
-    /// The Phase 1b evidence of the run: per suite, the visibly-off numeric cells inside Gate A's
-    /// envelope that the probe rows leave out.
+    /// How a visibly-off cell `id` misses decision 0355's envelope when R1(c) counts it:
+    /// [`CellEnvelope::Outside`] or [`CellEnvelope::WrongType`]; `None` for a cell R1(c) leaves
+    /// out. A cell the run did not classify reads as a wrong type, the stricter bar, so nothing
+    /// reads as met early.
+    #[must_use]
+    pub fn miss(&self, id: &str) -> Option<CellEnvelope> {
+        self.counts(id).then(|| {
+            self.misses
+                .get(id)
+                .copied()
+                .unwrap_or(CellEnvelope::WrongType)
+        })
+    }
+
+    /// The Phase 1b evidence of the run: per suite, the visibly-off numeric cells inside decision
+    /// 0355's envelope that the probe rows leave out.
     #[must_use]
     pub fn phase1b(&self) -> Phase1bEvidence {
         let mut out = Phase1bEvidence::default();
@@ -248,7 +276,7 @@ impl Phase1bEvidence {
             })
             .collect();
         Some(format!(
-            "Visibly-off cells under decision 0188 R1(c): {}. Phase 1b evidence is a number where both the engine and Excel are within 1e-9 of its 50-digit math value; a number with no math value counts. R3 passing cells are the `r3_math` bucket, not visibly off (decision 0310).",
+            "Visibly-off cells under decision 0188 R1(c): {}. Phase 1b evidence is a number inside decision 0355's envelope: within 12 significant digits of Excel, or within 1e-9 of its 50-digit math value. R3 passing cells are the `r3_math` bucket, not visibly off (decision 0310).",
             parts.join("; ")
         ))
     }

@@ -1,7 +1,8 @@
 //! Cells left out of the Phase 1 rate (decision 0134): visibly-off Excel cells whose only open
 //! question is desktop Excel evidence, which decision 0039 assigns to M14 and says never block a
-//! phase exit. One line per cell, tab-separated: `case!Sheet!A1`, the decision that names the
-//! cell as M14-only, and the open M14 task that owns it.
+//! phase exit, and (decision 0359) near-zero residue cells whose only miss is an input another,
+//! expert, function computes with an open fit. One line per cell, tab-separated: `case!Sheet!A1`,
+//! the decision that names the cell, and the open task that owns it.
 //!
 //! The list only changes how `v15_checkpoint` counts a function's Phase 1 cells: it hides no cell
 //! from the baseline or the gate, and every listed cell stays a known failure. The exit
@@ -257,6 +258,7 @@ mod tests {
                 "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!AL26 0188 T-4373",
                 "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!K25 0196 T-4373",
                 "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!N6 0188 T-4373",
+                "ironcalc-calc/FINANCIAL/IRR.xlsx!General!M17 0359 T-2928",
                 "ironcalc-calc/FINANCIAL/IRR.xlsx!Two Values!C4 0196 T-4373",
                 "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!G936 0134 T-4373",
                 "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!H936 0134 T-4373",

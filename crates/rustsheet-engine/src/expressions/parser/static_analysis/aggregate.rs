@@ -7,8 +7,8 @@ use super::{broadcast_static_result, run_static_analysis_on_node, Node, StaticRe
 
 /// AGGREGATE spills over an array `function_num`, options or fourth argument, broadcast against
 /// each other (`Model::fn_aggregate`). A range `function_num` or options lifts too
-/// (probes/aggregate-range-args); a range fourth argument is read, not lifted. A one-cell range
-/// there counts as 1x1, like any broadcast argument: Excel shows the legacy
+/// (probes/aggregate-range-args); a fourth argument that yields cells is read, not lifted. A
+/// one-cell range there counts as 1x1, like any broadcast argument: Excel shows the legacy
 /// `=AGGREGATE(@CHOOSE(1,{9}),0,E1:E6)` (probes/legacy-one-cell-shape-intersection, T-1265).
 pub(super) fn aggregate_static_result(args: &[Node]) -> StaticResult {
     let lifted = args
@@ -16,7 +16,12 @@ pub(super) fn aggregate_static_result(args: &[Node]) -> StaticResult {
         .enumerate()
         .filter(|(index, _)| *index < 2 || (*index == 3 && args.len() == 4))
         .filter(|(index, arg)| {
-            *index < 2 || !matches!(run_static_analysis_on_node(arg), StaticResult::Range(..))
+            // Only a fourth argument that yields cells is read; a range shape computed from a
+            // range (`-A1:B2`, `A1:B2%`) is an array and lifts (probes/aggregate-computed-range-
+            // fourth, T-5106), as in `lifted_static_result`.
+            *index < 2
+                || !(matches!(run_static_analysis_on_node(arg), StaticResult::Range(..))
+                    && yields_cells(arg, &mut Vec::new()))
         })
         .map(|(_, arg)| arg);
     broadcast_static_result(lifted)

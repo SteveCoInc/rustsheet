@@ -1,6 +1,9 @@
 //! EDATE and EOMONTH: a date shifted by whole months, and the last day of that month. Both lift
 //! over arrays and refuse a multi-cell range (`ArgKind::LiftArrays`, SPEC-0011): the scalar
 //! function is the kernel `lift_call` runs per element. Moved out of `date_and_time.rs` (T-1770).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+// LINT-DEBT-END
 
 use chrono::Datelike;
 
@@ -22,7 +25,7 @@ use crate::{
 impl Model {
     /// `EDATE(start_date, months)`.
     pub(crate) fn fn_edate(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let empty = self.empty_arguments::<2>(args);
+        let empty = self.empty_arguments::<2>(args, cell);
         self.lift_call(Function::Edate, args, cell, &mut |model, values| {
             model.edate_of(values, empty, cell)
         })
@@ -30,7 +33,7 @@ impl Model {
 
     /// `EOMONTH(start_date, months)`.
     pub(crate) fn fn_eomonth(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        let empty = self.empty_arguments::<2>(args);
+        let empty = self.empty_arguments::<2>(args, cell);
         self.lift_call(Function::Eomonth, args, cell, &mut |model, values| {
             model.eomonth_of(values, empty, cell)
         })

@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::assigning_clones, clippy::too_many_lines)]
+// LINT-DEBT-END
 #![deny(missing_docs)]
 
 use std::collections::{HashMap, HashSet};
@@ -24,7 +27,8 @@ const CUT_MERGE_ERROR: &str = "Cannot auto-fill: the fill size must fit whole me
 // already in the target are replaced by that pattern.
 struct MergedFillPlan {
     // source cells covered by a merge (every cell of a source merge except
-    // its anchor): they hold no content, and neither do their tiled copies
+    // its anchor): their content is copied to their tiled copies as it is,
+    // never as a progression term (`fill_covered_cell`)
     covered_source: HashSet<(i32, i32)>,
     // the tiled copies of the source merges, to create in the fill target
     new_merges: Vec<MergedCell>,
@@ -231,9 +235,14 @@ impl UserModel {
         Ok(())
     }
 
-    // The fill target cell is covered by a tiled merge: it gets no value,
-    // only the style and (lack of) link of its source cell, and its old
-    // content is cleared. `source` and `target` are `(row, column)` pairs.
+    // The fill target cell is covered by a tiled merge. A covered source that
+    // holds content is copied as a fill copies any cell (a formula's relative
+    // references shifted, `Model::fill_cell`), never as a progression term: a
+    // merged range keeps its covered content (docs/excel-semantics/
+    // xlsx-storage.md "A merged range keeps the values of its covered cells";
+    // docs/specs/SPEC-0036, whose autofill row is UNVERIFIED). An empty source
+    // clears the target. Either way the target takes the style and (lack of)
+    // link of its source cell. `source` and `target` are `(row, column)` pairs.
     fn fill_covered_cell(
         &mut self,
         sheet: u32,
@@ -245,20 +254,34 @@ impl UserModel {
         let (source_row, source_column) = source;
         let (row, column) = target;
         let old_style = self.model.get_cell_style_or_none(sheet, row, column)?;
-        // Going through prepare_cell_for_user_input keeps dynamic array
-        // formulas consistent (an anchor spilling into the cell is reset)
-        self.model.prepare_cell_for_user_input(sheet, row, column)?;
-        let worksheet = self.model.workbook.worksheet_mut(sheet)?;
-        if worksheet.cell(row, column).is_some() {
-            worksheet.cell_clear_contents(row, column)?;
-        }
-        if old_value.is_some() {
+        let source_is_empty = self.model.is_empty_cell(sheet, source_row, source_column)?;
+        if source_is_empty {
+            // Going through prepare_cell_for_user_input keeps dynamic array
+            // formulas consistent (an anchor spilling into the cell is reset)
+            self.model.prepare_cell_for_user_input(sheet, row, column)?;
+            let worksheet = self.model.workbook.worksheet_mut(sheet)?;
+            if worksheet.cell(row, column).is_some() {
+                worksheet.cell_clear_contents(row, column)?;
+            }
+            if old_value.is_some() {
+                diff_list.push(Diff::SetCellValue {
+                    sheet,
+                    row,
+                    column,
+                    new_value: String::new(),
+                    legacy: false,
+                    external: false,
+                    old_value: Box::new(old_value),
+                });
+            }
+        } else {
+            let new_value = self.model.fill_cell(sheet, source, target)?;
             diff_list.push(Diff::SetCellValue {
                 sheet,
                 row,
                 column,
-                new_value: "".to_string(),
-                legacy: false,
+                new_value,
+                legacy: self.model.cell_has_legacy_marker(sheet, row, column)?,
                 external: false,
                 old_value: Box::new(old_value),
             });
@@ -417,6 +440,9 @@ impl UserModel {
             (fill_row_start, column1, fill_row_end, last_column),
             true,
         )?;
+        // Every target cell is written, which a data table's results refuse (T-0452).
+        let target = (fill_row_start, column1, fill_row_end, last_column);
+        self.model.refuse_data_table_overlap(sheet, target)?;
         self.apply_fill_merge_removal(sheet, &plan, &mut diff_list)?;
 
         let saved_cse = self.collect_and_clear_cse_in_fill_target(
@@ -430,8 +456,9 @@ impl UserModel {
         for column in column1..=last_column {
             let mut index = 0;
             let locale = &self.model.locale;
-            // covered cells hold no content: the progression is detected over
-            // the rest and lands on the non-covered cells of the target
+            // covered cells are no progression terms: the progression is detected over
+            // the rest and lands on the non-covered cells of the target (a covered
+            // cell is copied as it is, `fill_covered_cell`)
             let values = if sign < 0 {
                 (row1..=last_row)
                     .rev()
@@ -451,7 +478,7 @@ impl UserModel {
                 detect_progression(&values, locale, &case_seed)
             };
             let mut progression_idx = 0;
-            for row_ref in row_range.iter() {
+            for row_ref in &row_range {
                 let row = *row_ref;
 
                 let old_value = saved_cse.get(&(row, column)).cloned().unwrap_or_else(|| {
@@ -502,7 +529,7 @@ impl UserModel {
                     sheet,
                     row,
                     column,
-                    new_value: target_value.to_string(),
+                    new_value: target_value.clone(),
                     legacy: self.model.cell_has_legacy_marker(sheet, row, column)?,
                     external: false,
                     old_value: Box::new(old_value),
@@ -568,7 +595,7 @@ impl UserModel {
             // we go right, we start from `last_column + 1` to `to_column`,
             anchor_column = column1;
             sign = 1;
-            column_range = (last_column + 1..to_column + 1).collect();
+            column_range = ((last_column + 1)..=to_column).collect();
         } else if to_column < column1 {
             // we go left, starting from `column1 - 1` all the way to `to_column`
             anchor_column = last_column;
@@ -591,6 +618,8 @@ impl UserModel {
             (row1, fill_col_start, last_row, fill_col_end),
             false,
         )?;
+        let target = (row1, fill_col_start, last_row, fill_col_end);
+        self.model.refuse_data_table_overlap(sheet, target)?;
         self.apply_fill_merge_removal(sheet, &plan, &mut diff_list)?;
 
         let saved_cse = self.collect_and_clear_cse_in_fill_target(
@@ -604,8 +633,9 @@ impl UserModel {
         for row in row1..=last_row {
             let mut index = 0;
             let locale = &self.model.locale;
-            // covered cells hold no content: the progression is detected over
-            // the rest and lands on the non-covered cells of the target
+            // covered cells are no progression terms: the progression is detected over
+            // the rest and lands on the non-covered cells of the target (a covered
+            // cell is copied as it is, `fill_covered_cell`)
             let values = if sign < 0 {
                 (column1..=last_column)
                     .rev()
@@ -625,7 +655,7 @@ impl UserModel {
                 detect_progression(&values, locale, &case_seed)
             };
             let mut progression_idx = 0;
-            for column_ref in column_range.iter() {
+            for column_ref in &column_range {
                 let column = *column_ref;
 
                 // Save value and style first
@@ -679,7 +709,7 @@ impl UserModel {
                     sheet,
                     row,
                     column,
-                    new_value: target_value.to_string(),
+                    new_value: target_value.clone(),
                     legacy: self.model.cell_has_legacy_marker(sheet, row, column)?,
                     external: false,
                     old_value: Box::new(old_value),

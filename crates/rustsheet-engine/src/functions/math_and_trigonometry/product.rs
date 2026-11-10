@@ -15,6 +15,14 @@ const PRODUCT_ARGS: AggregatePolicy = AggregatePolicy {
     nested: NestedReading::NotAvailable,
 };
 
+/// One step of PRODUCT's running product: `product · value` as a stored x87 multiplication
+/// ([`extended_product`]), a subnormal result flushed to 0 like Excel's `*`. SUBTOTAL 6 and 106
+/// multiply with this same step (one definition of the accumulator, findings 2026-11-07 audit
+/// item 6: SUBTOTAL kept a second, plain-`*` loop that no evidence asked for).
+pub(crate) fn product_step(product: f64, value: f64) -> f64 {
+    flush_subnormal(extended_product(product, value))
+}
+
 impl Model {
     /// PRODUCT(number1, [number2], ...)
     ///
@@ -47,7 +55,7 @@ impl Model {
             NumberRules::SUM_LIKE,
             |value| {
                 seen_value = true;
-                result = flush_subnormal(extended_product(result, value));
+                result = product_step(result, value);
             },
         ) {
             return error;

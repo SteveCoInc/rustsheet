@@ -134,21 +134,31 @@ fn get_bool_with_default(node: &XmlNode, s: &str, default: bool) -> bool {
 /// The value of an `xsd:boolean` attribute, or `default` if it is absent or
 /// not a valid literal.
 pub(super) fn parse_bool_with_default(value: Option<&str>, default: bool) -> bool {
+    // Not a valid xsd:boolean literal: the schema default rather than a guess (do NOT treat
+    // arbitrary non-empty strings as true).
+    value
+        .and_then(|value| xsd_boolean(&value.trim().to_ascii_lowercase()))
+        .unwrap_or(default)
+}
+
+/// An `xsd:boolean` literal, exactly: `1` or `true` is true, `0` or `false` false, anything else
+/// (`TRUE`, padding, `yes`) `None`, as SPEC-0005 reads `date1904` (`"TRUE"` is 1900,
+/// `tests/date_system.rs`). Every `xsd:boolean` attribute the importer reads goes through it
+/// (T-4853); [`parse_bool_with_default`]'s style attributes first trim and lower-case the value
+/// (the lenient read above), and a `t="b"` cell's value is [`cell_boolean`]'s, not this.
+pub(super) fn xsd_boolean(value: &str) -> Option<bool> {
     match value {
-        Some(value) => {
-            let value = value.trim();
-            if value == "1" || value.eq_ignore_ascii_case("true") {
-                true
-            } else if value == "0" || value.eq_ignore_ascii_case("false") {
-                false
-            } else {
-                // Not a valid xsd:boolean literal — fall back to the schema default rather than
-                // guessing (do NOT treat arbitrary non-empty strings as true).
-                default
-            }
-        }
-        None => default,
+        "1" | "true" => Some(true),
+        "0" | "false" => Some(false),
+        _ => None,
     }
+}
+
+/// The value of a `t="b"` cell (`<v>`, or a cached external-link value): ECMA-376 types it
+/// `0` or `1` (not `xsd:boolean`), so only `1` is TRUE and anything else, absent included, is
+/// FALSE, as the importer has always read it (T-4853).
+pub(super) fn cell_boolean(value: Option<&str>) -> bool {
+    value == Some("1")
 }
 
 pub(super) fn get_bool(node: &XmlNode, s: &str) -> bool {
@@ -182,6 +192,7 @@ pub(super) fn parse_constant_number(cell_value: Option<&str>) -> f64 {
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
+    #![expect(clippy::float_cmp, reason = "the parsed numbers are exact literals")]
     use super::*;
 
     // The attributes these helpers read are typed `xsd:boolean` in ECMA-376 SpreadsheetML, whose
@@ -192,6 +203,21 @@ mod tests {
     // tokens outside the xsd:boolean lexical space (`"yes"`, `"on"`, garbage, empty) are not valid
     // and must fall back to the attribute's schema default, never be read as true.
     const XML: &str = r#"<a one="1" zero="0" t="true" f="false" tu="TRUE" fc="False" ws=" true " empty="" yes="yes" on="on" other="x"/>"#;
+
+    #[test]
+    fn xsd_boolean_and_cell_boolean() {
+        for (text, value) in [("1", true), ("true", true), ("0", false), ("false", false)] {
+            assert_eq!(xsd_boolean(text), Some(value), "{text:?}");
+        }
+        for text in ["", "yes", "on", "2", "x", "TRUE", " true "] {
+            assert_eq!(xsd_boolean(text), None, "{text:?}");
+        }
+        // A `t="b"` value is 0 or 1 only.
+        assert!(cell_boolean(Some("1")));
+        for value in [Some("0"), Some("true"), Some(""), None] {
+            assert!(!cell_boolean(value), "{value:?}");
+        }
+    }
 
     #[test]
     fn get_bool_false_accepts_all_xsd_boolean_forms() {

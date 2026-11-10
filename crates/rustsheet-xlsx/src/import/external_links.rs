@@ -8,8 +8,10 @@ use rustsheet_engine::{
 };
 
 use super::{
-    package::{resolve_target, Package},
-    util::parse_cell_number,
+    package::{part_folder_and_rels, resolve_target, Package},
+    part_relationships,
+    shared_strings::decode_xlsx_escapes,
+    util::{cell_boolean, parse_cell_number, xsd_boolean},
     worksheets::parse_cell_reference,
     xml::XmlNode,
     Relationship,
@@ -40,7 +42,29 @@ fn load_external_book<R: Read + std::io::Seek>(
     let part = archive.open_optional(path).ok()??;
     let doc = XmlNode::parse(part).ok()?;
     let book = doc.descendants().find(|n| n.has_tag_name("externalBook"))?;
-    Some(read_external_book(book))
+    let target = book_target(archive, path, book.relationship_id());
+    Some(ExternalBook {
+        target,
+        ..read_external_book(book)
+    })
+}
+
+/// The target of the `externalBook`'s `r:id` relationship in the externalLink part's own
+/// relationships (`externalLinkPath`, `TargetMode="External"`), as written; empty when it has none.
+fn book_target<R: Read + std::io::Seek>(
+    archive: &mut Package<R>,
+    path: &str,
+    id: Option<&str>,
+) -> String {
+    let Some(id) = id else {
+        return String::new();
+    };
+    let (_, rels_path) = part_folder_and_rels(path);
+    part_relationships(archive, &rels_path)
+        .ok()
+        .and_then(|rels| rels.into_iter().find(|(rel_id, _)| rel_id == id))
+        .map(|(_, rel)| rel.target)
+        .unwrap_or_default()
 }
 
 fn read_external_book(book: &XmlNode) -> ExternalBook {
@@ -64,6 +88,7 @@ fn read_external_book(book: &XmlNode) -> ExternalBook {
         .collect();
     let mut cells = HashMap::new();
     let mut refresh_error_sheets = Vec::new();
+    let mut data_sheets = Vec::new();
     for sheet_data in book.descendants().filter(|n| n.has_tag_name("sheetData")) {
         let Some(sheet) = sheet_data
             .attribute("sheetId")
@@ -71,8 +96,11 @@ fn read_external_book(book: &XmlNode) -> ExternalBook {
         else {
             continue;
         };
+        if !data_sheets.contains(&sheet) {
+            data_sheets.push(sheet);
+        }
         // The fixture shows "1"; "true" is the other xsd:boolean spelling of it.
-        if matches!(sheet_data.attribute("refreshError"), Some("1" | "true"))
+        if sheet_data.attribute("refreshError").and_then(xsd_boolean) == Some(true)
             && !refresh_error_sheets.contains(&sheet)
         {
             refresh_error_sheets.push(sheet);
@@ -92,21 +120,25 @@ fn read_external_book(book: &XmlNode) -> ExternalBook {
         }
     }
     ExternalBook {
+        target: String::new(),
         sheet_names,
         defined_names,
         cells,
         refresh_error_sheets,
+        data_sheets,
     }
 }
 
 /// The value a cache `<cell t=…><v>…</v></cell>` holds: `t` absent or `n` for a number, `str`
-/// for text as Excel writes it (poi/ref-56737.xlsx), `b` with `1`/`0`, `e`. `t="s"` would be a
+/// for text (its `_xHHHH_` escapes decoded) as Excel writes it (poi/ref-56737.xlsx), `b` with `1`/`0`, `e`. `t="s"` would be a
 /// shared-string index, which an externalLink part has no table for, so it is read as a number
 /// like any type this does not know.
 fn cached_value(cell_type: Option<&str>, value: &str) -> SpillValue {
     match cell_type {
-        Some("str") => SpillValue::Text(value.into()),
-        Some("b") => SpillValue::Boolean(value == "1"),
+        // `_xHHHH_` escapes are decoded as in a shared or inline string, so a cached text the
+        // export escaped reads back the same (T-4143; xlsx-storage.md, UNVERIFIED).
+        Some("str") => SpillValue::Text(decode_xlsx_escapes(value).into()),
+        Some("b") => SpillValue::Boolean(cell_boolean(Some(value))),
         Some("e") => SpillValue::Error(get_error_by_english_name(value).unwrap_or(Error::ERROR)),
         _ => SpillValue::Number(parse_cell_number(Some(value))),
     }
@@ -120,12 +152,13 @@ mod tests {
     // The cache of poi/ref-56737.xlsx externalLink1.xml (Excel-written), trimmed.
     #[test]
     fn reads_sheet_names_names_and_cells() {
-        let xml = r#"<externalLink><externalBook><sheetNames><sheetName val="Uses"/><sheetName val="Defines"/></sheetNames><definedNames><definedName name="NR_Global_B2" refersTo="='Defines'!$B$2"/><definedName name="NR_To_A1" refersTo="='Defines'!$A$1" sheetId="1"/></definedNames><sheetDataSet><sheetData sheetId="0"><row r="1"><cell r="A1" t="str"><v>Hello!</v></cell><cell r="B1"/></row></sheetData><sheetData sheetId="1"><row r="2"><cell r="B2"><v>142</v></cell><cell r="C2" t="b"><v>1</v></cell><cell r="D2" t="e"><v>#N/A</v></cell></row></sheetData><sheetData sheetId="2" refreshError="1"/></sheetDataSet></externalBook></externalLink>"#;
+        let xml = r#"<externalLink><externalBook><sheetNames><sheetName val="Uses"/><sheetName val="Defines"/></sheetNames><definedNames><definedName name="NR_Global_B2" refersTo="='Defines'!$B$2"/><definedName name="NR_To_A1" refersTo="='Defines'!$A$1" sheetId="1"/></definedNames><sheetDataSet><sheetData sheetId="0"><row r="1"><cell r="A1" t="str"><v>Hello!</v></cell><cell r="B1"/><cell r="C1" t="str"><v>a_x0001_b</v></cell></row></sheetData><sheetData sheetId="1"><row r="2"><cell r="B2"><v>142</v></cell><cell r="C2" t="b"><v>1</v></cell><cell r="D2" t="e"><v>#N/A</v></cell></row></sheetData><sheetData sheetId="2" refreshError="1"/></sheetDataSet></externalBook></externalLink>"#;
         let doc = XmlNode::parse_str(xml).unwrap();
         let book = read_external_book(doc.child("externalBook").unwrap());
         assert_eq!(book.sheet_names, ["Uses", "Defines"]);
         // The refreshError sheet is kept (fixtures/external-link-uncached-lookups Refs!B38, T-0472).
         assert_eq!(book.refresh_error_sheets, [2]);
+        assert_eq!(book.data_sheets, [0, 1, 2]);
         assert_eq!(book.defined_names.len(), 2);
         assert_eq!(book.defined_names[0].sheet_id, None);
         assert_eq!(book.defined_names[1].sheet_id, Some(1));
@@ -135,12 +168,16 @@ mod tests {
             Some(&SpillValue::Text("Hello!".into()))
         );
         assert_eq!(book.cells.get(&(0, 1, 2)), None);
+        assert_eq!(
+            book.cells.get(&(0, 1, 3)),
+            Some(&SpillValue::Text("a\u{1}b".into()))
+        );
         assert_eq!(book.cells.get(&(1, 2, 2)), Some(&SpillValue::Number(142.0)));
         assert_eq!(book.cells.get(&(1, 2, 3)), Some(&SpillValue::Boolean(true)));
         assert_eq!(
             book.cells.get(&(1, 2, 4)),
             Some(&SpillValue::Error(Error::NA))
         );
-        assert_eq!(book.cells.len(), 4);
+        assert_eq!(book.cells.len(), 5);
     }
 }

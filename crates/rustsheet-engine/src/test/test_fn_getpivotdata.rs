@@ -110,9 +110,9 @@ fn model() -> Model {
             Aggregate::Average,
         ),
     ];
-    model._set("A3", "Sum of Sales");
-    model._set("A5", "East");
-    model._set("Z5", "=1/0");
+    model.set_a1("A3", "Sum of Sales");
+    model.set_a1("A5", "East");
+    model.set_a1("Z5", "=1/0");
     model
 }
 
@@ -120,12 +120,12 @@ fn model() -> Model {
 fn check(cases: &[(&str, &str)]) {
     let mut model = model();
     for (i, (formula, _)) in cases.iter().enumerate() {
-        model._set(&format!("H{}", 40 + i), formula);
+        model.set_a1(&format!("H{}", 40 + i), formula);
     }
     model.evaluate();
     for (i, (formula, expected)) in cases.iter().enumerate() {
         assert_eq!(
-            model._get_text(&format!("H{}", 40 + i)),
+            model.get_text_a1(&format!("H{}", 40 + i)),
             *expected,
             "{formula}"
         );
@@ -155,7 +155,9 @@ fn another_aggregates_caption_or_an_unknown_field_is_ref() {
 #[test]
 fn a_blank_cell_is_the_only_data_field() {
     check(&[
-        ("=GETPIVOTDATA(Z1,$A$3)", "49"), // J7
+        ("=GETPIVOTDATA(C3,$A$3)", "49"), // J7: a blank cell inside the pivot
+        // A blank cell outside it is `#REF!` (probes/t2085-getpivotdata-data-fields Q!A17).
+        ("=GETPIVOTDATA(Z1,$A$3)", "#REF!"),
         // `""` and an omitted argument: SPEC-0015 unknown 8.
         (r#"=GETPIVOTDATA("",$A$3)"#, "#REF!"),
         ("=GETPIVOTDATA(,$A$3)", "#REF!"),
@@ -232,10 +234,11 @@ fn unknown_items_fields_repeats_and_odd_pairs_are_ref() {
         ), // H17
         (
             r#"=GETPIVOTDATA("Sales",$A$3,"Region","East","Region","East")"#,
-            "#REF!",
-        ), // SPEC-0015 unknown 5
+            "22",
+        ), // the same field twice with the same item: probes/t2085-getpivotdata-items Q!E1
         (r#"=GETPIVOTDATA("Sales",$A$3,"Region")"#, "#REF!"), // H15
-        // Numbers and booleans as items, and errors in a pair: SPEC-0015 unknown 3, unprobed.
+        // A number or boolean names no text item (t2085-getpivotdata-items Q!A7, C4); an error
+        // item is `#REF!` (Q!E4, E5).
         (r#"=GETPIVOTDATA("Sales",$A$3,"Region",1)"#, "#REF!"),
         (r#"=GETPIVOTDATA("Sales",$A$3,"Region",TRUE)"#, "#REF!"),
         (r#"=GETPIVOTDATA("Sales",$A$3,"Region",NA())"#, "#REF!"),
@@ -265,7 +268,7 @@ fn the_reference_is_any_cell_of_the_pivot_or_a_range_meeting_it() {
         (r#"=GETPIVOTDATA("Sales",$A$1:$B$30)"#, "#REF!"),
         (r#"=GETPIVOTDATA("Sales","A3")"#, "#REF!"),
         // Errors in the first two arguments propagate (T-1703).
-        (r#"=GETPIVOTDATA(NA(),$A$3)"#, "#N/A"),
+        (r"=GETPIVOTDATA(NA(),$A$3)", "#N/A"),
         (r#"=GETPIVOTDATA("Sales",1/0)"#, "#DIV/0!"),
     ]);
 }
@@ -273,31 +276,43 @@ fn the_reference_is_any_cell_of_the_pivot_or_a_range_meeting_it() {
 #[test]
 fn an_array_of_items_lifts_and_spills() {
     let mut model = model();
-    model._set(
+    model.set_a1(
         "L1",
         r#"=GETPIVOTDATA("Sales",$A$3,"Region",{"East";"West"})"#,
     );
-    model._set(
+    model.set_a1(
         "L5",
         r#"=GETPIVOTDATA("Sales",$A$3,"Product",{"A","B","C"})"#,
     );
-    model._set("L8", r#"=GETPIVOTDATA("Sales",$A$3,{"Region"},"East")"#);
+    model.set_a1("L8", r#"=GETPIVOTDATA("Sales",$A$3,{"Region"},"East")"#);
+    // An array data_field or field name lifts too, a 1x1 one included (probes/
+    // t2085-getpivotdata-items Q!E9:F10; before T-2085 an array field name was SPEC-0015
+    // unknown 7, `#REF!`).
+    model.set_a1("L10", r#"=GETPIVOTDATA({"Sales","Units"},$A$3)"#);
+    model.set_a1(
+        "L12",
+        r#"=GETPIVOTDATA("Sales",$A$3,{"Region","Product"},"A")"#,
+    );
     model.evaluate();
-    let texts: Vec<String> = ["L1", "L2", "L5", "M5", "N5", "L8"]
-        .iter()
-        .map(|cell| model._get_text(cell))
-        .collect();
-    // An array field name is one `#REF!` (SPEC-0015 unknown 7).
-    assert_eq!(texts, ["22", "27", "34", "12", "3", "#REF!"]);
+    let texts: Vec<String> = [
+        "L1", "L2", "L5", "M5", "N5", "L8", "L10", "M10", "L12", "M12",
+    ]
+    .iter()
+    .map(|cell| model.get_text_a1(cell))
+    .collect();
+    assert_eq!(
+        texts,
+        ["22", "27", "34", "12", "3", "22", "49", "#REF!", "#REF!", "34"]
+    );
 }
 
 /// The aggregate over the East records (10, 5, 3, 4) of a Region-rows pivot.
 fn east(function: Aggregate) -> String {
     let mut model = model();
     model.workbook.pivot_tables[1].data_fields[0].function = function;
-    model._set("H1", r#"=GETPIVOTDATA("Sales",$A$20,"Region","East")"#);
+    model.set_a1("H1", r#"=GETPIVOTDATA("Sales",$A$20,"Region","East")"#);
     model.evaluate();
-    model._get_text("H1")
+    model.get_text_a1("H1")
 }
 
 #[test]
@@ -320,46 +335,48 @@ fn every_aggregate_runs_over_the_picked_records() {
 }
 
 #[test]
-fn aggregates_with_no_records_are_zero_except_var_and_stddev() {
-    // probes/getpivotdata-empty-intersection (Excel 0 for these five); Var/StdDev are unprobed
-    // and stay `#REF!` (SPEC-0015 unknown 2).
+fn every_aggregate_with_no_records_is_zero() {
+    // probes/getpivotdata-empty-intersection and probes/t2085-getpivotdata-data-fields Q!B6:J6
+    // (SPEC-0015 unknown 2).
     for (function, expected) in [
         (Aggregate::Average, "0"),
         (Aggregate::Count, "0"),
         (Aggregate::Max, "0"),
         (Aggregate::Min, "0"),
-        (Aggregate::Var, "#REF!"),
-        (Aggregate::StdDev, "#REF!"),
+        (Aggregate::Var, "0"),
+        (Aggregate::StdDev, "0"),
     ] {
         let mut model = model();
         model.workbook.pivot_tables[0].data_fields[0].function = function;
-        model._set(
+        model.set_a1(
             "H1",
             r#"=GETPIVOTDATA("Sales",$A$3,"Region","West","Product","C")"#,
         );
         model.evaluate();
-        assert_eq!(model._get_text("H1"), expected, "{function:?}");
+        assert_eq!(model.get_text_a1("H1"), expected, "{function:?}");
     }
 }
 
 #[test]
-fn a_record_without_a_number_in_the_data_field_is_ref() {
-    // SPEC-0015 unknown 6: only the call whose records hold the text is `#REF!`.
+fn a_text_or_blank_record_is_skipped_by_sum() {
+    // probes/t2085-getpivotdata-items Q!E13, E15: a Sum ignores a text and a blank record. Over
+    // only such records the engine answers 0, as for an empty intersection (DF B6:J6); that is
+    // UNVERIFIED (T-4633: what the pivot shows for a cell with no number).
     let mut model = model();
     model.workbook.pivot_caches = vec![cache_of(&[
         ("East", "A", CacheItem::Number(1.0)),
         ("West", "A", CacheItem::Text("x".to_string())),
         ("West", "B", CacheItem::Missing),
     ])];
-    model._set("H1", r#"=GETPIVOTDATA("Sales",$A$3,"Region","East")"#);
-    model._set("H2", r#"=GETPIVOTDATA("Sales",$A$3,"Region","West")"#);
-    model._set("H3", r#"=GETPIVOTDATA("Sales",$A$3,"Product","B")"#);
+    model.set_a1("H1", r#"=GETPIVOTDATA("Sales",$A$3,"Region","East")"#);
+    model.set_a1("H2", r#"=GETPIVOTDATA("Sales",$A$3,"Region","West")"#);
+    model.set_a1("H3", r#"=GETPIVOTDATA("Sales",$A$3,"Product","B")"#);
     model.evaluate();
     let texts: Vec<String> = ["H1", "H2", "H3"]
         .iter()
-        .map(|c| model._get_text(c))
+        .map(|c| model.get_text_a1(c))
         .collect();
-    assert_eq!(texts, ["1", "#REF!", "#REF!"]);
+    assert_eq!(texts, ["1", "0", "0"]);
 }
 
 #[test]
@@ -369,50 +386,52 @@ fn a_non_finite_result_is_num() {
         ("East", "A", CacheItem::Number(1e308)),
         ("East", "A", CacheItem::Number(1e308)),
     ])];
-    model._set("H1", r#"=GETPIVOTDATA("Sales",$A$3)"#);
+    model.set_a1("H1", r#"=GETPIVOTDATA("Sales",$A$3)"#);
     model.evaluate();
-    assert_eq!(model._get_text("H1"), "#NUM!");
+    assert_eq!(model.get_text_a1("H1"), "#NUM!");
 }
 
 #[test]
-fn unprobed_pivot_shapes_are_ref() {
-    // SPEC-0015 unknowns 1 (several data fields) and 4 (page fields, hidden items), and a
-    // malformed cache index.
+fn pivot_shapes_answer_what_the_pivot_shows() {
+    // Several data fields with no Values field on an axis, and a malformed cache index, are
+    // `#REF!`; a page field at (All) is the whole grand total, and a hidden item leaves the
+    // totals (probes/t2085-getpivotdata-layouts Q!A7, A9: the West records hidden leave East).
     type Change = fn(&mut PivotTable);
-    let changes: [Change; 4] = [
-        |p| p.data_fields.push(p.data_fields[0].clone()),
-        |p| p.fields[2].axis = Some(Axis::Page),
-        |p| p.fields[0].hide(1),
-        |p| p.cache = 7,
+    let changes: [(Change, &str); 4] = [
+        (|p| p.data_fields.push(p.data_fields[0].clone()), "#REF!"),
+        (|p| p.fields[2].axis = Some(Axis::Page), "49"),
+        (|p| p.fields[0].hide(1), "22"),
+        (|p| p.cache = 7, "#REF!"),
     ];
-    for change in changes {
+    for (change, expected) in changes {
         let mut model = model();
         change(&mut model.workbook.pivot_tables[0]);
-        model._set("H1", r#"=GETPIVOTDATA("Sales",$A$3)"#);
+        model.set_a1("H1", r#"=GETPIVOTDATA("Sales",$A$3)"#);
         model.evaluate();
-        assert_eq!(model._get_text("H1"), "#REF!");
+        assert_eq!(model.get_text_a1("H1"), expected);
     }
 }
 
 #[test]
-fn two_fields_on_an_axis_answer_only_the_grand_total() {
+fn two_fields_on_an_axis_answer_their_lines() {
     // calipers formula_stress_test Database!B16 (two row and two column fields) is the grand
-    // total; a pair is SPEC-0015 unknown 10.
+    // total; an outer item is its subtotal and both pairs the inner line
+    // (probes/t2085-getpivotdata-layouts Q!B1:D5).
     let mut model = model();
     let table = &mut model.workbook.pivot_tables[0];
     table.fields[1].axis = Some(Axis::Row);
     table.row_fields.push(AxisField::Field(1));
     table.column_fields.clear();
-    model._set("H1", r#"=GETPIVOTDATA("Sales",$A$3)"#);
-    model._set("H2", r#"=GETPIVOTDATA("Sales",$A$3,"Region","East")"#);
-    model._set(
+    model.set_a1("H1", r#"=GETPIVOTDATA("Sales",$A$3)"#);
+    model.set_a1("H2", r#"=GETPIVOTDATA("Sales",$A$3,"Region","East")"#);
+    model.set_a1(
         "H3",
         r#"=GETPIVOTDATA("Sales",$A$3,"Region","East","Product","A")"#,
     );
     model.evaluate();
-    assert_eq!(model._get_text("H1"), "49");
-    assert_eq!(model._get_text("H2"), "#REF!");
-    assert_eq!(model._get_text("H3"), "#REF!");
+    assert_eq!(model.get_text_a1("H1"), "49");
+    assert_eq!(model.get_text_a1("H2"), "22");
+    assert_eq!(model.get_text_a1("H3"), "14");
 }
 
 #[test]
@@ -436,19 +455,19 @@ fn an_omitted_item_is_the_blank_item() {
             .unwrap();
     }
     model.workbook.pivot_caches = vec![builder.finish()];
-    model._set("H1", r#"=GETPIVOTDATA("Sales",$A$3,"Region",)"#);
-    model._set(
+    model.set_a1("H1", r#"=GETPIVOTDATA("Sales",$A$3,"Region",)"#);
+    model.set_a1(
         "H2",
         r#"=GETPIVOTDATA("Sales",$A$3,"Product","A","Region",)"#,
     );
-    model._set("H3", r#"=GETPIVOTDATA("Sales",$A$3,"Product",)"#);
-    model._set("H4", r#"=GETPIVOTDATA("Sales",$A$3,"Region","")"#);
-    model._set("H5", r#"=GETPIVOTDATA("Sales",$A$3,"Region",$Z$99)"#);
-    model._set("H6", r#"=GETPIVOTDATA("Sales",$A$3,"Region","(blank)")"#);
+    model.set_a1("H3", r#"=GETPIVOTDATA("Sales",$A$3,"Product",)"#);
+    model.set_a1("H4", r#"=GETPIVOTDATA("Sales",$A$3,"Region","")"#);
+    model.set_a1("H5", r#"=GETPIVOTDATA("Sales",$A$3,"Region",$Z$99)"#);
+    model.set_a1("H6", r#"=GETPIVOTDATA("Sales",$A$3,"Region","(blank)")"#);
     model.evaluate();
     let texts: Vec<String> = ["H1", "H2", "H3", "H4", "H5", "H6"]
         .iter()
-        .map(|c| model._get_text(c))
+        .map(|c| model.get_text_a1(c))
         .collect();
     assert_eq!(texts, ["6", "6", "#REF!", "#REF!", "#REF!", "6"]);
 }
@@ -460,25 +479,25 @@ fn two_items_differing_only_in_case_are_ref() {
         ("East", "A", CacheItem::Number(1.0)),
         ("east", "A", CacheItem::Number(2.0)),
     ])];
-    model._set("H1", r#"=GETPIVOTDATA("Sales",$A$3,"Region","East")"#);
-    model._set("H2", r#"=GETPIVOTDATA("Sales",$A$3)"#);
+    model.set_a1("H1", r#"=GETPIVOTDATA("Sales",$A$3,"Region","East")"#);
+    model.set_a1("H2", r#"=GETPIVOTDATA("Sales",$A$3)"#);
     model.evaluate();
-    assert_eq!(model._get_text("H1"), "#REF!");
-    assert_eq!(model._get_text("H2"), "3");
+    assert_eq!(model.get_text_a1("H1"), "#REF!");
+    assert_eq!(model.get_text_a1("H2"), "3");
 }
 
 #[test]
 fn a_change_to_the_pivots_reaches_every_getpivotdata_cell() {
     let mut model = model();
-    model._set("H1", r#"=GETPIVOTDATA("Sales",$A$3,"Region","East")"#);
+    model.set_a1("H1", r#"=GETPIVOTDATA("Sales",$A$3,"Region","East")"#);
     model.evaluate();
-    assert_eq!(model._get_text("H1"), "22");
+    assert_eq!(model.get_text_a1("H1"), "22");
     model.workbook.pivot_caches = vec![cache_of(&[("East", "A", CacheItem::Number(100.0))])];
     model.evaluate();
-    assert_eq!(model._get_text("H1"), "100");
+    assert_eq!(model.get_text_a1("H1"), "100");
     model.workbook.pivot_tables.clear();
     model.evaluate();
-    assert_eq!(model._get_text("H1"), "#REF!");
+    assert_eq!(model.get_text_a1("H1"), "#REF!");
 }
 
 #[test]
@@ -486,15 +505,15 @@ fn many_calls_build_one_index_per_pivot_and_evaluation() {
     let mut model = model();
     for row in 1..=200 {
         let region = if row % 2 == 0 { "East" } else { "West" };
-        model._set(
+        model.set_a1(
             &format!("J{row}"),
             &format!(r#"=GETPIVOTDATA("Sales",$A$3,"Region","{region}")"#),
         );
     }
-    model._set("K1", r#"=GETPIVOTDATA("Sales",$A$20)"#);
+    model.set_a1("K1", r#"=GETPIVOTDATA("Sales",$A$20)"#);
     model.evaluate();
-    assert_eq!(model._get_text("J2"), "22");
-    assert_eq!(model._get_text("J1"), "27");
+    assert_eq!(model.get_text_a1("J2"), "22");
+    assert_eq!(model.get_text_a1("J1"), "27");
     let builds = model.evaluation.pivot_indexes.builds();
     assert_eq!(builds, 2);
     model.evaluate();
@@ -506,39 +525,39 @@ fn getpivotdata_follows_the_pivot_through_structural_edits() {
     // SPEC-0015 "Data model" (T-2086): the pivot moves with its cells, so a formula whose
     // reference moved with them keeps answering; an edit through the pivot is refused.
     let mut model = model();
-    model._set(
+    model.set_a1(
         "Sheet2!A1",
         r#"=GETPIVOTDATA("Sales",Sheet1!$A$3,"Region","East")"#,
     );
-    model._set("Sheet2!A2", r#"=GETPIVOTDATA("Sales",Sheet1!$E$7)"#);
+    model.set_a1("Sheet2!A2", r#"=GETPIVOTDATA("Sales",Sheet1!$E$7)"#);
     model.evaluate();
-    assert_eq!(model._get_text("Sheet2!A1"), "22");
+    assert_eq!(model.get_text_a1("Sheet2!A1"), "22");
     model.insert_rows(0, 1, 2).unwrap();
     model.delete_columns(0, 6, 2).unwrap();
     model.rename_sheet_by_index(0, "Moved").unwrap();
     assert!(model.insert_rows(0, 7, 1).is_err());
     model.evaluate();
     assert_eq!(
-        model._get_formula("Sheet2!A1"),
+        model.get_formula_a1("Sheet2!A1"),
         r#"=GETPIVOTDATA("Sales",Moved!$A$5,"Region","East")"#
     );
-    assert_eq!(model._get_text("Sheet2!A1"), "22");
-    assert_eq!(model._get_text("Sheet2!A2"), "49");
+    assert_eq!(model.get_text_a1("Sheet2!A1"), "22");
+    assert_eq!(model.get_text_a1("Sheet2!A2"), "49");
     // Deleting every row of the second pivot (A22:B25 now) drops it with its cells.
-    model._set("Sheet2!A3", r#"=GETPIVOTDATA("Sales",Moved!$A$22)"#);
+    model.set_a1("Sheet2!A3", r#"=GETPIVOTDATA("Sales",Moved!$A$22)"#);
     model.evaluate();
-    assert_eq!(model._get_text("Sheet2!A3"), "8.166666667");
+    assert_eq!(model.get_text_a1("Sheet2!A3"), "8.166666667");
     model.delete_rows(0, 21, 6).unwrap();
     model.evaluate();
-    assert_eq!(model._get_text("Sheet2!A3"), "#REF!");
-    assert_eq!(model._get_text("Sheet2!A1"), "22");
+    assert_eq!(model.get_text_a1("Sheet2!A3"), "#REF!");
+    assert_eq!(model.get_text_a1("Sheet2!A1"), "22");
 }
 
 #[test]
 fn getpivotdata_follows_the_pivot_through_moves() {
     // T-2401: a move shifts a pivot like the cells it covers; a move that splits one is refused.
     let mut model = model();
-    model._set(
+    model.set_a1(
         "Sheet2!A1",
         r#"=GETPIVOTDATA("Sales",Sheet1!$A$3,"Region","East")"#,
     );
@@ -571,10 +590,10 @@ fn getpivotdata_follows_the_pivot_through_moves() {
     assert_eq!(areas(&model), vec![(3, 1, 7, 5), (19, 1, 22, 2)]);
     model.evaluate();
     assert_eq!(
-        model._get_formula("Sheet2!A1"),
+        model.get_formula_a1("Sheet2!A1"),
         r#"=GETPIVOTDATA("Sales",Sheet1!$B$4,"Region","East")"#
     );
-    assert_eq!(model._get_text("Sheet2!A1"), "22");
+    assert_eq!(model.get_text_a1("Sheet2!A1"), "22");
 }
 
 /// T-4823; Excel: web.md "GETPIVOTDATA error arguments (T-4006)", gen-m6 cells.
@@ -590,8 +609,81 @@ fn error_arguments_follow_the_t4006_order() {
             r#"=GETPIVOTDATA("Sum of Sales",$A$3,"Region",#DIV/0!)"#,
             "#REF!",
         ), // item
-        (r#"=GETPIVOTDATA(#REF!,$A$3,#NAME?,2)"#, "#REF!"),
+        (r"=GETPIVOTDATA(#REF!,$A$3,#NAME?,2)", "#REF!"),
         (r#"=GETPIVOTDATA(#NULL!,$A$3,"Region",#VALUE!)"#, "#NULL!"), // typed df beats item
         (r#"=GETPIVOTDATA(Z5,$A$3,"Region","East")"#, "#REF!"),       // referenced df
     ]);
+}
+
+/// A two-data-field reduction of DF pivot M: the probe's records with two data fields over Sales, Sum of Sales and Count of
+/// Sales, Region on the rows and `Values` on the columns, at A3 (probes/t2085-getpivotdata-data-fields
+/// pivot M, DF A1, A3, A8 to A11). The case shape is DF's; the Values-name and caption rules it
+/// checks beyond DF's cells are UNVERIFIED (T-4911).
+fn two_data_field_model() -> Model {
+    let mut model = new_empty_model();
+    model.new_sheet();
+    model.workbook.pivot_caches = vec![cache()];
+    let mut table = pivot(
+        0,
+        CellArea {
+            top: 2,
+            left: 0,
+            bottom: 6,
+            right: 2,
+        },
+        false,
+        "Sum of Sales",
+        Aggregate::Sum,
+    );
+    table.column_fields = vec![AxisField::Values];
+    table.data_fields.push(DataField {
+        caption: "Count of Sales".to_string(),
+        field: 2,
+        function: Aggregate::Count,
+        ..DataField::default()
+    });
+    model.workbook.pivot_tables = vec![table];
+    model
+}
+
+#[test]
+fn several_data_fields_pick_by_source_name_caption_and_the_values_pair() {
+    let cases = [
+        // A source name two data fields share picks the first (DF A1).
+        (r#"=GETPIVOTDATA("Sales",A3)"#, "49"),
+        // A caption picks its data field, ignoring case (DF A3, A12, A13).
+        (r#"=GETPIVOTDATA("Count of Sales",A3)"#, "6"),
+        (r#"=GETPIVOTDATA("COUNT OF SALES",A3,"Region","East")"#, "4"),
+        // The Values pair names the data field by its caption (DF A8); another data field's
+        // caption is #REF! (DF A9, A11).
+        (r#"=GETPIVOTDATA("Sales",A3,"Values","Sum of Sales")"#, "49"),
+        // The Values field name matched ignoring case is UNVERIFIED (T-4911): DF only writes `Values`.
+        (r#"=GETPIVOTDATA("Sales",A3,"values","SUM OF SALES")"#, "49"),
+        (
+            r#"=GETPIVOTDATA("Count of Sales",A3,"Values","Count of Sales")"#,
+            "6",
+        ),
+        (
+            r#"=GETPIVOTDATA("Sales",A3,"Values","Count of Sales")"#,
+            "#REF!",
+        ),
+        (
+            r#"=GETPIVOTDATA("Sales",A3,"Region","East","Values","Count of Sales")"#,
+            "#REF!",
+        ),
+        // "Values" is no data field (DF A10).
+        (r#"=GETPIVOTDATA("Values",A3)"#, "#REF!"),
+    ];
+    let mut model = two_data_field_model();
+    for (i, (formula, _)) in cases.iter().enumerate() {
+        model.set_a1(&format!("H{}", 40 + i), formula);
+    }
+    model.evaluate();
+    for (i, (formula, expected)) in cases.iter().enumerate() {
+        assert_eq!(
+            model.get_text_a1(&format!("H{}", 40 + i)),
+            *expected,
+            "{formula}"
+        );
+    }
 }

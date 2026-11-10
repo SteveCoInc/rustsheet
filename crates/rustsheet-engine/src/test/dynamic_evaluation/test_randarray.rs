@@ -17,12 +17,12 @@ use crate::test::util::new_empty_model;
 fn randarray() {
     let mut model = new_empty_model();
 
-    model._set("A1", "=C2*4");
-    model._set("C1", "=RANDARRAY(3,4)");
+    model.set_a1("A1", "=C2*4");
+    model.set_a1("C1", "=RANDARRAY(3,4)");
 
     model.evaluate();
 
-    let a1 = model._get_text("A1").parse::<f64>().unwrap();
-    let c2 = model._get_text("C2").parse::<f64>().unwrap();
+    let a1 = model.get_text_a1("A1").parse::<f64>().unwrap();
+    let c2 = model.get_text_a1("C2").parse::<f64>().unwrap();
     assert!((a1 - c2 * 4.0).abs() < 1e-6);
 }

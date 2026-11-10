@@ -293,7 +293,7 @@ def test_calculated_fields_page_fields_and_numeric_groups() -> None:
                 "data": [{"field": "Sales"}],
                 "fields": {"Region": {"xml": {"items": "<items/>"}}},
             },
-            "are ['autoSortScope', 'extLst']",
+            "are ['autoSortScope', 'extLst', 'groupItems']",
         ),
     ],
 )
@@ -486,3 +486,54 @@ def test_item_order_refusals(item_order: object, message: str) -> None:
     }
     with pytest.raises(ValueError, match=message):
         _parts(_spec(definition))
+
+
+def test_a_named_source_saves_the_name_alone() -> None:
+    """T-4506: `source_name` writes `<worksheetSource name>` with no `ref` or `sheet`, as Excel saves a defined
+    name's or a Table's source; the cache is still built from `source`."""
+    parts = _parts(_spec({"rows": ["Region"], "data": [{"field": "Sales"}], "source_name": "SalesData"}))
+    cache = parts["xl/pivotCache/pivotCacheDefinition1.xml"]
+    assert '<cacheSource type="worksheet"><worksheetSource name="SalesData"/></cacheSource>' in cache
+    assert 'recordCount="4"' in cache
+    for bad in ("", 1):
+        with pytest.raises(ValueError, match="source_name is a non-empty text"):
+            build_xlsx(_spec({"rows": ["Region"], "data": [{"field": "Sales"}], "source_name": bad}))
+
+
+def _shared_spec(second: dict[str, Any]) -> dict[str, Any]:
+    spec = _spec({"rows": ["Region"], "data": [{"field": "Sales"}]})
+    spec["sheets"][1]["pivot_tables"].append(
+        {"name": "Pv2", "source": "Data!A1:D5", "location": "F3", "definition": second}
+    )
+    return spec
+
+
+def test_a_shared_cache_writes_one_cache_and_two_tables_over_it() -> None:
+    """T-4506: `shared_cache` writes the pivot's table only, with the named pivot's cacheId and part."""
+    parts = _parts(
+        _shared_spec(
+            {"rows": ["Product"], "data": [{"field": "Sales", "subtotal": "max"}], "shared_cache": "Pv"}
+        )
+    )
+    assert re.findall(r"<pivotCache [^>]*/>", parts["xl/workbook.xml"]) == [
+        '<pivotCache cacheId="1" r:id="rIdPivotCache1"/>'
+    ]
+    assert "xl/pivotCache/pivotCacheDefinition2.xml" not in parts
+    assert 'cacheId="1"' in parts["xl/pivotTables/pivotTable2.xml"]
+    assert "../pivotCache/pivotCacheDefinition1.xml" in parts["xl/pivotTables/_rels/pivotTable2.xml.rels"]
+    rels = parts["xl/worksheets/_rels/sheet2.xml.rels"]
+    assert "pivotTable1.xml" in rels and "pivotTable2.xml" in rels
+    assert parts["[Content_Types].xml"].count("pivotCacheDefinition+xml") == 1
+    assert parts["[Content_Types].xml"].count("pivotTable+xml") == 2
+
+
+def test_a_shared_cache_must_name_an_earlier_pivot_with_the_same_cache() -> None:
+    base: dict[str, Any] = {"rows": ["Region"], "data": [{"field": "Sales"}]}
+    for extra, message in (
+        ({"shared_cache": "Nope"}, "is no earlier defined pivot"),
+        ({"shared_cache": ""}, "shared_cache is a pivot name"),
+        ({"shared_cache": "Pv", "refresh_on_load": False}, "its cache differs from Pv's"),
+        ({"shared_cache": "Pv", "source_name": "Other"}, "its cache differs from Pv's"),
+    ):
+        with pytest.raises(ValueError, match=re.escape(message)):
+            build_xlsx(_shared_spec({**base, **extra}))

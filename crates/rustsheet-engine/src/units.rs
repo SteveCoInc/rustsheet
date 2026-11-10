@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::match_same_arms,
+    clippy::unnecessary_wraps,
+    clippy::unused_self
+)]
+// LINT-DEBT-END
 use crate::{
     expressions::{
         parser::{left_chain, Node},
@@ -35,10 +42,10 @@ pub enum Units {
 impl Units {
     pub fn get_num_fmt(&self) -> String {
         match self {
-            Units::Number { num_fmt, .. } => num_fmt.to_string(),
-            Units::Currency { num_fmt, .. } => num_fmt.to_string(),
-            Units::Percentage { num_fmt, .. } => num_fmt.to_string(),
-            Units::Date(num_fmt) => num_fmt.to_string(),
+            Units::Number { num_fmt, .. } => num_fmt.clone(),
+            Units::Currency { num_fmt, .. } => num_fmt.clone(),
+            Units::Percentage { num_fmt, .. } => num_fmt.clone(),
+            Units::Date(num_fmt) => num_fmt.clone(),
         }
     }
     pub fn get_precision(&self) -> i32 {
@@ -266,7 +273,7 @@ impl Model {
             num_fmt,
             group_separator: true,
             precision: 2,
-            currency: currency_symbol.to_string(),
+            currency: currency_symbol.clone(),
         })
     }
 
@@ -373,7 +380,7 @@ fn product_units(
                     // This is tricky, we need at least 2 digit precision
                     // but I do not want to mess with the num_fmt string
                     Some(Units::Currency {
-                        currency: currency.to_string(),
+                        currency: currency.clone(),
                         group_separator: true,
                         precision: 2,
                         num_fmt: format!("{currency}#,##0.00"),
@@ -398,7 +405,7 @@ fn product_units(
                     // This is tricky, we need at least 2 digit precision
                     // but I do not want to mess with the num_fmt string
                     Some(Units::Currency {
-                        currency: currency.to_string(),
+                        currency: currency.clone(),
                         group_separator: true,
                         precision: 2,
                         num_fmt: format!("{currency}#,##0.00"),

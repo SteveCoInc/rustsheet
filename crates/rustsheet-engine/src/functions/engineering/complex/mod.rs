@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::needless_pass_by_value, clippy::too_many_lines)]
+// LINT-DEBT-END
 use crate::arithmetic::{extended_sqrt, power};
 use crate::cast::number_text_too_long;
 use crate::functions::lift::{num_error, value_error};
@@ -181,7 +184,7 @@ impl Model {
     /// IFERROR or IFNA hand on for a blank cell, which is 0 like the blank cell itself.
     fn complex_pair_of(
         &self,
-        args: &[Node],
+        any_empty: bool,
         values: &[CalcResult],
         cell: CellReferenceIndex,
     ) -> Result<(ComplexParts, ComplexParts), CalcResult> {
@@ -192,7 +195,8 @@ impl Model {
         // probes/eng-imsub-imdiv-blank-j A3, A4, B3, B4. A variable bound to an omitted LAMBDA
         // parameter or an empty LET value hands the omission on: `LAMBDA(a,b,IMSUB(a,b))("1",)`,
         // `LET(e,,IMSUB("1",e))` (probes/eng-imsub-imdiv-lambda-let-empty A1:A4, A12).
-        if args.iter().any(|arg| self.is_empty_argument(arg)) {
+        // `any_empty` is [`Model::empty_arguments`] of the two, read before the call lifts.
+        if any_empty {
             return Err(CalcResult::new_error(Error::NA, cell, String::new()));
         }
         let first = self.complex_of(first, EmptyText::ZeroIfBlank, cell)?;
@@ -207,32 +211,38 @@ impl Model {
     /// multi-cell range (probes/eng-argument-modes B13:E13, probes/scalar-lift-open-a Y11,
     /// probes/eng-later-argument-lift H16).
     pub(crate) fn fn_complex(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.lift_call(Function::Complex, args, cell, &mut |model, values| {
-            let (x, y, suffix) = match values {
-                [x, y] => (x, y, None),
-                [x, y, suffix] => (x, y, Some(suffix)),
-                _ => return CalcResult::new_args_number_error(cell),
-            };
-            // Excel reads the suffix before the numbers, so a bad or error suffix wins over an
-            // error in real_num or i_num (T-2532; engineering.md, gen-m9 COMPLEX cells).
-            let suffix = match suffix.map(|suffix| Self::cast_string_ref(suffix, cell)) {
-                None => Suffix::I,
-                Some(Ok(s)) if s == "i" || s.is_empty() => Suffix::I,
-                Some(Ok(s)) if s == "j" => Suffix::J,
-                Some(Ok(_)) => return value_error(cell),
-                Some(Err(s)) => return s,
-            };
-            // A boolean is `#VALUE!`: `COMPLEX(TRUE,1)` (probes/eng-imsum-improduct-whole C12).
-            let x = match model.cast_number_no_bools_ref(x, cell) {
-                Ok(s) => s,
-                Err(s) => return s,
-            };
-            let y = match model.cast_number_no_bools_ref(y, cell) {
-                Ok(s) => s,
-                Err(s) => return s,
-            };
-            complex_result(x, y, suffix)
-        })
+        self.atp_lift_call(
+            Function::Complex,
+            args,
+            (2, 3),
+            cell,
+            &mut |model, values| {
+                let (x, y, suffix) = match values {
+                    [x, y] => (x, y, None),
+                    [x, y, suffix] => (x, y, Some(suffix)),
+                    _ => return CalcResult::new_args_number_error(cell),
+                };
+                // Excel reads the suffix before the numbers, so a bad or error suffix wins over an
+                // error in real_num or i_num (T-2532; engineering.md, gen-m9 COMPLEX cells).
+                let suffix = match suffix.map(|suffix| Self::cast_string_ref(suffix, cell)) {
+                    None => Suffix::I,
+                    Some(Ok(s)) if s == "i" || s.is_empty() => Suffix::I,
+                    Some(Ok(s)) if s == "j" => Suffix::J,
+                    Some(Ok(_)) => return value_error(cell),
+                    Some(Err(s)) => return s,
+                };
+                // A boolean is `#VALUE!`: `COMPLEX(TRUE,1)` (probes/eng-imsum-improduct-whole C12).
+                let x = match model.cast_number_no_bools_ref(x, cell) {
+                    Ok(s) => s,
+                    Err(s) => return s,
+                };
+                let y = match model.cast_number_no_bools_ref(y, cell) {
+                    Ok(s) => s,
+                    Err(s) => return s,
+                };
+                complex_result(x, y, suffix)
+            },
+        )
     }
 
     pub(crate) fn fn_imabs(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
@@ -274,11 +284,13 @@ impl Model {
     /// `IMDIV(inumber1, inumber2)`: both lift over an array and refuse a multi-cell range
     /// (probes/eng-argument-modes B36:E36, probes/scalar-lift-open-a Y13).
     pub(crate) fn fn_imdiv(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        let any_empty = self.empty_arguments::<2>(args, cell).contains(&true);
         self.lift_call(Function::Imdiv, args, cell, &mut |model, values| {
-            let ((x1, y1, suffix), (x2, y2, _)) = match model.complex_pair_of(args, values, cell) {
-                Ok(pair) => pair,
-                Err(error) => return error,
-            };
+            let ((x1, y1, suffix), (x2, y2, _)) =
+                match model.complex_pair_of(any_empty, values, cell) {
+                    Ok(pair) => pair,
+                    Err(error) => return error,
+                };
             if x2 == 0.0 && y2 == 0.0 {
                 return num_error(cell);
             }
@@ -417,11 +429,12 @@ impl Model {
     /// `IMSUB(inumber1, inumber2)`: both lift over an array and refuse a multi-cell range
     /// (probes/eng-argument-modes B49:E49, probes/scalar-lift-open-a Y12, Y15).
     pub(crate) fn fn_imsub(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        let any_empty = self.empty_arguments::<2>(args, cell).contains(&true);
         self.lift_call(
             Function::Imsub,
             args,
             cell,
-            &mut |model, values| match model.complex_pair_of(args, values, cell) {
+            &mut |model, values| match model.complex_pair_of(any_empty, values, cell) {
                 Ok(((x1, y1, suffix), (x2, y2, _))) => {
                     // Excel: a part that overflows is 0 and the other part stays
                     // (`IMSUB("9E307","-9E307")` is "0", `IMSUB("9E307+1i","-9E307")` is "i";

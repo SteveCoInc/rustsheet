@@ -8,7 +8,7 @@ use crate::{
 #[test]
 fn extend_to_basic() {
     let mut model = new_empty_model();
-    model._set("A1", "=B1*SUM(F5:H10)");
+    model.set_a1("A1", "=B1*SUM(F5:H10)");
 
     model.evaluate();
 
@@ -33,7 +33,7 @@ fn extend_to_basic() {
 #[test]
 fn extend_to_no_formula() {
     let mut model = new_empty_model();
-    model._set("A1", "Hey Jude!");
+    model.set_a1("A1", "Hey Jude!");
 
     model.evaluate();
 

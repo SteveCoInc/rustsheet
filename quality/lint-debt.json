@@ -1,99 +1,1770 @@
 {
-  "bindings/python/Cargo.toml": [
-    "clippy::redundant_closure_for_method_calls"
-  ],
-  "crates/rustsheet-engine/Cargo.toml": [
-    "clippy::assigning_clones",
-    "clippy::bool_to_int_with_if",
-    "clippy::cast_lossless",
-    "clippy::cast_possible_truncation",
-    "clippy::cast_possible_wrap",
-    "clippy::cast_precision_loss",
+  "crates/rustsheet-engine/src/actions.rs": [
     "clippy::cast_sign_loss",
-    "clippy::cloned_instead_of_copied",
-    "clippy::comparison_chain",
-    "clippy::default_trait_access",
-    "clippy::doc_link_with_quotes",
-    "clippy::elidable_lifetime_names",
-    "clippy::enum_glob_use",
-    "clippy::explicit_iter_loop",
-    "clippy::float_cmp",
-    "clippy::fn_params_excessive_bools",
-    "clippy::format_push_string",
-    "clippy::if_not_else",
-    "clippy::ignore_without_reason",
-    "clippy::ignored_unit_patterns",
-    "clippy::implicit_clone",
-    "clippy::implicit_hasher",
-    "clippy::incompatible_msrv",
-    "clippy::inconsistent_struct_constructor",
-    "clippy::inline_always",
-    "clippy::items_after_statements",
-    "clippy::manual_assert_eq",
-    "clippy::manual_let_else",
-    "clippy::manual_midpoint",
-    "clippy::manual_string_new",
-    "clippy::many_single_char_names",
-    "clippy::map_unwrap_or",
-    "clippy::match_bool",
-    "clippy::match_same_arms",
     "clippy::mut_mut",
-    "clippy::needless_pass_by_value",
-    "clippy::needless_raw_string_hashes",
-    "clippy::range_minus_one",
-    "clippy::range_plus_one",
-    "clippy::redundant_closure_for_method_calls",
-    "clippy::redundant_else",
-    "clippy::ref_as_ptr",
-    "clippy::single_char_pattern",
-    "clippy::single_match_else",
-    "clippy::struct_excessive_bools",
-    "clippy::struct_field_names",
     "clippy::too_many_lines",
-    "clippy::trivially_copy_pass_by_ref",
-    "clippy::unnecessary_semicolon",
-    "clippy::unnecessary_wraps",
-    "clippy::unnested_or_patterns",
-    "clippy::unreadable_literal",
-    "clippy::unused_self",
-    "clippy::used_underscore_items",
-    "clippy::wildcard_imports",
     "rust::elided_lifetimes_in_paths"
   ],
-  "crates/rustsheet-xlsx/Cargo.toml": [
-    "clippy::assigning_clones",
-    "clippy::cast_lossless",
+  "crates/rustsheet-engine/src/arithmetic.rs": [
+    "clippy::cast_precision_loss",
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/arithmetic/power.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/arithmetic/power_tests.rs": [
+    "cfg(test) clippy::cast_precision_loss",
+    "cfg(test) clippy::float_cmp",
+    "cfg(test) clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/builtin_styles.rs": [
+    "clippy::fn_params_excessive_bools",
+    "clippy::needless_pass_by_value",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/calc_result.rs": [
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/calculated_columns.rs": [
+    "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-engine/src/cast.rs": [
+    "clippy::cast_sign_loss",
+    "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-engine/src/cell.rs": [
+    "clippy::cast_sign_loss",
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/cf_styles.rs": [
+    "clippy::manual_let_else"
+  ],
+  "crates/rustsheet-engine/src/cf_types.rs": [
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/colors.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/conditional_formatting.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp",
+    "clippy::manual_let_else",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/constants.rs": [
+    "cfg(test) clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/cut_paste.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::manual_let_else"
+  ],
+  "crates/rustsheet-engine/src/data_table_memo.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/data_tables.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/decimal_round.rs": [
+    "cfg(test) clippy::manual_midpoint",
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/evaluation.rs": [
+    "clippy::cast_sign_loss",
+    "clippy::default_trait_access",
+    "clippy::struct_excessive_bools",
+    "clippy::struct_field_names"
+  ],
+  "crates/rustsheet-engine/src/excel_order.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/expressions/lexer/mod.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::needless_pass_by_value",
+    "clippy::redundant_else",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/expressions/lexer/ranges.rs": [
+    "clippy::manual_let_else"
+  ],
+  "crates/rustsheet-engine/src/expressions/lexer/structured_references.rs": [
+    "clippy::doc_link_with_quotes"
+  ],
+  "crates/rustsheet-engine/src/expressions/lexer/test/test_common.rs": [
+    "cfg(test) clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/expressions/lexer/util.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/expressions/parser/depth.rs": [
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/expressions/parser/lambda.rs": [
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/expressions/parser/lists.rs": [
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/expressions/parser/mod.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_sign_loss",
+    "clippy::implicit_hasher",
+    "clippy::struct_excessive_bools"
+  ],
+  "crates/rustsheet-engine/src/expressions/parser/move_formula.rs": [
+    "clippy::too_many_lines",
+    "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-engine/src/expressions/parser/operands.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss",
+    "clippy::manual_let_else",
+    "clippy::needless_pass_by_value"
+  ],
+  "crates/rustsheet-engine/src/expressions/parser/reference_operators.rs": [
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/expressions/parser/sheet_span.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/expressions/parser/static_analysis.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::match_same_arms",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/expressions/parser/static_analysis/legacy.rs": [
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/expressions/parser/static_analysis/reference_result.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/expressions/parser/stringify.rs": [
+    "clippy::manual_let_else",
+    "clippy::too_many_lines",
+    "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-engine/src/expressions/parser/stringify/rename_defined_name.rs": [
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/expressions/parser/stringify/structured.rs": [
+    "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-engine/src/expressions/parser/structured_lowering.rs": [
+    "clippy::cast_sign_loss",
+    "clippy::manual_let_else",
+    "clippy::match_same_arms",
+    "clippy::needless_pass_by_value",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/expressions/parser/tests/test_add_implicit_intersection.rs": [
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/expressions/parser/tests/test_general.rs": [
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/expressions/parser/tests/test_move_formula.rs": [
+    "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-engine/src/expressions/parser/tests/test_tables.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap"
+  ],
+  "crates/rustsheet-engine/src/expressions/token.rs": [
+    "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-engine/src/expressions/utils/mod.rs": [
+    "clippy::cast_sign_loss",
+    "clippy::manual_let_else"
+  ],
+  "crates/rustsheet-engine/src/external_reference.rs": [
+    "clippy::needless_pass_by_value"
+  ],
+  "crates/rustsheet-engine/src/formatter/calendar_dates.rs": [
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/formatter/complexity.rs": [
+    "clippy::struct_excessive_bools",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/formatter/date_clock.rs": [
+    "clippy::cast_precision_loss",
+    "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-engine/src/formatter/date_names.rs": [
+    "clippy::struct_excessive_bools"
+  ],
+  "crates/rustsheet-engine/src/formatter/date_text.rs": [
+    "clippy::match_same_arms",
+    "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-engine/src/formatter/dates.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/formatter/elapsed.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/formatter/format.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_sign_loss",
+    "clippy::doc_link_with_quotes",
+    "clippy::match_same_arms",
+    "clippy::too_many_lines",
+    "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-engine/src/formatter/fraction.rs": [
+    "clippy::match_same_arms",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/formatter/general.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/formatter/lexer.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::float_cmp",
+    "clippy::match_same_arms",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/formatter/locale_tag.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/formatter/numerals.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::match_same_arms",
+    "clippy::struct_excessive_bools"
+  ],
+  "crates/rustsheet-engine/src/formatter/parse_formatted.rs": [
+    "clippy::cast_precision_loss",
+    "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-engine/src/formatter/parser.rs": [
+    "clippy::match_same_arms",
+    "clippy::struct_excessive_bools",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/formatter/test/test_condition.rs": [
+    "cfg(test) clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/formatter/test/test_dates.rs": [
+    "cfg(test) clippy::float_cmp",
+    "cfg(test) clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/formatter/test/test_de_examples.rs": [
+    "cfg(test) clippy::ignore_without_reason"
+  ],
+  "crates/rustsheet-engine/src/formatter/test/test_digit_edges.rs": [
+    "cfg(test) clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/formatter/test/test_en_examples.rs": [
+    "cfg(test) clippy::ignore_without_reason",
+    "cfg(test) clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/formatter/test/test_fraction.rs": [
+    "cfg(test) clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/formatter/test/test_general.rs": [
+    "cfg(test) clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/formatter/test/test_parse_formatted_number.rs": [
+    "cfg(test) clippy::float_cmp",
+    "cfg(test) clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/formatter/test/test_scientific.rs": [
+    "cfg(test) clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/formatter/test/test_time.rs": [
+    "cfg(test) clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/formula_cells.rs": [
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/formula_rewrite.rs": [
+    "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-engine/src/functions/aggregate.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/criteria.rs": [
+    "clippy::cast_precision_loss",
+    "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-engine/src/functions/database.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/functions/date_and_time.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/date_and_time/holidays.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::trivially_copy_pass_by_ref"
+  ],
+  "crates/rustsheet-engine/src/functions/date_and_time/month_shift.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/date_and_time/networkdays.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/date_and_time/time_text.rs": [
+    "clippy::cast_possible_truncation",
+    "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-engine/src/functions/date_and_time/weeknum.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/functions/date_and_time/workday.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_precision_loss",
+    "clippy::trivially_copy_pass_by_ref"
+  ],
+  "crates/rustsheet-engine/src/functions/date_and_time/yearfrac.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/engineering/bessel.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/functions/engineering/bit_operations.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::float_cmp",
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/functions/engineering/complex/mod.rs": [
+    "clippy::needless_pass_by_value",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/functions/engineering/complex/parse.rs": [
+    "clippy::float_cmp",
+    "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-engine/src/functions/engineering/complex/tests.rs": [
+    "cfg(test) clippy::unnecessary_wraps"
+  ],
+  "crates/rustsheet-engine/src/functions/engineering/complex/trig.rs": [
+    "cfg(test) clippy::float_cmp",
+    "clippy::manual_midpoint"
+  ],
+  "crates/rustsheet-engine/src/functions/engineering/convert.rs": [
+    "clippy::too_many_lines",
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/functions/engineering/misc.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/engineering/number_basis.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/engineering/transcendental/bessel_excel.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::manual_midpoint"
+  ],
+  "crates/rustsheet-engine/src/functions/engineering/transcendental/bessel_i.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/functions/engineering/transcendental/bessel_k.rs": [
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/functions/engineering/transcendental/test_bessel.rs": [
+    "cfg(test) clippy::float_cmp",
+    "cfg(test) clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/functions/financial/accrint.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/financial/amortization.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp",
+    "clippy::unnecessary_wraps"
+  ],
+  "crates/rustsheet-engine/src/functions/financial/annuity.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/financial/annuity/tests.rs": [
+    "cfg(test) clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/financial/cumulative.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/financial/dates.rs": [
     "clippy::cast_possible_truncation",
     "clippy::cast_possible_wrap",
     "clippy::cast_precision_loss",
     "clippy::cast_sign_loss",
-    "clippy::cloned_instead_of_copied",
-    "clippy::dbg_macro",
+    "clippy::unused_self"
+  ],
+  "crates/rustsheet-engine/src/functions/financial/discount.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/financial/financial_bonds.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
     "clippy::float_cmp",
-    "clippy::format_push_string",
-    "clippy::if_not_else",
-    "clippy::implicit_clone",
-    "clippy::inconsistent_struct_constructor",
-    "clippy::items_after_statements",
-    "clippy::manual_assert",
-    "clippy::manual_assert_eq",
+    "clippy::many_single_char_names",
+    "clippy::needless_pass_by_value"
+  ],
+  "crates/rustsheet-engine/src/functions/financial/financial_bonds/coupon_schedule.rs": [
+    "clippy::cast_possible_wrap",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/functions/financial/financial_bonds/odd_last.rs": [
+    "clippy::cast_possible_wrap"
+  ],
+  "crates/rustsheet-engine/src/functions/financial/financial_bonds/yield_solver.rs": [
+    "cfg(test) clippy::float_cmp",
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::manual_midpoint"
+  ],
+  "crates/rustsheet-engine/src/functions/financial/financial_depreciation.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/financial/financial_util.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/financial/growth.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/financial/mirr.rs": [
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/financial/mod.rs": [
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/information/mod.rs": [
+    "clippy::cast_precision_loss",
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/functions/information/offline_errors.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/lift/call.rs": [
+    "clippy::needless_pass_by_value"
+  ],
+  "crates/rustsheet-engine/src/functions/lift/driver.rs": [
+    "clippy::match_same_arms",
+    "clippy::needless_pass_by_value"
+  ],
+  "crates/rustsheet-engine/src/functions/lift/kinds/general.rs": [
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/functions/lift/kinds/mod.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/functions/lift/tests/kernel_work.rs": [
+    "clippy::cast_precision_loss",
+    "clippy::needless_pass_by_value"
+  ],
+  "crates/rustsheet-engine/src/functions/lift/tests/mod.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/logical/bycol_byrow.rs": [
+    "cfg(test) clippy::float_cmp",
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::needless_pass_by_value"
+  ],
+  "crates/rustsheet-engine/src/functions/logical/lambda.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::needless_pass_by_value",
+    "clippy::unused_self"
+  ],
+  "crates/rustsheet-engine/src/functions/logical/let.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/functions/logical/mod.rs": [
+    "clippy::needless_pass_by_value",
+    "clippy::unused_self"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/address_areas.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::manual_let_else"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/choosecols_chooserows.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/drop_take.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/expand.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/group_order.rs": [
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/groupby.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::needless_pass_by_value"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/grouping.rs": [
+    "clippy::struct_field_names"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/grouping/tests.rs": [
+    "cfg(test) clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/index.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp",
+    "clippy::needless_pass_by_value"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/index_arg.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/lifted_options.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/lookup.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/lookup_table.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/mod.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::comparison_chain"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/offset.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/pivotby.rs": [
+    "clippy::needless_pass_by_value"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/ref_lift.rs": [
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/tocol_torow.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/trimrange.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/wrapcols_wraprows.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss",
+    "clippy::needless_pass_by_value"
+  ],
+  "crates/rustsheet-engine/src/functions/lookup_and_reference/xmatch.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/math_and_trigonometry/arabic_roman.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss",
+    "clippy::items_after_statements"
+  ],
+  "crates/rustsheet-engine/src/functions/math_and_trigonometry/ceiling_floor.rs": [
+    "cfg(test) clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/math_and_trigonometry/decimal_text.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/math_and_trigonometry/gcd_lcm.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::match_same_arms",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/functions/math_and_trigonometry/hyperbolic.rs": [
+    "clippy::float_cmp",
+    "clippy::manual_midpoint"
+  ],
+  "crates/rustsheet-engine/src/functions/math_and_trigonometry/mathematical.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss",
+    "clippy::unused_self"
+  ],
+  "crates/rustsheet-engine/src/functions/math_and_trigonometry/matrix.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss",
+    "clippy::manual_let_else"
+  ],
+  "crates/rustsheet-engine/src/functions/math_and_trigonometry/mmult.rs": [
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/math_and_trigonometry/multinomial.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/functions/math_and_trigonometry/random.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss",
+    "clippy::unused_self"
+  ],
+  "crates/rustsheet-engine/src/functions/math_and_trigonometry/sequence.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/functions/math_and_trigonometry/seriessum.rs": [
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/math_and_trigonometry/trig.rs": [
+    "cfg(test) clippy::cast_precision_loss",
+    "clippy::cast_possible_truncation",
+    "clippy::float_cmp",
+    "clippy::inline_always"
+  ],
+  "crates/rustsheet-engine/src/functions/mod.rs": [
+    "clippy::match_same_arms",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/functions/spill_functions.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp",
+    "clippy::unused_self"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/beta.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/beta_density.rs": [
+    "cfg(test) clippy::match_same_arms",
+    "clippy::float_cmp",
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/binom.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp",
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/bratio/basym.rs": [
+    "clippy::cast_precision_loss",
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/bratio/bfrac.rs": [
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/bratio/bgrat.rs": [
+    "clippy::cast_precision_loss",
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/bratio/bpser.rs": [
+    "clippy::float_cmp",
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/bratio/bup.rs": [
+    "clippy::float_cmp",
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/bratio/ln_beta.rs": [
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/bratio/mod.rs": [
+    "clippy::float_cmp",
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/bratio/tests.rs": [
+    "cfg(test) clippy::float_cmp",
+    "cfg(test) clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/chisq.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp",
     "clippy::manual_let_else",
-    "clippy::manual_string_new",
-    "clippy::map_unwrap_or",
+    "clippy::unused_self"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/count.rs": [
+    "clippy::cast_precision_loss",
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/count_and_average.rs": [
+    "cfg(test) clippy::float_cmp",
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::items_after_statements"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/covariance.rs": [
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/devsq.rs": [
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/discrete.rs": [
+    "cfg(test) clippy::float_cmp",
+    "cfg(test) clippy::unreadable_literal",
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/erf.rs": [
+    "cfg(test) clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/ets.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/ets/model.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp",
+    "clippy::manual_midpoint"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/ets/tests.rs": [
+    "cfg(test) clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/exponential.rs": [
+    "cfg(test) clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/f_density.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp",
+    "clippy::manual_midpoint",
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/f_density/tests.rs": [
+    "cfg(test) clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/f_test_tail.rs": [
+    "cfg(test) clippy::float_cmp",
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/fisher.rs": [
+    "cfg(test) clippy::unreadable_literal",
+    "clippy::cast_precision_loss",
+    "clippy::float_cmp",
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/forecast.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp",
+    "clippy::manual_midpoint"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/frequency.rs": [
+    "clippy::cast_precision_loss",
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/gamma_x87.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp",
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/gammaln.rs": [
+    "cfg(test) clippy::float_cmp",
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/geomean.rs": [
+    "cfg(test) clippy::float_cmp",
+    "clippy::cast_precision_loss",
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/half_integer_beta.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/hypegeom.rs": [
+    "cfg(test) clippy::float_cmp",
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/if_ifs.rs": [
+    "clippy::cast_precision_loss",
+    "clippy::inline_always"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/incomplete_beta.rs": [
+    "clippy::float_cmp",
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/incomplete_gamma/closed_form.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/incomplete_gamma/density.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/incomplete_gamma/fraction.rs": [
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/incomplete_gamma/mod.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp",
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/incomplete_gamma/near_mode.rs": [
+    "cfg(test) clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/incomplete_gamma/tests.rs": [
+    "cfg(test) clippy::cast_precision_loss",
+    "cfg(test) clippy::float_cmp",
+    "cfg(test) clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/inverse_beta.rs": [
+    "cfg(test) clippy::cast_precision_loss",
+    "clippy::cast_possible_truncation",
+    "clippy::float_cmp",
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/large_shape_beta.rs": [
+    "cfg(test) clippy::float_cmp",
+    "cfg(test) clippy::unreadable_literal",
+    "clippy::cast_precision_loss",
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/linest.rs": [
+    "clippy::cast_precision_loss",
+    "clippy::many_single_char_names",
+    "clippy::match_same_arms",
+    "clippy::needless_pass_by_value"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/loader.rs": [
+    "cfg(test) clippy::unreadable_literal",
+    "clippy::float_cmp",
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/normal.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/paired.rs": [
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/percentile.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/permut.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/poisson.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/prob.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/quartile.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/rank_eq_avg.rs": [
+    "clippy::cast_precision_loss",
+    "clippy::float_cmp",
+    "clippy::manual_midpoint"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/regression.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/special.rs": [
+    "cfg(test) clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/student_t.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp",
+    "clippy::manual_midpoint",
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/t_dist.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_precision_loss",
+    "clippy::float_cmp",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/t_dist/tests.rs": [
+    "cfg(test) clippy::float_cmp",
+    "cfg(test) clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/trimmean.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/variance.rs": [
+    "cfg(test) clippy::float_cmp",
+    "cfg(test) clippy::unreadable_literal",
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/statistical/z_test.rs": [
+    "clippy::cast_precision_loss",
+    "clippy::needless_pass_by_value",
+    "clippy::unnecessary_wraps",
+    "clippy::unused_self"
+  ],
+  "crates/rustsheet-engine/src/functions/subtotal.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::needless_pass_by_value"
+  ],
+  "crates/rustsheet-engine/src/functions/text/arraytotext.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/text/bahttext.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/functions/text/before_after.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/text/char_code.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss",
+    "clippy::match_same_arms",
+    "clippy::unused_self"
+  ],
+  "crates/rustsheet-engine/src/functions/text/common.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp",
+    "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-engine/src/functions/text/pcre/backtrack.rs": [
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/functions/text/pcre/mod.rs": [
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/functions/text/pcre/parse.rs": [
+    "clippy::needless_pass_by_value",
+    "clippy::struct_excessive_bools"
+  ],
+  "crates/rustsheet-engine/src/functions/text/position.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_sign_loss",
+    "clippy::items_after_statements"
+  ],
+  "crates/rustsheet-engine/src/functions/text/regex_functions.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/text/regex_reach.rs": [
+    "cfg(test) clippy::format_push_string"
+  ],
+  "crates/rustsheet-engine/src/functions/text/string_format.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/text/textsplit.rs": [
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/functions/text/util.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/functions/util.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/util/aggregate_args.rs": [
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/functions/util/collation.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/functions/util/collation/kana.rs": [
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/functions/util/near_integer.rs": [
+    "cfg(test) clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/functions/xlookup.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/functions/xlsx_names.rs": [
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/iteration.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/legacy_formula.rs": [
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/limits.rs": [
+    "clippy::cast_possible_wrap",
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/model.rs": [
+    "cfg(not(test)) clippy::enum_glob_use",
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_sign_loss",
+    "clippy::inline_always",
+    "clippy::manual_let_else",
     "clippy::match_same_arms",
     "clippy::needless_pass_by_value",
-    "clippy::needless_raw_string_hashes",
-    "clippy::print_stderr",
-    "clippy::print_stdout",
-    "clippy::redundant_closure_for_method_calls",
-    "clippy::redundant_else",
-    "clippy::ref_option",
-    "clippy::single_match_else",
-    "clippy::struct_field_names",
     "clippy::too_many_lines",
-    "clippy::unnecessary_join",
-    "clippy::unnecessary_wraps",
-    "clippy::wildcard_imports",
+    "clippy::unused_self"
+  ],
+  "crates/rustsheet-engine/src/new_empty.rs": [
+    "clippy::assigning_clones",
+    "clippy::cast_possible_truncation",
+    "clippy::default_trait_access",
+    "clippy::items_after_statements",
+    "clippy::manual_let_else",
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/node_frames.rs": [
+    "cfg(not(test)) clippy::enum_glob_use"
+  ],
+  "crates/rustsheet-engine/src/number_format.rs": [
+    "cfg(test) clippy::unreadable_literal",
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp",
+    "clippy::manual_let_else"
+  ],
+  "crates/rustsheet-engine/src/pivot.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/pivot/accumulate.rs": [
+    "cfg(test) clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/pivot/date_groups.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/pivot/layout/lines.rs": [
+    "clippy::struct_field_names"
+  ],
+  "crates/rustsheet-engine/src/pivot/layout/render.rs": [
+    "clippy::unused_self"
+  ],
+  "crates/rustsheet-engine/src/pivot/model.rs": [
+    "clippy::struct_excessive_bools"
+  ],
+  "crates/rustsheet-engine/src/pivot/number_groups.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/pivot/probe_cases.rs": [
+    "cfg(test) clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/pivot/refresh.rs": [
+    "clippy::struct_excessive_bools"
+  ],
+  "crates/rustsheet-engine/src/pivot/refresh/tests.rs": [
+    "cfg(test) rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-engine/src/pivot/show_as.rs": [
+    "clippy::comparison_chain",
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/positions.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/reference_forms.rs": [
+    "clippy::struct_excessive_bools"
+  ],
+  "crates/rustsheet-engine/src/reference_operators/areas.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::needless_pass_by_value"
+  ],
+  "crates/rustsheet-engine/src/sheet_data.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/styles.rs": [
+    "clippy::assigning_clones",
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/table_types.rs": [
+    "clippy::struct_excessive_bools"
+  ],
+  "crates/rustsheet-engine/src/tailed_array.rs": [
+    "clippy::unused_self"
+  ],
+  "crates/rustsheet-engine/src/test/conditional_formatting/average.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/test/conditional_formatting/cell_is.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap"
+  ],
+  "crates/rustsheet-engine/src/test/conditional_formatting/formula.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap"
+  ],
+  "crates/rustsheet-engine/src/test/conditional_formatting/mod.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/conditional_formatting/on_first_read.rs": [
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/test/conditional_formatting/priority.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/conditional_formatting/text.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap"
+  ],
+  "crates/rustsheet-engine/src/test/conditional_formatting/top_bottom.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/test/dynamic_evaluation/oracle.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/test/dynamic_evaluation/test_bug_hunt.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/dynamic_evaluation/test_history_independence.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/test/dynamic_evaluation/test_known_gaps.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/dynamic_evaluation/test_order_independence.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/test/dynamic_evaluation/test_ordered_restart.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss",
+    "clippy::many_single_char_names",
+    "clippy::unused_self"
+  ],
+  "crates/rustsheet-engine/src/test/dynamic_evaluation/test_range_reads.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/test/kernel_rows.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/mathematical/test_multinomial.rs": [
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/test/mathematical/test_sum_prefix.rs": [
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/test/mathematical/test_sumproduct_masked.rs": [
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/test/statistical/test_fn_confidence.rs": [
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/test/statistical/test_fn_f_test.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/statistical/test_fn_fisher.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/statistical/test_fn_weibull.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/test_actions.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/test_arrays_and_errors.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap"
+  ],
+  "crates/rustsheet-engine/src/test/test_clock.rs": [
+    "clippy::cast_precision_loss",
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/test_column_width.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/test_criteria.rs": [
+    "clippy::needless_pass_by_value",
+    "clippy::unnecessary_wraps"
+  ],
+  "crates/rustsheet-engine/src/test/test_data_table_memo.rs": [
+    "clippy::default_trait_access"
+  ],
+  "crates/rustsheet-engine/src/test/test_date_and_time.rs": [
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/test/test_date_huge_month_day.rs": [
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/test/test_defined_name_formulas.rs": [
+    "clippy::items_after_statements"
+  ],
+  "crates/rustsheet-engine/src/test/test_even_odd.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/test_exp_sign.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/test_fn_bond_functions.rs": [
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/test/test_fn_cumulative_lift.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/test_fn_datevalue_datedif.rs": [
+    "clippy::float_cmp",
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/test/test_fn_datevalue_timevalue.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/test_fn_depreciation.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/test_fn_financial.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/test/test_fn_offline_errors.rs": [
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/test/test_fn_or_xor.rs": [
+    "clippy::items_after_statements"
+  ],
+  "crates/rustsheet-engine/src/test/test_fn_randarray.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/test_fn_time.rs": [
+    "clippy::float_cmp",
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/test/test_forecast.rs": [
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/test/test_general.rs": [
+    "clippy::float_cmp",
+    "clippy::ignore_without_reason"
+  ],
+  "crates/rustsheet-engine/src/test/test_geomean.rs": [
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/test/test_iteration_settings.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/test_merged_cells.rs": [
+    "clippy::unnecessary_wraps"
+  ],
+  "crates/rustsheet-engine/src/test/test_multi_area_arguments.rs": [
+    "clippy::format_push_string"
+  ],
+  "crates/rustsheet-engine/src/test/test_nan_inf.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/test/test_near_zero_snapping.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/test_networkdays_closed_form.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::trivially_copy_pass_by_ref"
+  ],
+  "crates/rustsheet-engine/src/test/test_now.rs": [
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/test/test_number_format.rs": [
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/test/test_pivot_properties.rs": [
+    "clippy::format_push_string"
+  ],
+  "crates/rustsheet-engine/src/test/test_set_functions_error_handling.rs": [
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/test/test_set_user_input.rs": [
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/test/test_shared_formulas.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_sign_loss",
+    "clippy::default_trait_access"
+  ],
+  "crates/rustsheet-engine/src/test/test_structured_references.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap"
+  ],
+  "crates/rustsheet-engine/src/test/test_styles.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/test/test_subtotal_reference_args.rs": [
+    "clippy::format_push_string"
+  ],
+  "crates/rustsheet-engine/src/test/test_text.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/test/test_this_row.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/test/test_today.rs": [
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/test/test_unary_operators.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap"
+  ],
+  "crates/rustsheet-engine/src/test/test_union_sum_metamorphic.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap"
+  ],
+  "crates/rustsheet-engine/src/test/test_worksheet.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap"
+  ],
+  "crates/rustsheet-engine/src/test/text_functions/fn_text_arrays.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap"
+  ],
+  "crates/rustsheet-engine/src/test/user_model/test_autofill_merged_cells.rs": [
+    "clippy::unnecessary_wraps"
+  ],
+  "crates/rustsheet-engine/src/test/user_model/test_batch_row_column_diff.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/user_model/test_border.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/test/user_model/test_column_style.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/user_model/test_conditional_formatting.rs": [
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/test/user_model/test_delete_row_column_formatting.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/user_model/test_delete_undo_rewrites.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/test/user_model/test_external_diffs_untrusted.rs": [
+    "clippy::items_after_statements",
+    "clippy::needless_pass_by_value",
+    "clippy::too_many_lines",
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-engine/src/test/user_model/test_general.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/user_model/test_hidden_columns.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/user_model/test_keyboard_navigation.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/user_model/test_merged_cells.rs": [
+    "clippy::unnecessary_wraps"
+  ],
+  "crates/rustsheet-engine/src/test/user_model/test_move_sheet.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/test/user_model/test_named_styles.rs": [
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/test/user_model/test_on_area_selection.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/test/user_model/test_on_expand_selected_range.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/test/user_model/test_window_size.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/test/util.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/themes.rs": [
+    "clippy::match_same_arms",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/typed_input.rs": [
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/types.rs": [
+    "clippy::default_trait_access",
+    "clippy::struct_excessive_bools",
+    "clippy::trivially_copy_pass_by_ref",
+    "clippy::unreadable_literal",
     "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-engine/src/tz/os_tz.rs": [
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/units.rs": [
+    "clippy::match_same_arms",
+    "clippy::unnecessary_wraps",
+    "clippy::unused_self"
+  ],
+  "crates/rustsheet-engine/src/user_model/autofill.rs": [
+    "clippy::assigning_clones",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/user_model/border.rs": [
+    "clippy::default_trait_access",
+    "clippy::match_same_arms",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/user_model/border_utils.rs": [
+    "clippy::manual_let_else"
+  ],
+  "crates/rustsheet-engine/src/user_model/clipboard.rs": [
+    "clippy::assigning_clones",
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/user_model/common.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/user_model/conditional_formatting.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/user_model/sequence_detector.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-engine/src/user_model/ui.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::manual_let_else",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/user_model/undo_redo.rs": [
+    "clippy::assigning_clones",
+    "clippy::match_same_arms",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-engine/src/utils.rs": [
+    "cfg(test) clippy::cast_possible_truncation",
+    "cfg(test) clippy::unnecessary_wraps",
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/variable_stack.rs": [
+    "cfg(test) clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/workbook.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-engine/src/workbook_check.rs": [
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-engine/src/worksheet.rs": [
+    "clippy::manual_let_else",
+    "clippy::unnecessary_wraps"
+  ],
+  "crates/rustsheet-engine/src/x87_exp.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp",
+    "clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/x87_exp/tests.rs": [
+    "cfg(test) clippy::cast_precision_loss",
+    "cfg(test) clippy::float_cmp",
+    "cfg(test) clippy::many_single_char_names"
+  ],
+  "crates/rustsheet-engine/src/x87_log10.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_precision_loss",
+    "clippy::cast_sign_loss",
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/x87_log1p.rs": [
+    "cfg(test) clippy::float_cmp"
+  ],
+  "crates/rustsheet-engine/src/x87_register.rs": [
+    "cfg(test) clippy::float_cmp",
+    "clippy::cast_precision_loss"
+  ],
+  "crates/rustsheet-engine/src/x87_table_read.rs": [
+    "cfg(test) clippy::float_cmp",
+    "clippy::unreadable_literal"
+  ],
+  "crates/rustsheet-xlsx/src/bin/test.rs": [
+    "clippy::print_stdout"
+  ],
+  "crates/rustsheet-xlsx/src/compare.rs": [
+    "clippy::format_push_string",
+    "clippy::match_same_arms",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-xlsx/src/export/conditional_formatting.rs": [
+    "clippy::if_not_else",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-xlsx/src/export/data_tables.rs": [
+    "clippy::format_push_string"
+  ],
+  "crates/rustsheet-xlsx/src/export/doc_props.rs": [
+    "clippy::manual_let_else"
+  ],
+  "crates/rustsheet-xlsx/src/export/escape.rs": [
+    "clippy::format_push_string"
+  ],
+  "crates/rustsheet-xlsx/src/export/mod.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-xlsx/src/export/patch.rs": [
+    "clippy::format_push_string",
+    "clippy::too_many_lines",
+    "clippy::unnecessary_wraps"
+  ],
+  "crates/rustsheet-xlsx/src/export/patch/package.rs": [
+    "clippy::format_push_string",
+    "clippy::match_same_arms"
+  ],
+  "crates/rustsheet-xlsx/src/export/patch/strings.rs": [
+    "clippy::format_push_string"
+  ],
+  "crates/rustsheet-xlsx/src/export/pivots.rs": [
+    "clippy::print_stderr"
+  ],
+  "crates/rustsheet-xlsx/src/export/pivots/cache.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-xlsx/src/export/rich_errors.rs": [
+    "clippy::format_push_string",
+    "clippy::manual_let_else"
+  ],
+  "crates/rustsheet-xlsx/src/export/styles.rs": [
+    "clippy::if_not_else"
+  ],
+  "crates/rustsheet-xlsx/src/export/styles_util.rs": [
+    "clippy::if_not_else",
+    "clippy::ref_option"
+  ],
+  "crates/rustsheet-xlsx/src/export/tables.rs": [
+    "clippy::format_push_string"
+  ],
+  "crates/rustsheet-xlsx/src/export/test/test_cf.rs": [
+    "cfg(test) clippy::items_after_statements",
+    "cfg(test) clippy::too_many_lines"
+  ],
+  "crates/rustsheet-xlsx/src/export/test/test_export.rs": [
+    "cfg(test) clippy::cast_sign_loss"
+  ],
+  "crates/rustsheet-xlsx/src/export/workbook.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-xlsx/src/export/worksheets.rs": [
+    "cfg(test) clippy::float_cmp",
+    "clippy::cast_sign_loss",
+    "clippy::if_not_else",
+    "clippy::manual_let_else",
+    "clippy::ref_option",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-xlsx/src/import/conditional_formatting.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::manual_let_else",
+    "clippy::match_same_arms",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-xlsx/src/import/encryption.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-xlsx/src/import/pivots.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::float_cmp",
+    "clippy::print_stderr",
+    "clippy::too_many_lines",
+    "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-xlsx/src/import/pivots/table.rs": [
+    "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-xlsx/src/import/pivots/tests.rs": [
+    "cfg(test) clippy::cast_possible_truncation",
+    "cfg(test) clippy::format_push_string"
+  ],
+  "crates/rustsheet-xlsx/src/import/relocation_key.rs": [
+    "clippy::single_match_else",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-xlsx/src/import/shared_strings.rs": [
+    "clippy::needless_pass_by_value"
+  ],
+  "crates/rustsheet-xlsx/src/import/sheet_data.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::cast_sign_loss",
+    "clippy::manual_let_else",
+    "clippy::too_many_lines",
+    "clippy::unnecessary_wraps",
+    "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-xlsx/src/import/styles.rs": [
+    "clippy::dbg_macro",
+    "clippy::match_same_arms",
+    "clippy::print_stdout",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-xlsx/src/import/tables.rs": [
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-xlsx/src/import/theme.rs": [
+    "clippy::print_stderr"
+  ],
+  "crates/rustsheet-xlsx/src/import/workbook.rs": [
+    "clippy::struct_field_names"
+  ],
+  "crates/rustsheet-xlsx/src/import/worksheets.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap",
+    "clippy::needless_pass_by_value",
+    "clippy::print_stdout",
+    "clippy::too_many_lines"
+  ],
+  "crates/rustsheet-xlsx/src/import/worksheets/tests.rs": [
+    "cfg(test) clippy::items_after_statements"
+  ],
+  "crates/rustsheet-xlsx/src/import/xml.rs": [
+    "clippy::match_same_arms",
+    "rust::elided_lifetimes_in_paths"
+  ],
+  "crates/rustsheet-xlsx/src/metadata_clock.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-xlsx/src/util.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-xlsx/tests/dynamic_formula_export.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap"
+  ],
+  "crates/rustsheet-xlsx/tests/error_cell_export.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap"
+  ],
+  "crates/rustsheet-xlsx/tests/malformed_import.rs": [
+    "clippy::format_push_string"
+  ],
+  "crates/rustsheet-xlsx/tests/padded_column_name.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-xlsx/tests/shared_string_whitespace.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap"
+  ],
+  "crates/rustsheet-xlsx/tests/subnormal_export.rs": [
+    "clippy::float_cmp"
+  ],
+  "crates/rustsheet-xlsx/tests/table_part_names.rs": [
+    "clippy::cast_possible_truncation"
+  ],
+  "crates/rustsheet-xlsx/tests/test.rs": [
+    "clippy::assigning_clones",
+    "clippy::float_cmp",
+    "clippy::format_push_string",
+    "clippy::needless_pass_by_value"
+  ],
+  "crates/rustsheet-xlsx/tests/text_escape_round_trip.rs": [
+    "clippy::cast_possible_truncation",
+    "clippy::cast_possible_wrap"
   ]
 }

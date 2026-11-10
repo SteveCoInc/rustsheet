@@ -20,35 +20,35 @@ fn fill(model: &mut Model) {
     for row in 1..=40 {
         let i = (row - 1) % 10;
         let j = (row * 3) % 10;
-        model._set(&format!("A{row}"), A[i]);
-        model._set(&format!("B{row}"), B[j]);
-        model._set(&format!("C{row}"), C[(i + j) % 10]);
+        model.set_a1(&format!("A{row}"), A[i]);
+        model.set_a1(&format!("B{row}"), B[j]);
+        model.set_a1(&format!("C{row}"), C[(i + j) % 10]);
     }
-    model._set("H1", "1");
-    model._set("H2", "=1/0");
-    model._set("H3", "TRUE");
+    model.set_a1("H1", "1");
+    model.set_a1("H2", "=1/0");
+    model.set_a1("H3", "TRUE");
     // #N/IMPL!: a formula the engine does not implement, SHEETS of a non-reference (T-2113).
     // The FORECAST.ETS family played this part until T-3599 to T-3601 implemented it; an error
     // literal does not do (the tailed reading meets it as #ERROR!).
-    model._set("H4", "=SHEETS(5)");
+    model.set_a1("H4", "=SHEETS(5)");
     let keys = ["0", "=\"\"", "FALSE", "", "1", "x"];
     for (index, key) in keys.iter().enumerate() {
         let row = index + 1;
-        model._set(&format!("J{row}"), key);
-        model._set(&format!("K{row}"), &format!("{}", row * 10));
+        model.set_a1(&format!("J{row}"), key);
+        model.set_a1(&format!("K{row}"), &format!("{}", row * 10));
         let column = ["N", "O", "P", "Q", "R", "S"][index];
-        model._set(&format!("{column}1"), key);
-        model._set(&format!("{column}2"), &format!("{}", row * 100));
+        model.set_a1(&format!("{column}1"), key);
+        model.set_a1(&format!("{column}2"), &format!("{}", row * 100));
     }
     for (index, value) in ["3", "2", "1", "0", "-1"].iter().enumerate() {
-        model._set(&format!("L{}", index + 1), value);
+        model.set_a1(&format!("L{}", index + 1), value);
     }
     model
         .new_defined_name("Tbl", None, "Sheet1!$J$1:$K$6")
         .unwrap();
     model.new_sheet();
     for row in 1..=60 {
-        model._set(&format!("Sheet2!A{row}"), &(row % 7).to_string());
+        model.set_a1(&format!("Sheet2!A{row}"), &(row % 7).to_string());
     }
 }
 
@@ -63,7 +63,7 @@ fn both_ways(formulas: &[String]) -> (Vec<(String, String, String)>, usize) {
         let mut model = new_empty_model();
         fill(&mut model);
         for (index, formula) in formulas.iter().enumerate() {
-            model._set(&format!("E{}", index + 1), formula);
+            model.set_a1(&format!("E{}", index + 1), formula);
         }
         model.evaluate();
         if !off {
@@ -71,7 +71,7 @@ fn both_ways(formulas: &[String]) -> (Vec<(String, String, String)>, usize) {
         }
         values.push(
             (0..formulas.len())
-                .map(|index| model._get_text(&format!("E{}", index + 1)))
+                .map(|index| model.get_text_a1(&format!("E{}", index + 1)))
                 .collect::<Vec<_>>(),
         );
     }
@@ -183,15 +183,15 @@ fn operands_on_another_sheet() {
 fn a_long_operator_chain_is_tailed() {
     let mut model = new_empty_model();
     for row in 1..=10 {
-        model._set(&format!("A{row}"), &row.to_string());
+        model.set_a1(&format!("A{row}"), &row.to_string());
     }
     let chain = vec!["A:A"; 4000].join("+");
-    model._set("E1", &format!("=SUM({chain})"));
-    model._set("E2", &format!("=COUNTA({chain})"));
+    model.set_a1("E1", &format!("=SUM({chain})"));
+    model.set_a1("E2", &format!("=COUNTA({chain})"));
     TAILED_WALKS.with(|count| count.set(0));
     model.evaluate();
-    assert_eq!(model._get_text("E1"), "220000");
-    assert_eq!(model._get_text("E2"), "1048576");
+    assert_eq!(model.get_text_a1("E1"), "220000");
+    assert_eq!(model.get_text_a1("E2"), "1048576");
     assert_eq!(TAILED_WALKS.with(std::cell::Cell::get), 2);
 }
 
@@ -225,12 +225,12 @@ fn excluded_forms_are_not_tailed() {
 #[test]
 fn a_spill_into_the_tail_restarts_the_pass() {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("E1", "=SUM(IF(A:A>0,A:A))");
-    model._set("F1", "=SEQUENCE(5,1,10)");
-    model._set("A100", "=F1:F5*1");
+    model.set_a1("A1", "1");
+    model.set_a1("E1", "=SUM(IF(A:A>0,A:A))");
+    model.set_a1("F1", "=SEQUENCE(5,1,10)");
+    model.set_a1("A100", "=F1:F5*1");
     model.evaluate();
-    assert_eq!(model._get_text("E1"), "61");
+    assert_eq!(model.get_text_a1("E1"), "61");
 }
 
 /// A head of one row (only A1 is used): a 1x1 array where the ordinary reading has the whole
@@ -250,9 +250,9 @@ fn a_head_of_one_row() {
         TAILED_OFF.with(|flag| flag.set(off));
         TAILED_WALKS.with(|count| count.set(0));
         let mut model = new_empty_model();
-        model._set("A1", "3");
+        model.set_a1("A1", "3");
         for (index, formula) in formulas.iter().enumerate() {
-            model._set(&format!("E{}", index + 1), formula);
+            model.set_a1(&format!("E{}", index + 1), formula);
         }
         model.evaluate();
         if !off {
@@ -260,7 +260,7 @@ fn a_head_of_one_row() {
         }
         values.push(
             (1..=formulas.len())
-                .map(|r| model._get_text(&format!("E{r}")))
+                .map(|r| model.get_text_a1(&format!("E{r}")))
                 .collect::<Vec<_>>(),
         );
     }
@@ -277,13 +277,13 @@ fn a_cycle_through_a_scalar_operand() {
         TAILED_OFF.with(|flag| flag.set(off));
         let mut model = new_empty_model();
         for row in 1..=5 {
-            model._set(&format!("A{row}"), &row.to_string());
+            model.set_a1(&format!("A{row}"), &row.to_string());
         }
-        model._set("E1", "=SUM(IF(A:A>E2,A:A))");
-        model._set("E2", "=E1/100");
-        model._set("E3", "=SUM(E1:E2)");
+        model.set_a1("E1", "=SUM(IF(A:A>E2,A:A))");
+        model.set_a1("E2", "=E1/100");
+        model.set_a1("E3", "=SUM(E1:E2)");
         model.evaluate();
-        texts.push(["E1", "E2", "E3"].map(|c| model._get_text(c)));
+        texts.push(["E1", "E2", "E3"].map(|c| model.get_text_a1(c)));
     }
     TAILED_OFF.with(|flag| flag.set(false));
     assert_eq!(texts[0], texts[1]);
@@ -361,7 +361,7 @@ fn bounded_spans_and_row_positions_are_tailed() {
         "=MIN(IF(C1:C9000=3,ROW(C1:C9000)*10))",
         "=SUMPRODUCT(IF(A2:A70000=1,ROW(A2:A70000)))",
         "=SUM(IF(A2:A70000=1,ROW(A2:A70000),A2:A70000))",
-        // A real #N/IMPL tail with no ROW() is an ordinary tail error.
+        // A real #N/IMPL! tail with no ROW() is an ordinary tail error.
         "=COUNTA(IF(A2:A70000=1,A2:A70000,$H$4))",
     ]
     .iter()
@@ -376,7 +376,7 @@ fn bounded_spans_and_row_positions_are_tailed() {
 
 /// What bounded spans and `ROW()` leave to the ordinary reading: ranges of two spans, a tail row
 /// that reaches `ROW()` (its value differs by row: the sentinel), `ROW()` in an IF's condition, a
-/// real `#N/IMPL` tail beside `ROW()` (taken for the sentinel), `ROW()` with no range operand
+/// real `#N/IMPL!` tail beside `ROW()` (taken for the sentinel), `ROW()` with no range operand
 /// beside it, and a span whose rows past the used area are too few.
 #[test]
 fn ragged_spans_and_row_dependent_tails_are_not_tailed() {
@@ -408,12 +408,12 @@ fn ragged_spans_and_row_dependent_tails_are_not_tailed() {
 #[test]
 fn a_spill_into_a_bounded_tail_restarts_the_pass() {
     let mut model = new_empty_model();
-    model._set("A2", "1");
-    model._set("E1", "=SUM(IF(A2:A70000>0,A2:A70000))");
-    model._set("F1", "=SEQUENCE(5,1,10)");
-    model._set("A100", "=F1:F5*1");
+    model.set_a1("A2", "1");
+    model.set_a1("E1", "=SUM(IF(A2:A70000>0,A2:A70000))");
+    model.set_a1("F1", "=SEQUENCE(5,1,10)");
+    model.set_a1("A100", "=F1:F5*1");
     model.evaluate();
-    assert_eq!(model._get_text("E1"), "61");
+    assert_eq!(model.get_text_a1("E1"), "61");
 }
 
 /// SUMPRODUCT of two bounded arguments of one length but different first rows: each is tailed
@@ -735,14 +735,14 @@ fn tallied(setup: &dyn Fn(&mut Model), formula: &str) -> [(String, usize, (u64, 
         TAILED_OFF.with(|flag| flag.set(off));
         let mut model = new_empty_model();
         setup(&mut model);
-        model._set("E1", formula);
+        model.set_a1("E1", formula);
         TAILED_WALKS.with(|count| count.set(0));
         LIFT_TALLY.with(|tally| tally.set((0, 0)));
         REGEX_UNITS.with(|units| units.set(0));
         model.evaluate();
         TAILED_OFF.with(|flag| flag.set(false));
         (
-            model._get_text("E1"),
+            model.get_text_a1("E1"),
             TAILED_WALKS.with(std::cell::Cell::get),
             LIFT_TALLY.with(std::cell::Cell::get),
             REGEX_UNITS.with(std::cell::Cell::get),
@@ -754,12 +754,12 @@ fn tallied(setup: &dyn Fn(&mut Model), formula: &str) -> [(String, usize, (u64, 
 /// in J1:K4.
 fn small_keys(model: &mut Model, last: &str) {
     for (row, key) in ["1", "2", "2", "3", "3", last].iter().enumerate() {
-        model._set(&format!("A{}", row + 1), key);
+        model.set_a1(&format!("A{}", row + 1), key);
     }
-    model._set("Z6", "1");
+    model.set_a1("Z6", "1");
     for row in 1..=4 {
-        model._set(&format!("J{row}"), &row.to_string());
-        model._set(&format!("K{row}"), &(row * 10).to_string());
+        model.set_a1(&format!("J{row}"), &row.to_string());
+        model.set_a1(&format!("K{row}"), &(row * 10).to_string());
     }
 }
 
@@ -797,16 +797,16 @@ fn the_continued_lift_charges_the_one_lift() {
 fn keys_at_the_cap(model: &mut Model, distinct: i32, repeat: bool) {
     model.new_sheet();
     for row in 1..=32_768 {
-        model._set(&format!("Sheet2!A{row}"), &row.to_string());
+        model.set_a1(&format!("Sheet2!A{row}"), &row.to_string());
     }
     for row in 1..=distinct {
-        model._set(&format!("A{row}"), &row.to_string());
+        model.set_a1(&format!("A{row}"), &row.to_string());
     }
     let last = distinct + 1;
     if repeat {
-        model._set(&format!("A{last}"), &distinct.to_string());
+        model.set_a1(&format!("A{last}"), &distinct.to_string());
     }
-    model._set(&format!("Z{last}"), "1");
+    model.set_a1(&format!("Z{last}"), "1");
 }
 
 /// The per-call cap at its boundary (SPEC-0020 Amendment 2, section 2): the head's walks and the
@@ -848,8 +848,8 @@ fn fixed_references_in_a_cycle_or_a_spill() {
     ] {
         let setup = |model: &mut Model| {
             fill(model);
-            model._set("F1", "=E1");
-            model._set("G1", "=SEQUENCE(3)");
+            model.set_a1("F1", "=E1");
+            model.set_a1("G1", "=SEQUENCE(3)");
         };
         let [tailed, full] = tallied(&setup, formula);
         assert_eq!(tailed.0, full.0, "{formula}");
@@ -918,12 +918,12 @@ fn keyed_xlookup_shapes_that_are_not_tailed() {
 /// table in J1:K4 (1..=4 and their tens).
 fn regex_keys(model: &mut Model, last: &str) {
     for (row, key) in ["1", "", "2", "2", last].iter().enumerate() {
-        model._set(&format!("A{}", row + 1), key);
+        model.set_a1(&format!("A{}", row + 1), key);
     }
-    model._set("Z5", "1");
+    model.set_a1("Z5", "1");
     for row in 1..=4 {
-        model._set(&format!("J{row}"), &row.to_string());
-        model._set(&format!("K{row}"), &(row * 10).to_string());
+        model.set_a1(&format!("J{row}"), &row.to_string());
+        model.set_a1(&format!("K{row}"), &(row * 10).to_string());
     }
 }
 

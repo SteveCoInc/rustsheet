@@ -1,0 +1,11 @@
+# Visible data rows of S after delete_column C, per upload (rows 2-7; F!B<n> = SUBTOTAL(3,S!B<n>) is 1 exactly there).
+# H_engine: the engine's rule (numbers.md, ours T-4803): show each hidden row a kept values criterion keeps
+#   (case ignored, blank by blank="1"), leave visible rows visible, keep rows hidden under any other kept criterion.
+# H_reapply: Excel re-applies the kept criterion to every data row (as the number-format probe showed), case ignored.
+variant	sha256	H_engine	H_reapply
+base	09a47594d125e73f1573b89a323b42d401d122df285b05113e45e9c576f9fc42	2,4,5,6	2,4,5,6
+upper-case	e347a535c1b194dc1c7ff88c6146f2e62b9d1829d662fc4ebdd5f417e95debbb	2,4,5,6	2,4,5,6
+blank-kept	ee7c25a89695a5fd97f46edc1a51b2aeb2f4dac47c4ab0f9d0ccca6d81c3292b	2,4,5,6	2,4,5,6
+blank-rejected	1a515789baa4c5d92d150894d22048e97c6e8d31830adb0eecb083bae2641ca6	2,4,5,6	2,4,5
+custom	5eb28dc19fbbdb2ff533b7a460bc1c47d94ad6fb9b400776a465eac88e44b873	2,4,6	2,4,5,6
+custom-upper	87f6a4ab97b83f44110c369a6bf96526d8ed46e151138a708aecad684813c4a9	2,4,5,6	2,4,5,6	# T-4965, written before the fill (same commit as the result): custom equal A/C is case-insensitive like the upper-case row, so 2,4,5,6; case-sensitive would show none

@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::needless_pass_by_value, clippy::unused_self)]
+// LINT-DEBT-END
 mod and_or_xor_not;
 mod bycol_byrow;
 mod lambda;
@@ -14,6 +17,7 @@ pub(crate) use lambda_scope::ScopeResult;
 pub(crate) use r#let::{has_duplicate_parameter, same_variable};
 
 use crate::cast::calc_result_to_array_node;
+use crate::functions::util::empty_args::replaces_error;
 use crate::{
     arithmetic::bcast_idx,
     calc_result::CalcResult,
@@ -270,7 +274,7 @@ impl Model {
 
         // Output size = largest extent across all array arguments.
         let cond_rows = cond_array.len();
-        let cond_cols = cond_array.first().map_or(0, |r| r.len());
+        let cond_cols = cond_array.first().map_or(0, std::vec::Vec::len);
         let (true_rows, true_cols) = true_arg.dims();
         let (false_rows, false_cols) = false_arg.as_ref().map_or((1, 1), BroadcastArg::dims);
         let max_rows = cond_rows.max(true_rows).max(false_rows);
@@ -320,12 +324,14 @@ impl Model {
 
     pub(crate) fn fn_iferror(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         // IFERROR replaces every kind of error with the fallback.
-        self.if_error_like(args, cell, |_| true)
+        self.if_error_like(args, cell, |error| {
+            replaces_error(&Function::Iferror, error)
+        })
     }
 
     pub(crate) fn fn_ifna(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         // IFNA replaces only #N/A; every other error passes through.
-        self.if_error_like(args, cell, |error| error == &Error::NA)
+        self.if_error_like(args, cell, |error| replaces_error(&Function::Ifna, error))
     }
 
     /// Shared implementation for IFERROR and IFNA.
@@ -412,7 +418,7 @@ impl Model {
 
         // Output size = largest extent across value and the fallback.
         let value_rows = value_array.len();
-        let value_cols = value_array.first().map_or(0, |r| r.len());
+        let value_cols = value_array.first().map_or(0, std::vec::Vec::len);
         let (fb_rows, fb_cols) = fallback_arg.dims();
         let max_rows = value_rows.max(fb_rows);
         let max_cols = value_cols.max(fb_cols);

@@ -17,7 +17,9 @@ same rounding, same quirks — including behavior Excel never documented. The pr
    exceeds 1e-4 on evidenced points, follow the math, as a `MATH-OVER-EXCEL` entry it lists;
    Excel's errors are still matched, directive 5's limits still apply, and a new case needs a
    decision record carrying an owner ruling.
-2. **Never regress, never weaken gates.** `make check` must pass. Never hand-edit
+2. **Never regress, never weaken gates.** `make check` must pass: no cell may leave the decision
+   0355 envelope or get a wrong type or error, and no tier gate may go from met to unmet; bit
+   drift inside the envelope is recorded, not blocked. Never hand-edit
    `eval/baseline/` or `quality/*.json`, and never commit `docs/tasks/BOARD.md` (generated,
    git-ignored); never add lint-debt entries, blanket `#[allow]`s, skipped/deleted tests, or
    `--allow-regressions` (except via a decision record in `docs/decisions/` that reviewers approve).

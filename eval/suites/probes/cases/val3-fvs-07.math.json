@@ -1,0 +1,22 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "fb3fc0e1f45c3f7eadb38baaefafdec1b2174bb10d555d3c94d0f9572ae4844b",
+  "definitions": {
+   "FVSCHEDULE": "0737cd3e9f06f8c1"
+  },
+  "arguments_sha256": "6ed910f0bc4af00af2d845050a06f2f2a5dbbcdd9e4734a21329d564cd1c2904"
+ },
+ "sheets": {
+  "Probe": {
+   "B1": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=FVSCHEDULE(2^1023,{-1,1})"
+   }
+  }
+ }
+}

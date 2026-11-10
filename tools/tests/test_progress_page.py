@@ -18,6 +18,7 @@ RUN = Run("2026-10-19", "abc12345", ("s",), ())
 DATA = data()
 AS_OF = "<!-- as-of: 2026-10-19 abc12345 -->"
 SECTIONS = {
+    "usage-tiers": "## Usage tiers",
     "goals": "## Goals",
     "campaign": "## Campaign stages",
     "since-last-run": "## Since the last run",
@@ -84,6 +85,7 @@ def test_a_first_run_writes_every_block_in_order_with_placeholders() -> None:
     assert names == [
         "status",
         "bottom-line",
+        "usage-tiers",
         "goals",
         "campaign",
         "since-last-run",

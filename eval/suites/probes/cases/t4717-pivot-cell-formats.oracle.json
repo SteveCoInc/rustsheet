@@ -1,0 +1,2498 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "pivots": [
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Qty",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "4",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxDate": "2024-04-19T00:00:00",
+      "minDate": "2024-01-15T00:00:00"
+     }
+    },
+    {
+     "name": "Val",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "3000",
+      "minValue": "-250.25"
+     }
+    },
+    {
+     "name": "Code",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "count": "3",
+      "maxValue": "30",
+      "minValue": "7"
+     },
+     "shared_items": [
+      {
+       "t": "n",
+       "v": "7"
+      },
+      {
+       "t": "n",
+       "v": "12"
+      },
+      {
+       "t": "n",
+       "v": "30"
+      }
+     ]
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "n",
+     "v": 7.0
+    },
+    "A5": {
+     "t": "n",
+     "v": 12.0
+    },
+    "A6": {
+     "t": "n",
+     "v": 30.0
+    },
+    "A7": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Val"
+    },
+    "B4": {
+     "t": "n",
+     "v": 984.25
+    },
+    "B5": {
+     "t": "n",
+     "v": 3000.125
+    },
+    "B6": {
+     "t": "n",
+     "v": 42.75
+    },
+    "B7": {
+     "t": "n",
+     "v": 4027.125
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B7",
+   "name": "PreLabels",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "R1",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "7",
+    "A5": "12",
+    "A6": "30",
+    "A7": "Grand Total",
+    "B3": "Sum of Val",
+    "B4": "984.25",
+    "B5": "3,000.13",
+    "B6": "42.75",
+    "B7": "4,027.13"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Qty",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "4",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxDate": "2024-04-19T00:00:00",
+      "minDate": "2024-01-15T00:00:00"
+     }
+    },
+    {
+     "name": "Val",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "3000",
+      "minValue": "-250.25"
+     }
+    },
+    {
+     "name": "Code",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "30",
+      "minValue": "7"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "s",
+     "v": "West"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Val"
+    },
+    "B4": {
+     "t": "n",
+     "v": 984.25
+    },
+    "B5": {
+     "t": "n",
+     "v": 3042.875
+    },
+    "B6": {
+     "t": "n",
+     "v": 4027.125
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "PreOn",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "R2",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "East",
+    "A5": "West",
+    "A6": "Grand Total",
+    "B3": "Sum of Val",
+    "B4": "984.25",
+    "B5": "3042.875",
+    "B6": "4027.125"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Qty",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "4",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxDate": "2024-04-19T00:00:00",
+      "minDate": "2024-01-15T00:00:00"
+     }
+    },
+    {
+     "name": "Val",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "3000",
+      "minValue": "-250.25"
+     }
+    },
+    {
+     "name": "Code",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "30",
+      "minValue": "7"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "s",
+     "v": "West"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Val"
+    },
+    "B4": {
+     "t": "n",
+     "v": 984.25
+    },
+    "B5": {
+     "t": "n",
+     "v": 3042.875
+    },
+    "B6": {
+     "t": "n",
+     "v": 4027.125
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "PreOff",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "R3",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "East",
+    "A5": "West",
+    "A6": "Grand Total",
+    "B3": "Sum of Val",
+    "B4": "984.25",
+    "B5": "3042.875",
+    "B6": "4027.125"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Qty",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "4",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxDate": "2024-04-19T00:00:00",
+      "minDate": "2024-01-15T00:00:00"
+     }
+    },
+    {
+     "name": "Val",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "3000",
+      "minValue": "-250.25"
+     }
+    },
+    {
+     "name": "Code",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "30",
+      "minValue": "7"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "s",
+     "v": "West"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Val"
+    },
+    "B4": {
+     "t": "n",
+     "v": 984.25
+    },
+    "B5": {
+     "t": "n",
+     "v": 3042.875
+    },
+    "B6": {
+     "t": "n",
+     "v": 4027.125
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "PreZero",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "R4",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "East",
+    "A5": "West",
+    "A6": "Grand Total",
+    "B3": "Sum of Val",
+    "B4": "984.25",
+    "B5": "3042.875",
+    "B6": "4027.125"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Qty",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "4",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxDate": "2024-04-19T00:00:00",
+      "minDate": "2024-01-15T00:00:00"
+     }
+    },
+    {
+     "name": "Val",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "3000",
+      "minValue": "-250.25"
+     }
+    },
+    {
+     "name": "Code",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "30",
+      "minValue": "7"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "empty"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A5": {
+     "t": "s",
+     "v": "East"
+    },
+    "A6": {
+     "t": "s",
+     "v": "West"
+    },
+    "A7": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Values"
+    },
+    "B4": {
+     "t": "s",
+     "v": "Pct"
+    },
+    "B5": {
+     "t": "n",
+     "v": 0.24440512772759723
+    },
+    "B6": {
+     "t": "n",
+     "v": 0.7555948722724027
+    },
+    "B7": {
+     "t": "n",
+     "v": 1.0
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "s",
+     "v": "Pct10"
+    },
+    "C5": {
+     "t": "n",
+     "v": 0.24440512772759723
+    },
+    "C6": {
+     "t": "n",
+     "v": 0.7555948722724027
+    },
+    "C7": {
+     "t": "n",
+     "v": 1.0
+    },
+    "D3": {
+     "t": "empty"
+    },
+    "D4": {
+     "t": "s",
+     "v": "Idx"
+    },
+    "D5": {
+     "t": "n",
+     "v": 1.0
+    },
+    "D6": {
+     "t": "n",
+     "v": 1.0
+    },
+    "D7": {
+     "t": "n",
+     "v": 1.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 2,
+     "r": 0,
+     "x": [
+      2
+     ]
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 2,
+   "first_header_row": 1,
+   "location": "A3:D7",
+   "name": "ShowAs",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "S1",
+   "text": {
+    "A4": "Row Labels",
+    "A5": "East",
+    "A6": "West",
+    "A7": "Grand Total",
+    "B3": "Values",
+    "B4": "Pct",
+    "B5": "0.244405128",
+    "B6": "0.755594872",
+    "B7": "1",
+    "C4": "Pct10",
+    "C5": "24.44%",
+    "C6": "75.56%",
+    "C7": "100.00%",
+    "D4": "Idx",
+    "D5": "1",
+    "D6": "1",
+    "D7": "1"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Qty",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "4",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxDate": "2024-04-19T00:00:00",
+      "minDate": "2024-01-15T00:00:00"
+     }
+    },
+    {
+     "name": "Val",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "3000",
+      "minValue": "-250.25"
+     }
+    },
+    {
+     "name": "Code",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "30",
+      "minValue": "7"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "empty"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A5": {
+     "t": "s",
+     "v": "East"
+    },
+    "A6": {
+     "t": "s",
+     "v": "West"
+    },
+    "A7": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Values"
+    },
+    "B4": {
+     "t": "s",
+     "v": "Q"
+    },
+    "B5": {
+     "t": "n",
+     "v": 3.5
+    },
+    "B6": {
+     "t": "n",
+     "v": 7.5
+    },
+    "B7": {
+     "t": "n",
+     "v": 11.0
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "s",
+     "v": "Last"
+    },
+    "C5": {
+     "t": "n",
+     "v": 45337.0
+    },
+    "C6": {
+     "t": "n",
+     "v": 45400.0
+    },
+    "C7": {
+     "t": "n",
+     "v": 45400.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "x": [
+      1
+     ]
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 2,
+   "first_header_row": 1,
+   "location": "A3:C7",
+   "name": "SrcVals",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "S2",
+   "text": {
+    "A4": "Row Labels",
+    "A5": "East",
+    "A6": "West",
+    "A7": "Grand Total",
+    "B3": "Values",
+    "B4": "Q",
+    "B5": "3.5",
+    "B6": "7.5",
+    "B7": "11",
+    "C4": "Last",
+    "C5": "45337",
+    "C6": "45400",
+    "C7": "45400"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Qty",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "4",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxDate": "2024-04-19T00:00:00",
+      "minDate": "2024-01-15T00:00:00"
+     }
+    },
+    {
+     "name": "Val",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "3000",
+      "minValue": "-250.25"
+     }
+    },
+    {
+     "name": "Code",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "count": "3",
+      "maxValue": "30",
+      "minValue": "7"
+     },
+     "shared_items": [
+      {
+       "t": "n",
+       "v": "7"
+      },
+      {
+       "t": "n",
+       "v": "12"
+      },
+      {
+       "t": "n",
+       "v": "30"
+      }
+     ]
+    }
+   ],
+   "cells": {
+    "A10": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "n",
+     "v": 7.0
+    },
+    "A5": {
+     "t": "s",
+     "v": "7.00 Total"
+    },
+    "A6": {
+     "t": "n",
+     "v": 12.0
+    },
+    "A7": {
+     "t": "s",
+     "v": "12.00 Total"
+    },
+    "A8": {
+     "t": "n",
+     "v": 30.0
+    },
+    "A9": {
+     "t": "s",
+     "v": "30.00 Total"
+    },
+    "B10": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Region"
+    },
+    "B4": {
+     "t": "s",
+     "v": "East"
+    },
+    "B5": {
+     "t": "empty"
+    },
+    "B6": {
+     "t": "s",
+     "v": "West"
+    },
+    "B7": {
+     "t": "empty"
+    },
+    "B8": {
+     "t": "s",
+     "v": "West"
+    },
+    "B9": {
+     "t": "empty"
+    },
+    "C10": {
+     "t": "n",
+     "v": 4027.125
+    },
+    "C3": {
+     "t": "s",
+     "v": "Sum of Val"
+    },
+    "C4": {
+     "t": "n",
+     "v": 984.25
+    },
+    "C5": {
+     "t": "n",
+     "v": 984.25
+    },
+    "C6": {
+     "t": "n",
+     "v": 3000.125
+    },
+    "C7": {
+     "t": "n",
+     "v": 3000.125
+    },
+    "C8": {
+     "t": "n",
+     "v": 42.75
+    },
+    "C9": {
+     "t": "n",
+     "v": 42.75
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 2,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:C10",
+   "name": "RowFmt",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "default",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1,
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "default",
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2,
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "default",
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "L1",
+   "text": {
+    "A10": "Grand Total",
+    "A3": "Row Labels",
+    "A4": "7.00",
+    "A5": "7.00 Total",
+    "A6": "12.00",
+    "A7": "12.00 Total",
+    "A8": "30.00",
+    "A9": "30.00 Total",
+    "B3": "Region",
+    "B4": "East",
+    "B6": "West",
+    "B8": "West",
+    "C10": "4027.125",
+    "C3": "Sum of Val",
+    "C4": "984.25",
+    "C5": "984.25",
+    "C6": "3000.125",
+    "C7": "3000.125",
+    "C8": "42.75",
+    "C9": "42.75"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Qty",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "4",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxDate": "2024-04-19T00:00:00",
+      "minDate": "2024-01-15T00:00:00"
+     }
+    },
+    {
+     "name": "Val",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "3000",
+      "minValue": "-250.25"
+     }
+    },
+    {
+     "name": "Code",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "count": "3",
+      "maxValue": "30",
+      "minValue": "7"
+     },
+     "shared_items": [
+      {
+       "t": "n",
+       "v": "7"
+      },
+      {
+       "t": "n",
+       "v": "12"
+      },
+      {
+       "t": "n",
+       "v": "30"
+      }
+     ]
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Sum of Val"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A5": {
+     "t": "s",
+     "v": "East"
+    },
+    "A6": {
+     "t": "s",
+     "v": "West"
+    },
+    "A7": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Column Labels"
+    },
+    "B4": {
+     "t": "n",
+     "v": 7.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 984.25
+    },
+    "B6": {
+     "t": "empty"
+    },
+    "B7": {
+     "t": "n",
+     "v": 984.25
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "n",
+     "v": 12.0
+    },
+    "C5": {
+     "t": "empty"
+    },
+    "C6": {
+     "t": "n",
+     "v": 3000.125
+    },
+    "C7": {
+     "t": "n",
+     "v": 3000.125
+    },
+    "D3": {
+     "t": "empty"
+    },
+    "D4": {
+     "t": "n",
+     "v": 30.0
+    },
+    "D5": {
+     "t": "empty"
+    },
+    "D6": {
+     "t": "n",
+     "v": 42.75
+    },
+    "D7": {
+     "t": "n",
+     "v": 42.75
+    },
+    "E3": {
+     "t": "empty"
+    },
+    "E4": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "E5": {
+     "t": "n",
+     "v": 984.25
+    },
+    "E6": {
+     "t": "n",
+     "v": 3042.875
+    },
+    "E7": {
+     "t": "n",
+     "v": 4027.125
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 2,
+   "first_header_row": 1,
+   "location": "A3:E7",
+   "name": "ColFmt",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "L2",
+   "text": {
+    "A3": "Sum of Val",
+    "A4": "Row Labels",
+    "A5": "East",
+    "A6": "West",
+    "A7": "Grand Total",
+    "B3": "Column Labels",
+    "B4": "7.00",
+    "B5": "984.25",
+    "B7": "984.25",
+    "C4": "12.00",
+    "C6": "3000.125",
+    "C7": "3000.125",
+    "D4": "30.00",
+    "D6": "42.75",
+    "D7": "42.75",
+    "E4": "Grand Total",
+    "E5": "984.25",
+    "E6": "3042.875",
+    "E7": "4027.125"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "s",
+       "v": "West"
+      }
+     ]
+    },
+    {
+     "name": "Qty",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "4",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxDate": "2024-04-19T00:00:00",
+      "minDate": "2024-01-15T00:00:00"
+     }
+    },
+    {
+     "name": "Val",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "3000",
+      "minValue": "-250.25"
+     }
+    },
+    {
+     "name": "Code",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "count": "3",
+      "maxValue": "30",
+      "minValue": "7"
+     },
+     "shared_items": [
+      {
+       "t": "n",
+       "v": "7"
+      },
+      {
+       "t": "n",
+       "v": "12"
+      },
+      {
+       "t": "n",
+       "v": "30"
+      }
+     ]
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "Code"
+    },
+    "A2": {
+     "t": "empty"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "West"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "n",
+     "v": 12.0
+    },
+    "B2": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Val"
+    },
+    "B4": {
+     "t": "n",
+     "v": 3000.125
+    },
+    "B5": {
+     "t": "n",
+     "v": 3000.125
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "PageFmt",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "L3",
+   "text": {
+    "A1": "Code",
+    "A3": "Row Labels",
+    "A4": "West",
+    "A5": "Grand Total",
+    "B1": "12.00",
+    "B3": "Sum of Val",
+    "B4": "3000.125",
+    "B5": "3000.125"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Qty",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "count": "3",
+      "maxValue": "4",
+      "minValue": "1"
+     },
+     "shared_items": [
+      {
+       "t": "n",
+       "v": "1"
+      },
+      {
+       "t": "n",
+       "v": "2.5"
+      },
+      {
+       "t": "n",
+       "v": "4"
+      }
+     ]
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxDate": "2024-04-19T00:00:00",
+      "minDate": "2024-01-15T00:00:00"
+     }
+    },
+    {
+     "name": "Val",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "3000",
+      "minValue": "-250.25"
+     }
+    },
+    {
+     "name": "Code",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "30",
+      "minValue": "7"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "n",
+     "v": 1.0
+    },
+    "A5": {
+     "t": "n",
+     "v": 2.5
+    },
+    "A6": {
+     "t": "n",
+     "v": 4.0
+    },
+    "A7": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Val"
+    },
+    "B4": {
+     "t": "n",
+     "v": 1234.625
+    },
+    "B5": {
+     "t": "n",
+     "v": -207.5
+    },
+    "B6": {
+     "t": "n",
+     "v": 3000.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 4027.125
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B7",
+   "name": "SrcNum",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "L4",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "1",
+    "A5": "2.5",
+    "A6": "4",
+    "A7": "Grand Total",
+    "B3": "Sum of Val",
+    "B4": "1234.625",
+    "B5": "-207.5",
+    "B6": "3000",
+    "B7": "4027.125"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Qty",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "4",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsMixedTypes": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "count": "10",
+      "maxDate": "1900-01-01T22:51:04",
+      "minDate": "2024-01-15T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2024-01-15T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2024-02-15T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2024-03-15T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2024-04-15T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2024-04-18T00:00:00"
+      },
+      {
+       "t": "n",
+       "v": "45306"
+      },
+      {
+       "t": "n",
+       "v": "45337"
+      },
+      {
+       "t": "n",
+       "v": "45366"
+      },
+      {
+       "t": "n",
+       "v": "45397"
+      },
+      {
+       "t": "n",
+       "v": "45400"
+      }
+     ]
+    },
+    {
+     "name": "Val",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "3000",
+      "minValue": "-250.25"
+     }
+    },
+    {
+     "name": "Code",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "30",
+      "minValue": "7"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "n",
+     "v": 45306.0
+    },
+    "A5": {
+     "t": "n",
+     "v": 45337.0
+    },
+    "A6": {
+     "t": "n",
+     "v": 45366.0
+    },
+    "A7": {
+     "t": "n",
+     "v": 45397.0
+    },
+    "A8": {
+     "t": "n",
+     "v": 45400.0
+    },
+    "A9": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Val"
+    },
+    "B4": {
+     "t": "n",
+     "v": 1234.5
+    },
+    "B5": {
+     "t": "n",
+     "v": -250.25
+    },
+    "B6": {
+     "t": "n",
+     "v": 0.125
+    },
+    "B7": {
+     "t": "n",
+     "v": 3000.0
+    },
+    "B8": {
+     "t": "n",
+     "v": 42.75
+    },
+    "B9": {
+     "t": "n",
+     "v": 4027.125
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B9",
+   "name": "SrcDate",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      5
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      6
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      7
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      8
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      9
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "L5",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "1/15/2024",
+    "A5": "2/15/2024",
+    "A6": "3/15/2024",
+    "A7": "4/15/2024",
+    "A8": "4/18/2024",
+    "A9": "Grand Total",
+    "B3": "Sum of Val",
+    "B4": "1234.5",
+    "B5": "-250.25",
+    "B6": "0.125",
+    "B7": "3000",
+    "B8": "42.75",
+    "B9": "4027.125"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Qty",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "4",
+      "minValue": "1"
+     }
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsMixedTypes": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "count": "10",
+      "maxDate": "1900-01-01T22:51:04",
+      "minDate": "2024-01-15T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2024-01-15T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2024-02-15T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2024-03-15T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2024-04-15T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2024-04-18T00:00:00"
+      },
+      {
+       "t": "n",
+       "v": "45306"
+      },
+      {
+       "t": "n",
+       "v": "45337"
+      },
+      {
+       "t": "n",
+       "v": "45366"
+      },
+      {
+       "t": "n",
+       "v": "45397"
+      },
+      {
+       "t": "n",
+       "v": "45400"
+      }
+     ]
+    },
+    {
+     "name": "Val",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "3000",
+      "minValue": "-250.25"
+     }
+    },
+    {
+     "name": "Code",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "30",
+      "minValue": "7"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "n",
+     "v": 45306.0
+    },
+    "A5": {
+     "t": "n",
+     "v": 45337.0
+    },
+    "A6": {
+     "t": "n",
+     "v": 45366.0
+    },
+    "A7": {
+     "t": "n",
+     "v": 45397.0
+    },
+    "A8": {
+     "t": "n",
+     "v": 45400.0
+    },
+    "A9": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Val"
+    },
+    "B4": {
+     "t": "n",
+     "v": 1234.5
+    },
+    "B5": {
+     "t": "n",
+     "v": -250.25
+    },
+    "B6": {
+     "t": "n",
+     "v": 0.125
+    },
+    "B7": {
+     "t": "n",
+     "v": 3000.0
+    },
+    "B8": {
+     "t": "n",
+     "v": 42.75
+    },
+    "B9": {
+     "t": "n",
+     "v": 4027.125
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B9",
+   "name": "DateFmt",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      5
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      6
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      7
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      8
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      9
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "L6",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "15-Jan-24",
+    "A5": "15-Feb-24",
+    "A6": "15-Mar-24",
+    "A7": "15-Apr-24",
+    "A8": "18-Apr-24",
+    "A9": "Grand Total",
+    "B3": "Sum of Val",
+    "B4": "1234.5",
+    "B5": "-250.25",
+    "B6": "0.125",
+    "B7": "3000",
+    "B8": "42.75",
+    "B9": "4027.125"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Region"
+    },
+    {
+     "name": "Qty",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "count": "3",
+      "maxValue": "4",
+      "minValue": "1"
+     },
+     "shared_items": [
+      {
+       "t": "n",
+       "v": "1"
+      },
+      {
+       "t": "n",
+       "v": "2.5"
+      },
+      {
+       "t": "n",
+       "v": "4"
+      }
+     ]
+    },
+    {
+     "name": "When",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxDate": "2024-04-19T00:00:00",
+      "minDate": "2024-01-15T00:00:00"
+     }
+    },
+    {
+     "name": "Val",
+     "shared_flags": {
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "3000",
+      "minValue": "-250.25"
+     }
+    },
+    {
+     "name": "Code",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "30",
+      "minValue": "7"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "n",
+     "v": 1.0
+    },
+    "A5": {
+     "t": "n",
+     "v": 2.5
+    },
+    "A6": {
+     "t": "n",
+     "v": 4.0
+    },
+    "A7": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Sum of Val"
+    },
+    "B4": {
+     "t": "n",
+     "v": 1234.625
+    },
+    "B5": {
+     "t": "n",
+     "v": -207.5
+    },
+    "B6": {
+     "t": "n",
+     "v": 3000.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 4027.125
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B7",
+   "name": "NumOver",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "L7",
+   "text": {
+    "A3": "Row Labels",
+    "A4": "100.00%",
+    "A5": "250.00%",
+    "A6": "400.00%",
+    "A7": "Grand Total",
+    "B3": "Sum of Val",
+    "B4": "1234.625",
+    "B5": "-207.5",
+    "B6": "3000",
+    "B7": "4027.125"
+   }
+  }
+ ],
+ "sheets": {
+  "Data": {},
+  "L1": {},
+  "L2": {},
+  "L3": {},
+  "L4": {},
+  "L5": {},
+  "L6": {},
+  "L7": {},
+  "Q": {
+   "A1": {
+    "t": "n",
+    "v": 4027.125
+   }
+  },
+  "R1": {},
+  "R2": {},
+  "R3": {},
+  "R4": {},
+  "S1": {},
+  "S2": {}
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "8330b6830fe81e5df88a31ca655c8d2b9959a2c3d8df3f105003b03787a5a902",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-07T22:16:34+00:00",
+  "version": null,
+  "workbook_name": "0804afae51376237a5a008a5df8632f306b8eb1f54e072b9193071e7fb4c8033.xlsx"
+ }
+}

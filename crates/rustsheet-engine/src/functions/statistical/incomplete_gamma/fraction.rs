@@ -3,6 +3,9 @@
 //! double-double evaluated backward ([`accurate_fraction`], T-3285; any shape since T-4000), whose
 //! rounding does not accumulate the way the forward product's does (5.1 ulp at Q(2.5, 5), 16 at
 //! Q(1.5, 3)).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::many_single_char_names)]
+// LINT-DEBT-END
 
 use super::{continued_fraction_budget, Terms};
 use crate::x87_exp::{dd_add, dd_div, dd_mul, two_sum};

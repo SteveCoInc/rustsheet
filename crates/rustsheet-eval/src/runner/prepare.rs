@@ -4,14 +4,16 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::time::Duration;
 
-use super::{CheckCell, Expectation, Prepared, PreparedCase};
+use super::{run_in_worker, CheckCell, Expectation, ExportOutcome, Prepared, PreparedCase};
 use crate::case::{
     canonical_key, cell_key, is_excel_evidence, kept_nonzero_formulas, load_oracle,
     split_qualified, CaseSpec, CASE_FORMAT,
 };
 use crate::cellref::Addr;
 use crate::deviations::{self, Pin};
+use crate::export_case;
 use crate::formula_calls::calls_add_in;
 use crate::overrides;
 use crate::pivot_freshness;
@@ -37,11 +39,15 @@ pub(super) fn prepare(
     let mut prepared = match suite.manifest.kind {
         SuiteKind::Xlsx => prepare_xlsx(suite, case),
         SuiteKind::Spec => prepare_spec(case, values),
+        SuiteKind::Export => prepare_export(suite, case),
         // `Suite::load_all` keeps round-trip suites out of every cell run (SPEC-0033 D8).
         SuiteKind::Roundtrip => {
             Err("a roundtrip suite is run by `rustsheet-eval roundtrip`".into())
         }
     }?;
+    if suite.manifest.kind == SuiteKind::Spec {
+        apply_superseded(suite, case, &mut prepared.expectations)?;
+    }
     let refusal = pin_deviations(suite, case, &mut prepared.expectations)?;
     Ok((prepared, refusal))
 }
@@ -83,6 +89,16 @@ fn pin_deviations(
 
 fn prepare_xlsx(suite: &Suite, case: &CaseFile) -> Result<PreparedCase, String> {
     let bytes = std::fs::read(&case.path).map_err(|e| e.to_string())?;
+    prepare_xlsx_bytes(suite, case, bytes)
+}
+
+/// [`prepare_xlsx`] of the workbook `bytes`, the case file's own or the package an export case
+/// saves.
+fn prepare_xlsx_bytes(
+    suite: &Suite,
+    case: &CaseFile,
+    bytes: Vec<u8>,
+) -> Result<PreparedCase, String> {
     let snapshot = read_snapshot(&bytes).map_err(|e| e.to_string())?;
     // Every poi workbook, pending ones too: a crashed one holding a subset formula is listed. The
     // parser reads third-party text here, outside the evaluation's panic isolation, so a panic
@@ -140,6 +156,7 @@ fn prepare_xlsx(suite: &Suite, case: &CaseFile) -> Result<PreparedCase, String> 
             saved_pivots: Vec::new(),
             pivot_features: Vec::new(),
             pivot_keys: BTreeSet::new(),
+            export: None,
         });
     };
     let (scorable, skipped_volatile) =
@@ -191,6 +208,7 @@ fn prepare_xlsx(suite: &Suite, case: &CaseFile) -> Result<PreparedCase, String> 
         saved_pivots,
         pivot_features: Vec::new(),
         pivot_keys: BTreeSet::new(),
+        export: None,
     })
 }
 
@@ -219,6 +237,48 @@ pub(super) fn apply_cached_overrides(
         target.from_graph = evidence.kept_nonzero;
     }
     Ok(expectations)
+}
+
+/// Scores each cell the suite's `superseded` file lists for this case against the later Excel
+/// fill of the same inputs that superseded it (decision 0358, applying decision 0329 item 2 and
+/// T-3610): Excel changed, or the earlier fill did not reproduce, so the later fill is the target.
+/// The earlier sidecar stays committed and unchanged. A line must cite the same cell in a golden
+/// sidecar whose case is a copy of this one ([`overrides::same_inputs`]), and must name a scored
+/// cell, so a stale or mistaken line is an error, as for overrides.
+pub(super) fn apply_superseded(
+    suite: &Suite,
+    case: &CaseFile,
+    expectations: &mut [Expectation],
+) -> Result<(), String> {
+    let Some(file) = &suite.manifest.superseded else {
+        return Ok(());
+    };
+    let path = suite.dir.join(file);
+    let text = std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let suites_dir = suite.dir.parent().unwrap_or(&suite.dir);
+    let rel = relative_case_id(suite, case);
+    let lines = overrides::parse_file(&text, "superseded")?;
+    let mut checked: BTreeSet<&str> = BTreeSet::new();
+    for o in lines.iter().filter(|o| o.case == rel) {
+        if (o.sheet.as_str(), o.addr) != (o.evidence_sheet.as_str(), o.evidence_addr) {
+            return Err(format!(
+                "superseded line for {}!{} cites another cell, {}!{}",
+                o.sheet, o.addr, o.evidence_sheet, o.evidence_addr
+            ));
+        }
+        if checked.insert(o.evidence.as_str()) {
+            let refill = suites_dir.join(o.evidence.replace(".oracle.json", ".case.json"));
+            overrides::same_inputs(&case.path, &refill)?;
+        }
+        let evidence = overrides::evidence(o, suites_dir)?;
+        let target = expectations
+            .iter_mut()
+            .find(|e| e.sheet == o.sheet && e.addr == o.addr)
+            .ok_or_else(|| format!("superseded line for unscored cell {}!{}", o.sheet, o.addr))?;
+        target.expected = evidence.value;
+        target.from_graph = evidence.kept_nonzero;
+    }
+    Ok(())
 }
 
 /// Every formula cell of a spec case, as (sheet, cell, formula text).
@@ -359,5 +419,63 @@ pub(super) fn prepare_spec(case: &CaseFile, values: bool) -> Result<PreparedCase
         expected_source: source,
         skipped_volatile,
         skipped_add_in,
+        export: None,
     })
+}
+
+/// How long building and saving one export case may take, outside the case's own timeout.
+const EXPORT_TIMEOUT: Duration = Duration::from_secs(120);
+
+/// An engine-export case (T-4177): the package its workbook saves ([`export_case::export`], on
+/// an isolated worker), scored as an xlsx case against the sidecar's values, with every cell of
+/// the sidecar's pivot areas an expectation too, as a spec case scores them.
+fn prepare_export(suite: &Suite, case: &CaseFile) -> Result<PreparedCase, String> {
+    let tags = export_case::read(&case.path)?.tags;
+    let path = case.path.clone();
+    let (outcome, _) = run_in_worker(format!("export:{}", case.id), EXPORT_TIMEOUT, move || {
+        export_case::export(&path)
+    });
+    let bytes = match outcome {
+        Ok(result) => result.map_err(|e| format!("export failed: {e}"))?,
+        Err((status, message)) => return Err(format!("export {status:?}: {message}")),
+    };
+    let sha = export_case::sha256_hex(&bytes);
+    let mut prepared = prepare_xlsx_bytes(suite, case, bytes)?;
+    prepared.tags = tags;
+    let mut export = ExportOutcome::default();
+    if let Some(oracle) = load_oracle(case)? {
+        let filled = oracle.source.input_sha256.as_deref().unwrap_or("none");
+        if filled != sha {
+            export.note = Some(format!(
+                "the export changed since the oracle fill (sidecar {filled}, now {sha}): \
+                 refill with `rustsheet-oracle fill --force`"
+            ));
+        }
+        export.refused = oracle.refused;
+        let pivots = oracle.pivots;
+        let given: BTreeSet<String> = (prepared.expectations.iter())
+            .map(|e| cell_key(&e.sheet, e.addr))
+            .collect();
+        let from_excel = is_excel_evidence(&oracle.source.kind);
+        for (sheet, addr, expected) in pivot_scoring::pivot_cells(&pivots) {
+            let key = cell_key(&sheet, addr);
+            if given.contains(&key) || !prepared.pivot_keys.insert(key) {
+                continue;
+            }
+            prepared.expectations.push(Expectation {
+                sheet,
+                addr,
+                formula: None,
+                anchor_formula: None,
+                expected,
+                from_excel,
+                pinned: None,
+                from_graph: false,
+            });
+        }
+        prepared.text = text_expect::with_pivot_text(prepared.text, &pivots);
+        prepared.pivots = pivots;
+    }
+    prepared.export = Some(export);
+    Ok(prepared)
 }

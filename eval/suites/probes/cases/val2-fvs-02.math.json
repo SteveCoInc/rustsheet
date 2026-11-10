@@ -1,0 +1,98 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "c1681f5830c2aa227ff9692c7da185fbf7a0a15f4598e5e064a93f6e0eda322e",
+  "definitions": {
+   "FVSCHEDULE": "0737cd3e9f06f8c1"
+  },
+  "arguments_sha256": "9b481eb799e33d40b7622f4c33ddcaf578dde756e94e3d7ec359d2a906e58b07"
+ },
+ "sheets": {
+  "P": {
+   "B25": {
+    "t": "n",
+    "v": "8.9884656743115795386465259539451236680898848947115e+307",
+    "f": "=FVSCHEDULE(2^1023,{-0.5,1})"
+   },
+   "B28": {
+    "t": "n",
+    "v": "9.9999997181806858625128510289593389462918133606227e+300",
+    "f": "=FVSCHEDULE(1E+300,{-0.999999999,1E+10})"
+   },
+   "B30": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=FVSCHEDULE(2^1023,{-1,1})"
+   },
+   "B36": {
+    "t": "n",
+    "v": "5.9160000000000003106181616697893501913356361258359e+303",
+    "f": "=FVSCHEDULE(5916,{1E+300})"
+   },
+   "B43": {
+    "t": "n",
+    "v": "1.7628851326804976328801387511462368542733523009789e-279",
+    "f": "=FVSCHEDULE(2^-1022,J43:L43)"
+   }
+  }
+ },
+ "skipped": {
+  "P": {
+   "B23": {
+    "f": "=FVSCHEDULE(2^1023,{1,-0.5})",
+    "why": "no single value"
+   },
+   "B24": {
+    "f": "=FVSCHEDULE(-(2^1023),{1,-0.5})",
+    "why": "no single value"
+   },
+   "B27": {
+    "f": "=FVSCHEDULE(1E+300,{1E+10,-0.999999999})",
+    "why": "no single value"
+   },
+   "B29": {
+    "f": "=FVSCHEDULE(2^1023,{1,-1})",
+    "why": "no single value"
+   },
+   "B31": {
+    "f": "=FVSCHEDULE(2^1023,{1,0})",
+    "why": "no single value"
+   },
+   "B32": {
+    "f": "=FVSCHEDULE(2^1023,{1,1E-300})",
+    "why": "no single value"
+   },
+   "B35": {
+    "f": "=FVSCHEDULE(1,{1E+300,1E+300,-1})",
+    "why": "no single value"
+   },
+   "B37": {
+    "f": "=FVSCHEDULE(0,{-1E+300,1E+300})",
+    "why": "no single value"
+   },
+   "B38": {
+    "f": "=FVSCHEDULE(1E-300,{-0.9999999999})",
+    "why": "no single value"
+   },
+   "B39": {
+    "f": "=FVSCHEDULE(1E-300,{-0.9999999999,-0.9999999999,1E+30})",
+    "why": "no single value"
+   },
+   "B40": {
+    "f": "=FVSCHEDULE(2.5E-308,{-0.2})",
+    "why": "no single value"
+   },
+   "B41": {
+    "f": "=FVSCHEDULE(2^-1022,J41:L41)",
+    "why": "no single value"
+   },
+   "B42": {
+    "f": "=FVSCHEDULE(2^-1022,J42:L42)",
+    "why": "no single value"
+   }
+  }
+ }
+}

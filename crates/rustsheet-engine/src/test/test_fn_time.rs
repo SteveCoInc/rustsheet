@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp, clippy::unreadable_literal)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 use crate::cell::CellValue;
@@ -29,7 +32,7 @@ const TIME_00_00_01: &str = "1.15741E-05";
 fn test_time_expressions(expressions: &[(&str, &str)]) -> crate::model::Model {
     let mut model = new_empty_model();
     for (cell, formula) in expressions {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     model
@@ -44,9 +47,9 @@ fn test_component_extraction(time_value: &str) -> (String, String, String) {
         ("C1", &format!("=SECOND({time_value})")),
     ]);
     (
-        model._get_text("A1").to_string(),
-        model._get_text("B1").to_string(),
-        model._get_text("C1").to_string(),
+        model.get_text_a1("A1").clone(),
+        model.get_text_a1("B1").clone(),
+        model.get_text_a1("C1").clone(),
     )
 }
 
@@ -74,25 +77,25 @@ fn test_excel_timevalue_compatibility() {
     ]);
 
     // Excel documentation examples - verify exact values
-    assert_eq!(model._get_text("A1"), *TIME_2_24_AM); // 2:24 AM
-    assert_eq!(model._get_text("A2"), *TIME_2_PM); // 2 PM = 14:00
-    assert_eq!(model._get_text("A3"), *TIME_6_45_PM); // 6:45 PM = 18:45
-    assert_eq!(model._get_text("A4"), *TIME_6_45_PM); // 18:45 (24-hour)
+    assert_eq!(model.get_text_a1("A1"), *TIME_2_24_AM); // 2:24 AM
+    assert_eq!(model.get_text_a1("A2"), *TIME_2_PM); // 2 PM = 14:00
+    assert_eq!(model.get_text_a1("A3"), *TIME_6_45_PM); // 6:45 PM = 18:45
+    assert_eq!(model.get_text_a1("A4"), *TIME_6_45_PM); // 18:45 (24-hour)
 
     // Date-time formats (date ignored, extract time only)
-    assert_eq!(model._get_text("B1"), *TIME_6_35_AM); // 6:35 AM ≈ 0.2743
-    assert_eq!(model._get_text("B2"), *TIME_14_30); // 14:30:00
+    assert_eq!(model.get_text_a1("B1"), *TIME_6_35_AM); // 6:35 AM ≈ 0.2743
+    assert_eq!(model.get_text_a1("B2"), *TIME_14_30); // 14:30:00
 
     // Edge cases
-    assert_eq!(model._get_text("C1"), *MIDNIGHT); // 12:00 AM = 00:00
-    assert_eq!(model._get_text("C2"), *NOON); // 12:00 PM = 12:00
-    assert_eq!(model._get_text("C3"), *TIME_23_59_59); // 11:59:59 PM
+    assert_eq!(model.get_text_a1("C1"), *MIDNIGHT); // 12:00 AM = 00:00
+    assert_eq!(model.get_text_a1("C2"), *NOON); // 12:00 PM = 12:00
+    assert_eq!(model.get_text_a1("C3"), *TIME_23_59_59); // 11:59:59 PM
 
     // Single digit hours
-    assert_eq!(model._get_text("D1"), *TIME_1_AM); // 1:00 AM
-    assert_eq!(model._get_text("D2"), *TIME_9_PM); // 9:00 PM = 21:00
-    assert_eq!(model._get_text("D3"), *MIDNIGHT); // 12 AM = 00:00
-    assert_eq!(model._get_text("D4"), *NOON); // 12 PM = 12:00
+    assert_eq!(model.get_text_a1("D1"), *TIME_1_AM); // 1:00 AM
+    assert_eq!(model.get_text_a1("D2"), *TIME_9_PM); // 9:00 PM = 21:00
+    assert_eq!(model.get_text_a1("D3"), *MIDNIGHT); // 12 AM = 00:00
+    assert_eq!(model.get_text_a1("D4"), *NOON); // 12 PM = 12:00
 }
 
 #[test]
@@ -104,10 +107,10 @@ fn test_time_function_basic_cases() {
         ("A4", "=TIME(23,59,59)"), // Max time
     ]);
 
-    assert_eq!(model._get_text("A1"), *MIDNIGHT);
-    assert_eq!(model._get_text("A2"), *NOON);
-    assert_eq!(model._get_text("A3"), *TIME_14_30);
-    assert_eq!(model._get_text("A4"), *TIME_23_59_59);
+    assert_eq!(model.get_text_a1("A1"), *MIDNIGHT);
+    assert_eq!(model.get_text_a1("A2"), *NOON);
+    assert_eq!(model.get_text_a1("A3"), *TIME_14_30);
+    assert_eq!(model.get_text_a1("A4"), *TIME_23_59_59);
 }
 
 #[test]
@@ -120,11 +123,11 @@ fn test_time_function_normalization() {
         ("A5", "=TIME(14.9,30.9,59.9)"), // Fractional inputs floored to 14:30:59
     ]);
 
-    assert_eq!(model._get_text("A1"), *TIME_1_AM); // 1:00:00
-    assert_eq!(model._get_text("A2"), *MIDNIGHT); // 0:00:00
-    assert_eq!(model._get_text("A3"), *"0.0625"); // 1:30:00
-    assert_eq!(model._get_text("A4"), *"0.001041667"); // 0:01:30
-    assert_eq!(model._get_text("A5"), *TIME_14_30_59); // 14:30:59 (floored)
+    assert_eq!(model.get_text_a1("A1"), *TIME_1_AM); // 1:00:00
+    assert_eq!(model.get_text_a1("A2"), *MIDNIGHT); // 0:00:00
+    assert_eq!(model.get_text_a1("A3"), *"0.0625"); // 1:30:00
+    assert_eq!(model.get_text_a1("A4"), *"0.001041667"); // 0:01:30
+    assert_eq!(model.get_text_a1("A5"), *TIME_14_30_59); // 14:30:59 (floored)
 }
 
 #[test]
@@ -148,19 +151,19 @@ fn test_time_function_precision_edge_cases() {
     ]);
 
     // Fractional seconds are floored
-    assert_eq!(model._get_text("A2"), *"45"); // 45.999 floored to 45
+    assert_eq!(model.get_text_a1("A2"), *"45"); // 45.999 floored to 45
 
     // Multiple days should work with rem_euclid
-    assert_eq!(model._get_text("B2"), *"12"); // 999.5 days, hour = 12 (noon)
+    assert_eq!(model.get_text_a1("B2"), *"12"); // 999.5 days, hour = 12 (noon)
 
     // Boundary normalization
-    assert_eq!(model._get_text("C1"), *"0.042361111"); // 24:60:60 = 01:01:00 (normalized)
-                                                       // 23:59:59.9999 rounds to the next midnight: HOUR is 0, as Excel gives for HOUR(0.99999999)
-                                                       // (probes/second-rounding A36, T-1408).
-    assert_eq!(model._get_text("C2"), *"0");
+    assert_eq!(model.get_text_a1("C1"), *"0.042361111"); // 24:60:60 = 01:01:00 (normalized)
+                                                         // 23:59:59.9999 rounds to the next midnight: HOUR is 0, as Excel gives for HOUR(0.99999999)
+                                                         // (probes/second-rounding A36, T-1408).
+    assert_eq!(model.get_text_a1("C2"), *"0");
 
     // High precision should be handled correctly
-    let result_d1 = model._get_text("D1").parse::<f64>().unwrap();
+    let result_d1 = model.get_text_a1("D1").parse::<f64>().unwrap();
     assert!(result_d1 < 1.0 && result_d1 > 0.999); // Very close to but less than 1.0
 }
 
@@ -177,15 +180,15 @@ fn test_time_function_errors() {
     ]);
 
     // Wrong argument count
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
-    assert_eq!(model._get_text("A2"), *"#ERROR!");
-    assert_eq!(model._get_text("A3"), *"#ERROR!");
-    assert_eq!(model._get_text("A4"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A3"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A4"), *"#ERROR!");
 
     // Negative values should return #NUM! error
-    assert_eq!(model._get_text("B1"), *"#NUM!");
-    assert_eq!(model._get_text("B2"), *"#NUM!");
-    assert_eq!(model._get_text("B3"), *"#NUM!");
+    assert_eq!(model.get_text_a1("B1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("B2"), *"#NUM!");
+    assert_eq!(model.get_text_a1("B3"), *"#NUM!");
 }
 
 #[test]
@@ -227,43 +230,46 @@ fn test_timevalue_function_formats() {
     ]);
 
     // Basic formats
-    assert_eq!(model._get_text("A1"), *TIME_14_30);
-    assert_eq!(model._get_text("A2"), *TIME_14_30_45);
-    assert_eq!(model._get_text("A3"), *MIDNIGHT);
+    assert_eq!(model.get_text_a1("A1"), *TIME_14_30);
+    assert_eq!(model.get_text_a1("A2"), *TIME_14_30_45);
+    assert_eq!(model.get_text_a1("A3"), *MIDNIGHT);
 
     // AM/PM formats
-    assert_eq!(model._get_text("B1"), *TIME_14_30); // 2:30 PM = 14:30
-    assert_eq!(model._get_text("B2"), *TIME_2_30_AM); // 2:30 AM
-    assert_eq!(model._get_text("B3"), *NOON); // 12:00 PM = noon
-    assert_eq!(model._get_text("B4"), *MIDNIGHT); // 12:00 AM = midnight
+    assert_eq!(model.get_text_a1("B1"), *TIME_14_30); // 2:30 PM = 14:30
+    assert_eq!(model.get_text_a1("B2"), *TIME_2_30_AM); // 2:30 AM
+    assert_eq!(model.get_text_a1("B3"), *NOON); // 12:00 PM = noon
+    assert_eq!(model.get_text_a1("B4"), *MIDNIGHT); // 12:00 AM = midnight
 
     // Single hour AM/PM formats (now supported!)
-    assert_eq!(model._get_text("B5"), *TIME_2_PM); // 2 PM = 14:00
-    assert_eq!(model._get_text("B6"), *TIME_2_AM); // 2 AM = 02:00
-    assert_eq!(model._get_text("B7"), *TIME_2_PM); // 2 AM = 02:00
-    assert_eq!(model._get_text("B8"), *TIME_2_PM); // 2 AM = 02:00
-    assert_eq!(model._get_text("B9"), *TIME_2_AM); // 2 AM = 02:00
-    assert_eq!(model._get_text("B10"), *TIME_2_AM); // 2 AM = 02:00
+    assert_eq!(model.get_text_a1("B5"), *TIME_2_PM); // 2 PM = 14:00
+    assert_eq!(model.get_text_a1("B6"), *TIME_2_AM); // 2 AM = 02:00
+    assert_eq!(model.get_text_a1("B7"), *TIME_2_PM); // 2 AM = 02:00
+    assert_eq!(model.get_text_a1("B8"), *TIME_2_PM); // 2 AM = 02:00
+    assert_eq!(model.get_text_a1("B9"), *TIME_2_AM); // 2 AM = 02:00
+    assert_eq!(model.get_text_a1("B10"), *TIME_2_AM); // 2 AM = 02:00
 
     // Date-time formats
-    assert_eq!(model._get_text("C1"), *TIME_14_30);
-    assert_eq!(model._get_text("C2"), *TIME_14_30);
+    assert_eq!(model.get_text_a1("C1"), *TIME_14_30);
+    // The ISO `T` separator is #VALUE!, as in VALUE and DATEVALUE, since TIMEVALUE reads date
+    // text with their date-clock reader (docs/excel-semantics/dates.md, probes/
+    // datevalue-separator-spaces rows 5-6; audit 2 item 4, T-4975).
+    assert_eq!(model.get_text_a1("C2"), *"#VALUE!");
 
     // Whitespace
-    assert_eq!(model._get_text("D1"), *TIME_14_30);
-    assert_eq!(model._get_text("D2"), *TIME_14_30);
-    assert_eq!(model._get_text("D3"), *TIME_14_30);
+    assert_eq!(model.get_text_a1("D1"), *TIME_14_30);
+    assert_eq!(model.get_text_a1("D2"), *TIME_14_30);
+    assert_eq!(model.get_text_a1("D3"), *TIME_14_30);
 
     // Whitespace handling for simple AM/PM
-    assert_eq!(model._get_text("E1"), *TIME_2_PM); // 2 AM = 02:00
-    assert_eq!(model._get_text("E2"), *TIME_2_PM); // 2 AM = 02:00
-    assert_eq!(model._get_text("E3"), *TIME_2_AM); // 2 AM = 02:00
-    assert_eq!(model._get_text("E4"), *TIME_2_AM); // 2 AM = 02:00
+    assert_eq!(model.get_text_a1("E1"), *TIME_2_PM); // 2 AM = 02:00
+    assert_eq!(model.get_text_a1("E2"), *TIME_2_PM); // 2 AM = 02:00
+    assert_eq!(model.get_text_a1("E3"), *TIME_2_AM); // 2 AM = 02:00
+    assert_eq!(model.get_text_a1("E4"), *TIME_2_AM); // 2 AM = 02:00
 
     // Dot handling for simple AM/PM
-    assert_eq!(model._get_text("F1"), *TIME_2_AM); // 2 AM = 02:00
-    assert_eq!(model._get_text("F2"), *TIME_2_PM); // 2 PM = 14:00
-    assert_eq!(model._get_text("F3"), *"#VALUE!"); // 2 p.m. = #VALUE!
+    assert_eq!(model.get_text_a1("F1"), *TIME_2_AM); // 2 AM = 02:00
+    assert_eq!(model.get_text_a1("F2"), *TIME_2_PM); // 2 PM = 14:00
+    assert_eq!(model.get_text_a1("F3"), *"#VALUE!"); // 2 p.m. = #VALUE!
 }
 
 #[test]
@@ -279,15 +285,15 @@ fn test_timevalue_function_errors() {
     ]);
 
     // Wrong argument count should return #ERROR!
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
-    assert_eq!(model._get_text("A2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), *"#ERROR!");
 
     // Invalid formats should return #VALUE!
-    assert_eq!(model._get_text("B1"), *"#VALUE!");
-    assert_eq!(model._get_text("B2"), *"#VALUE!");
-    assert_eq!(model._get_text("B3"), *"#VALUE!");
-    assert_eq!(model._get_text("B4"), *"#VALUE!");
-    assert_eq!(model._get_text("B5"), *"#VALUE!"); // "2PM" no space - not supported
+    assert_eq!(model.get_text_a1("B1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("B2"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("B3"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("B4"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("B5"), *"#VALUE!"); // "2PM" no space - not supported
 }
 
 #[test]
@@ -362,20 +368,20 @@ fn test_time_component_function_errors() {
     ]);
 
     // Wrong argument count should return #ERROR!
-    assert_eq!(model._get_text("A1"), *"#ERROR!");
-    assert_eq!(model._get_text("A2"), *"#ERROR!");
-    assert_eq!(model._get_text("A3"), *"#ERROR!");
-    assert_eq!(model._get_text("A4"), *"#ERROR!");
-    assert_eq!(model._get_text("A5"), *"#ERROR!");
-    assert_eq!(model._get_text("A6"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A1"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A2"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A3"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A4"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A5"), *"#ERROR!");
+    assert_eq!(model.get_text_a1("A6"), *"#ERROR!");
 
     // Negative values should return #NUM!
-    assert_eq!(model._get_text("B1"), *"#NUM!");
-    assert_eq!(model._get_text("B2"), *"#NUM!");
-    assert_eq!(model._get_text("B3"), *"#NUM!");
-    assert_eq!(model._get_text("B4"), *"#NUM!");
-    assert_eq!(model._get_text("B5"), *"#NUM!");
-    assert_eq!(model._get_text("B6"), *"#NUM!");
+    assert_eq!(model.get_text_a1("B1"), *"#NUM!");
+    assert_eq!(model.get_text_a1("B2"), *"#NUM!");
+    assert_eq!(model.get_text_a1("B3"), *"#NUM!");
+    assert_eq!(model.get_text_a1("B4"), *"#NUM!");
+    assert_eq!(model.get_text_a1("B5"), *"#NUM!");
+    assert_eq!(model.get_text_a1("B6"), *"#NUM!");
 }
 
 #[test]
@@ -401,20 +407,20 @@ fn test_time_functions_integration() {
     ]);
 
     // TIME and TIMEVALUE should produce equivalent results
-    assert_eq!(model._get_text("A1"), model._get_text("A2"));
+    assert_eq!(model.get_text_a1("A1"), model.get_text_a1("A2"));
 
     // Extracting components should work consistently
-    assert_eq!(model._get_text("B1"), *"14");
-    assert_eq!(model._get_text("B2"), *"30");
-    assert_eq!(model._get_text("B3"), *"45");
-    assert_eq!(model._get_text("C1"), *"14");
-    assert_eq!(model._get_text("C2"), *"30");
-    assert_eq!(model._get_text("C3"), *"45");
+    assert_eq!(model.get_text_a1("B1"), *"14");
+    assert_eq!(model.get_text_a1("B2"), *"30");
+    assert_eq!(model.get_text_a1("B3"), *"45");
+    assert_eq!(model.get_text_a1("C1"), *"14");
+    assert_eq!(model.get_text_a1("C2"), *"30");
+    assert_eq!(model.get_text_a1("C3"), *"45");
 
     // Components from TIME(14,0,0)
-    assert_eq!(model._get_text("E1"), *"14");
-    assert_eq!(model._get_text("E2"), *"0");
-    assert_eq!(model._get_text("E3"), *"0");
+    assert_eq!(model.get_text_a1("E1"), *"14");
+    assert_eq!(model.get_text_a1("E2"), *"0");
+    assert_eq!(model.get_text_a1("E3"), *"0");
 }
 
 #[test]
@@ -441,25 +447,25 @@ fn test_time_function_extreme_values() {
 
     // An argument past 32767 is #NUM!, not wrapped (probes/time-argument-bound A13:A18).
     for cell in ["A1", "A2"] {
-        assert_eq!(model._get_text(cell), "#NUM!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), "#NUM!", "{cell}");
     }
-    let result_a3 = model._get_text("A3").parse::<f64>().unwrap();
+    let result_a3 = model.get_text_a1("A3").parse::<f64>().unwrap();
     assert!(
         (0.0..1.0).contains(&result_a3),
         "Result should be valid time fraction"
     );
 
     // Component extraction should work with very large values
-    let hour_b1 = model._get_text("B1").parse::<i32>().unwrap();
+    let hour_b1 = model.get_text_a1("B1").parse::<i32>().unwrap();
     assert!((0..=23).contains(&hour_b1), "Hour should be 0-23");
 
     // Exactly 1.0 should be midnight (start of next day)
-    assert_eq!(model._get_text("C1"), *"0");
-    assert_eq!(model._get_text("C2"), *"0");
-    assert_eq!(model._get_text("C3"), *"0");
+    assert_eq!(model.get_text_a1("C1"), *"0");
+    assert_eq!(model.get_text_a1("C2"), *"0");
+    assert_eq!(model.get_text_a1("C3"), *"0");
 
     // Very high precision should still extract valid components
-    let hour_d1 = model._get_text("D1").parse::<i32>().unwrap();
+    let hour_d1 = model.get_text_a1("D1").parse::<i32>().unwrap();
     assert!((0..=23).contains(&hour_d1), "Hour should be 0-23");
 }
 
@@ -487,33 +493,33 @@ fn test_timevalue_malformed_but_parseable() {
     ]);
 
     // Fractional seconds parse (probe timevalue-fractional-seconds)
-    assert_eq!(model._get_text("A1"), *"0.60416809");
-    assert_eq!(model._get_text("A2"), *"0.604178229");
+    assert_eq!(model.get_text_a1("A1"), *"0.60416809");
+    assert_eq!(model.get_text_a1("A2"), *"0.604178229");
 
     // Leading zeros should work fine
-    assert_eq!(model._get_text("A3"), *TIME_2_30_AM); // 02:30:00 should parse as 2:30:00
+    assert_eq!(model.get_text_a1("A3"), *TIME_2_30_AM); // 02:30:00 should parse as 2:30:00
 
     // AM/PM boundary cases should work
-    let result_b1 = model._get_text("B1").parse::<f64>().unwrap();
+    let result_b1 = model.get_text_a1("B1").parse::<f64>().unwrap();
     assert!(
         result_b1 > 0.99 && result_b1 < 1.0,
         "11:59:59 PM should be very close to 1.0"
     );
 
-    let result_b2 = model._get_text("B2").parse::<f64>().unwrap();
+    let result_b2 = model.get_text_a1("B2").parse::<f64>().unwrap();
     assert!(
         result_b2 > 0.0 && result_b2 < 0.01,
         "12:00:01 AM should be very close to 0.0"
     );
 
-    // ISO 8601 format with "T" separator should be parsed correctly
-    assert_eq!(model._get_text("C1"), *TIME_23_59_59); // 23:59:59 → almost midnight
-    assert_eq!(model._get_text("C2"), *TIME_00_00_01); // 00:00:01 → one second past midnight
+    // The ISO `T` separator is #VALUE!, as in VALUE and DATEVALUE (see above).
+    assert_eq!(model.get_text_a1("C1"), *"#VALUE!");
+    assert_eq!(model.get_text_a1("C2"), *TIME_00_00_01); // 00:00:01 → one second past midnight
 
     // Time parser normalizes edge cases to midnight (Excel compatibility)
-    assert_eq!(model._get_text("D1"), *"0"); // 24:00:00 = midnight of next day
-    assert_eq!(model._get_text("D2"), *"0"); // 23:60:00 normalizes to 24:00:00 = midnight
-    assert_eq!(model._get_text("D3"), *"0"); // 23:59:60 normalizes to 24:00:00 = midnight
+    assert_eq!(model.get_text_a1("D1"), *"0"); // 24:00:00 = midnight of next day
+    assert_eq!(model.get_text_a1("D2"), *"0"); // 23:60:00 normalizes to 24:00:00 = midnight
+    assert_eq!(model.get_text_a1("D3"), *"0"); // 23:59:60 normalizes to 24:00:00 = midnight
 }
 
 #[test]
@@ -542,7 +548,7 @@ fn test_performance_stress_with_extreme_values() {
     // TIME of an argument past 32767 is #NUM! and so is a part of it (probes/time-argument-bound
     // A13:A18; gen-m6/9e6a1b733ee1e1e0 A77).
     for cell in ["B1", "B2", "B3", "A1", "A2", "A3", "D1", "D2", "D3", "D4"] {
-        assert_eq!(model._get_text(cell), "#NUM!", "{cell}");
+        assert_eq!(model.get_text_a1(cell), "#NUM!", "{cell}");
     }
 }
 
@@ -550,9 +556,9 @@ fn test_performance_stress_with_extreme_values() {
 fn time_over_24_hours_divides_before_dropping_days() {
     // Excel-cached values: DATE_AND_TIME/TIME_HOUR_MINUTE_SECOND.xlsx D3, D14, D17.
     let mut model = new_empty_model();
-    model._set("A1", "=TIME(24,2,3)");
-    model._set("A2", "=TIME(34,1,2)");
-    model._set("A3", "=TIME(32767,32767,32767)");
+    model.set_a1("A1", "=TIME(24,2,3)");
+    model.set_a1("A2", "=TIME(34,1,2)");
+    model.set_a1("A3", "=TIME(32767,32767,32767)");
     model.evaluate();
     let bits = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
         Ok(CellValue::Number(n)) => n.to_bits(),
@@ -579,7 +585,7 @@ fn time_arguments_snap_near_an_integer_and_stop_at_32767() {
         ("A9", "=TIME(600,32767,0)"),
     ]);
     let seconds = |c: &str| {
-        let v: f64 = model._get_text(c).parse().unwrap();
+        let v: f64 = model.get_text_a1(c).parse().unwrap();
         (v * 86400.0).round()
     };
     assert_eq!(seconds("A1"), 3600.0);
@@ -587,7 +593,7 @@ fn time_arguments_snap_near_an_integer_and_stop_at_32767() {
     assert_eq!(seconds("A3"), 36000.0);
     assert_eq!(seconds("A4"), 35998.0);
     assert_eq!(seconds("A5"), 25200.0);
-    assert_eq!(model._get_text("A6"), "#NUM!");
+    assert_eq!(model.get_text_a1("A6"), "#NUM!");
     assert_eq!(seconds("A7"), 21120.0);
     // -32768-1E-6 floors to -32769, which wraps to 32767 (T-3983).
     assert_eq!(seconds("A8"), seconds("A9"));
@@ -610,17 +616,17 @@ fn time_wraps_an_argument_below_minus_32768() {
         ("A10", "=TIME(600,-32768.5,0)"),
     ]);
     let seconds = |c: &str| {
-        let v: f64 = model._get_text(c).parse().unwrap();
+        let v: f64 = model.get_text_a1(c).parse().unwrap();
         (v * 86400.0).round()
     };
     assert_eq!(seconds("A1"), seconds("A2"));
-    assert_eq!(model._get_text("A3"), "#NUM!");
+    assert_eq!(model.get_text_a1("A3"), "#NUM!");
     assert_eq!(seconds("A4"), 86340.0);
     assert_eq!(seconds("A5"), 19200.0);
     // Past -2^31 the value reads as 0, not as its wrap (-1 would give 23:59).
     assert_eq!(seconds("A6"), 0.0);
     assert_eq!(seconds("A7"), 36000.0);
-    assert_eq!(model._get_text("A8"), "#NUM!");
-    assert_eq!(model._get_text("A9"), "#NUM!");
+    assert_eq!(model.get_text_a1("A8"), "#NUM!");
+    assert_eq!(model.get_text_a1("A9"), "#NUM!");
     assert_eq!(seconds("A10"), seconds("A2"));
 }

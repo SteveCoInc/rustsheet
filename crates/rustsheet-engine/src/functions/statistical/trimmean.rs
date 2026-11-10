@@ -1,6 +1,13 @@
 //! TRIMMEAN. The data argument is read and sorted once per call (`sorted_data.rs`); `percent`
 //! lifts over arrays and ranges (probes/stat-argument-modes H549-H550, probes/stat-whole-lift
 //! W35-W37).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss
+)]
+// LINT-DEBT-END
 
 use super::percentile::{area_numbers, num_error, typed_scalar_numbers, value_at};
 use super::sorted_data::{DataArg, DataOrder};

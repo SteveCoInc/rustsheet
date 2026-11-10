@@ -1,0 +1,238 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Case of error names (T-4852): lower- and mixed-case error names typed as constants (A, read by B:D), entered as formula literals (E, read by F:G), and as COUNTIF criteria over #N/A, #DIV/0! and text (I).",
+  "tags": [
+    "M2",
+    "errors",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "A1": {
+          "entered": "#n/a"
+        },
+        "B1": "=ISERROR(A1)",
+        "C1": "=ERROR.TYPE(A1)",
+        "D1": "=ISTEXT(A1)",
+        "A2": {
+          "entered": "#N/a"
+        },
+        "B2": "=ISERROR(A2)",
+        "C2": "=ERROR.TYPE(A2)",
+        "D2": "=ISTEXT(A2)",
+        "A3": {
+          "entered": "#ref!"
+        },
+        "B3": "=ISERROR(A3)",
+        "C3": "=ERROR.TYPE(A3)",
+        "D3": "=ISTEXT(A3)",
+        "A4": {
+          "entered": "#value!"
+        },
+        "B4": "=ISERROR(A4)",
+        "C4": "=ERROR.TYPE(A4)",
+        "D4": "=ISTEXT(A4)",
+        "A5": {
+          "entered": "#div/0!"
+        },
+        "B5": "=ISERROR(A5)",
+        "C5": "=ERROR.TYPE(A5)",
+        "D5": "=ISTEXT(A5)",
+        "A6": {
+          "entered": "#name?"
+        },
+        "B6": "=ISERROR(A6)",
+        "C6": "=ERROR.TYPE(A6)",
+        "D6": "=ISTEXT(A6)",
+        "A7": {
+          "entered": "#num!"
+        },
+        "B7": "=ISERROR(A7)",
+        "C7": "=ERROR.TYPE(A7)",
+        "D7": "=ISTEXT(A7)",
+        "A8": {
+          "entered": "#null!"
+        },
+        "B8": "=ISERROR(A8)",
+        "C8": "=ERROR.TYPE(A8)",
+        "D8": "=ISTEXT(A8)",
+        "A9": {
+          "entered": "#spill!"
+        },
+        "B9": "=ISERROR(A9)",
+        "C9": "=ERROR.TYPE(A9)",
+        "D9": "=ISTEXT(A9)",
+        "A10": {
+          "entered": "#calc!"
+        },
+        "B10": "=ISERROR(A10)",
+        "C10": "=ERROR.TYPE(A10)",
+        "D10": "=ISTEXT(A10)",
+        "A11": {
+          "entered": "#getting_data"
+        },
+        "B11": "=ISERROR(A11)",
+        "C11": "=ERROR.TYPE(A11)",
+        "D11": "=ISTEXT(A11)",
+        "A12": {
+          "entered": "#Getting_Data"
+        },
+        "B12": "=ISERROR(A12)",
+        "C12": "=ERROR.TYPE(A12)",
+        "D12": "=ISTEXT(A12)",
+        "A13": {
+          "entered": "#N/A"
+        },
+        "B13": "=ISERROR(A13)",
+        "C13": "=ERROR.TYPE(A13)",
+        "D13": "=ISTEXT(A13)",
+        "A14": {
+          "entered": "#Ref!"
+        },
+        "B14": "=ISERROR(A14)",
+        "C14": "=ERROR.TYPE(A14)",
+        "D14": "=ISTEXT(A14)",
+        "E1": {
+          "entered": "=#n/a"
+        },
+        "F1": "=FORMULATEXT(E1)",
+        "G1": "=ERROR.TYPE(E1)",
+        "E2": {
+          "entered": "=#ref!"
+        },
+        "F2": "=FORMULATEXT(E2)",
+        "G2": "=ERROR.TYPE(E2)",
+        "E3": {
+          "entered": "=#value!"
+        },
+        "F3": "=FORMULATEXT(E3)",
+        "G3": "=ERROR.TYPE(E3)",
+        "E4": {
+          "entered": "=#div/0!"
+        },
+        "F4": "=FORMULATEXT(E4)",
+        "G4": "=ERROR.TYPE(E4)",
+        "E5": {
+          "entered": "=#name?"
+        },
+        "F5": "=FORMULATEXT(E5)",
+        "G5": "=ERROR.TYPE(E5)",
+        "E6": {
+          "entered": "=#num!"
+        },
+        "F6": "=FORMULATEXT(E6)",
+        "G6": "=ERROR.TYPE(E6)",
+        "E7": {
+          "entered": "=#null!"
+        },
+        "F7": "=FORMULATEXT(E7)",
+        "G7": "=ERROR.TYPE(E7)",
+        "E8": {
+          "entered": "=#Div/0!"
+        },
+        "F8": "=FORMULATEXT(E8)",
+        "G8": "=ERROR.TYPE(E8)",
+        "H1": "=NA()",
+        "H2": "=1/0",
+        "H3": "x",
+        "I1": "=COUNTIF(H1:H3,\"#n/a\")",
+        "I2": "=COUNTIF(H1:H3,\"#N/A\")",
+        "I3": "=COUNTIF(H1:H3,\"#div/0!\")",
+        "I4": "=COUNTIF(H1:H3,\"=#n/a\")",
+        "I5": "=COUNTIF(H1:H3,\"<>#n/a\")",
+        "I6": "=COUNTIF(H1:H3,\"#N/a\")"
+      }
+    }
+  ],
+  "expected": {},
+  "check": [
+    "S!A1",
+    "S!B1",
+    "S!C1",
+    "S!D1",
+    "S!A2",
+    "S!B2",
+    "S!C2",
+    "S!D2",
+    "S!A3",
+    "S!B3",
+    "S!C3",
+    "S!D3",
+    "S!A4",
+    "S!B4",
+    "S!C4",
+    "S!D4",
+    "S!A5",
+    "S!B5",
+    "S!C5",
+    "S!D5",
+    "S!A6",
+    "S!B6",
+    "S!C6",
+    "S!D6",
+    "S!A7",
+    "S!B7",
+    "S!C7",
+    "S!D7",
+    "S!A8",
+    "S!B8",
+    "S!C8",
+    "S!D8",
+    "S!A9",
+    "S!B9",
+    "S!C9",
+    "S!D9",
+    "S!A10",
+    "S!B10",
+    "S!C10",
+    "S!D10",
+    "S!A11",
+    "S!B11",
+    "S!C11",
+    "S!D11",
+    "S!A12",
+    "S!B12",
+    "S!C12",
+    "S!D12",
+    "S!A13",
+    "S!B13",
+    "S!C13",
+    "S!D13",
+    "S!A14",
+    "S!B14",
+    "S!C14",
+    "S!D14",
+    "S!E1",
+    "S!F1",
+    "S!G1",
+    "S!E2",
+    "S!F2",
+    "S!G2",
+    "S!E3",
+    "S!F3",
+    "S!G3",
+    "S!E4",
+    "S!F4",
+    "S!G4",
+    "S!E5",
+    "S!F5",
+    "S!G5",
+    "S!E6",
+    "S!F6",
+    "S!G6",
+    "S!E7",
+    "S!F7",
+    "S!G7",
+    "S!E8",
+    "S!F8",
+    "S!G8",
+    "S!I1",
+    "S!I2",
+    "S!I3",
+    "S!I4",
+    "S!I5",
+    "S!I6"
+  ]
+}

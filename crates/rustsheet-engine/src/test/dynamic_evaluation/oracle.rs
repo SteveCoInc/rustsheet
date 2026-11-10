@@ -1,3 +1,12 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss,
+    clippy::float_cmp,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 
 // The consistency oracle of evaluation.
@@ -73,7 +82,11 @@ fn describe(result: &CalcResult) -> String {
         CalcResult::Error { error, .. } => format!("{error:?}"),
         CalcResult::EmptyCell | CalcResult::EmptyArg => "empty".to_string(),
         CalcResult::Range { .. } => "range".to_string(),
-        CalcResult::Array(a) => format!("array {}x{}", a.len(), a.first().map_or(0, |r| r.len())),
+        CalcResult::Array(a) => format!(
+            "array {}x{}",
+            a.len(),
+            a.first().map_or(0, std::vec::Vec::len)
+        ),
         CalcResult::Lambda(_) => "lambda".to_string(),
     }
 }
@@ -85,7 +98,7 @@ pub(crate) fn violations(model: &mut Model) -> Vec<String> {
     let cells = model.get_all_cells();
     for index in cells {
         let (sheet, row, column) = (index.index, index.row, index.column);
-        let cell_ref = CellReferenceIndex { sheet, row, column };
+        let cell_ref = CellReferenceIndex { sheet, column, row };
         let cell = model
             .workbook
             .worksheet(sheet)
@@ -356,13 +369,13 @@ mod tests {
     #[test]
     fn consistent_sheet_has_no_violations() {
         let mut model = new_empty_model();
-        model._set("A1", "=SEQUENCE(3)");
-        model._set("B1", "=A3*2");
-        model._set("C1", "=SUM(A1#)");
+        model.set_a1("A1", "=SEQUENCE(3)");
+        model.set_a1("B1", "=A3*2");
+        model.set_a1("C1", "=SUM(A1#)");
         model
             .set_user_array_formula(0, 1, 4, 1, 2, "=B1+1")
             .unwrap();
-        model._set("E1", "=E1+1");
+        model.set_a1("E1", "=E1+1");
         model.evaluate();
         assert_eq!(violations(&mut model), Vec::<String>::new());
     }
@@ -370,8 +383,8 @@ mod tests {
     #[test]
     fn tampered_scalar_is_reported() {
         let mut model = new_empty_model();
-        model._set("A1", "5");
-        model._set("B1", "=A1*2");
+        model.set_a1("A1", "5");
+        model.set_a1("B1", "=A1*2");
         model.evaluate();
         let ws = model.workbook.worksheet_mut(0).unwrap();
         if let Some(Cell::CellFormula { v, .. }) = ws.cell_mut(1, 2) {
@@ -385,7 +398,7 @@ mod tests {
     #[test]
     fn tampered_spill_cell_is_reported() {
         let mut model = new_empty_model();
-        model._set("A1", "=SEQUENCE(3)");
+        model.set_a1("A1", "=SEQUENCE(3)");
         model.evaluate();
         let ws = model.workbook.worksheet_mut(0).unwrap();
         if let Some(Cell::SpillCell { v, .. }) = ws.cell_mut(2, 1) {
@@ -402,7 +415,7 @@ mod tests {
     #[test]
     fn orphan_spill_cell_is_reported() {
         let mut model = new_empty_model();
-        model._set("A1", "=SEQUENCE(2)");
+        model.set_a1("A1", "=SEQUENCE(2)");
         model.evaluate();
         let ws = model.workbook.worksheet_mut(0).unwrap();
         ws.update_cell(
@@ -426,7 +439,7 @@ mod tests {
     #[test]
     fn missing_spill_cell_is_reported() {
         let mut model = new_empty_model();
-        model._set("A1", "=SEQUENCE(3)");
+        model.set_a1("A1", "=SEQUENCE(3)");
         model.evaluate();
         model
             .workbook

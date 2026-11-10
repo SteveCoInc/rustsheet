@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::match_same_arms
+)]
+// LINT-DEBT-END
 use chrono::Datelike;
 
 use super::num_error;
@@ -144,12 +151,12 @@ impl Model {
         // A written-empty return_type is omitted, type 1 (`WEEKNUM(45000,)` is 11:
         // probes/t4870-empty-date-args A16, t4870-r2-empty-optional A5, A6, A14; T-4870).
         let args = match args {
-            [serial, return_type] if self.is_empty_argument(return_type) => {
+            [serial, return_type] if self.is_empty_argument(return_type, cell) => {
                 std::slice::from_ref(serial)
             }
             _ => args,
         };
-        let empty = self.empty_arguments::<1>(args);
+        let empty = self.empty_arguments::<1>(args, cell);
         let result = self.lift_call(Function::Weeknum, args, cell, &mut |model, values| {
             model.weeknum_of(values, empty, cell)
         });

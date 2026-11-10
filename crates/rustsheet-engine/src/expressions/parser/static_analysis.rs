@@ -1,4 +1,12 @@
-use super::reference_operators::{at_outside, is_reference_operand, wrong_range_shape};
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::match_same_arms,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
+use super::reference_operators::{at_outside, wrong_range_shape};
 use super::{for_each_chain_operand_mut, Node};
 use crate::functions::lift::lifting_table_functions;
 use crate::functions::lookup_and_reference::lifts_into_reference_elements;
@@ -271,7 +279,7 @@ pub(super) fn add_legacy_intersection(node: &mut Node, add: bool, arrays: bool) 
                 *node = Node::automatic_at(node.clone());
             }
         }
-    };
+    }
 }
 
 /// The result of the static analysis of a node
@@ -332,7 +340,7 @@ pub(crate) fn run_static_analysis_on_node(node: &Node) -> StaticResult {
         }
         Node::ArrayKind(array) => {
             let n = array.len() as i32;
-            let m = array.first().map(|row| row.len() as i32).unwrap_or(0);
+            let m = array.first().map_or(0, |row| row.len() as i32);
             StaticResult::Array(n, m)
         }
         Node::RangeKind {
@@ -414,7 +422,7 @@ fn criteria_static_result(args: &[Node], first: usize) -> StaticResult {
 /// once per element of an array of references in a range argument
 /// (`Function::per_reference_element`; SPEC-0014 rule 6,
 /// `COUNTIF(OFFSET(A1,{0;1},0),">0")` spills 1, 1, probes/reference-lift-consumers E57): a range
-/// argument that is a lifted OFFSET or INDIRECT, or an XLOOKUP with an `if_not_found`
+/// argument that is a lifted OFFSET or INDIRECT, or an XLOOKUP with a lifted `lookup_value`
 /// ([`lifts_into_reference_elements`]), gives the shape, the criteria
 /// (`args[first]`, `args[first + 2]`, ...) only without one. Anything else does not:
 /// `SUMIF(IF(TRUE,A1:A6),"a",B1:B6)` stays a scalar call (probes/legacy-if-arm-range-argument U12).
@@ -429,16 +437,18 @@ fn criteria_and_grid_static_result(kind: &Function, args: &[Node], first: usize)
             return None;
         }
         match arg.ungrouped() {
-            // An XLOOKUP's grid has its lookup_value's shape, one cell gives none, and only a
-            // reference `if_not_found` builds it (the engine's `NotFound::Range`).
+            // An XLOOKUP's grid has the broadcast shape of its lookup_value, match_mode and
+            // search_mode, one cell gives none, whatever its `if_not_found`
+            // (probes/t4742-countif-array-range-arg A10:C22; a mode alone lifts it,
+            // probes/t4863-xlookup-mode-lift-criteria A11, B90).
             Node::FunctionKind {
                 kind: Function::Xlookup,
                 args,
             } => {
-                if !args.get(3).is_some_and(is_reference_operand) {
-                    return None;
-                }
-                let (rows, columns) = run_static_analysis_on_node(args.first()?).counts()?;
+                let (rows, columns) = [0, 4, 5]
+                    .iter()
+                    .filter_map(|&index| run_static_analysis_on_node(args.get(index)?).counts())
+                    .reduce(|(r, c), (a, b)| (r.max(a), c.max(b)))?;
                 ((rows, columns) != (1, 1)).then_some(StaticResult::Array(rows, columns))
             }
             _ => match run_static_analysis_on_node(arg) {
@@ -448,9 +458,24 @@ fn criteria_and_grid_static_result(kind: &Function, args: &[Node], first: usize)
         }
     });
     // Over a grid each call's own spill is cut to its top-left value (as the engine runs it),
-    // so the grids alone give the shape.
-    let grids: Vec<StaticResult> = grids.collect();
+    // so the grids give the shape, broadcast with a criteria array of a criteria function
+    // (`PerElement::broadcasts_criteria`; probes/t4742-countif-array-range-arg A40:C40).
+    let mut grids: Vec<StaticResult> = grids.collect();
     if !grids.is_empty() {
+        if kind
+            .per_reference_element(args.len())
+            .is_some_and(|p| p.broadcasts_criteria)
+        {
+            grids.extend(
+                args.iter()
+                    .enumerate()
+                    .filter(|(index, _)| !takes_reference(*index))
+                    .map(|(_, arg)| match run_static_analysis_on_node(arg) {
+                        shape @ StaticResult::Array(..) => shape,
+                        _ => StaticResult::Scalar,
+                    }),
+            );
+        }
         return broadcast_shapes(grids);
     }
     criteria_static_result(args, first)
@@ -789,8 +814,21 @@ fn fallback_shape(kind: &Function, args: &[Node]) -> Option<StaticResult> {
         Function::Mmult => StaticResult::Unknown,
         Function::Bycol | Function::Byrow => StaticResult::Unknown,
         Function::Groupby | Function::Pivotby => StaticResult::Unknown,
-        // Spills by its items, broadcast; the other arguments never lift (SPEC-0015, T-2083).
-        Function::Getpivotdata => broadcast_static_result(args.iter().skip(3).step_by(2)),
+        // Spills by its items, broadcast, a range of items included; an array data_field or field
+        // name lifts too, but a range there is one `#REF!` argument (gen-m6 16b67941f34e0346
+        // A40, A43). `pivot_table` never lifts (SPEC-0015, T-2083; probes/
+        // t2085-getpivotdata-items Q!E9:F10, T-4154).
+        Function::Getpivotdata => {
+            broadcast_shapes(args.iter().enumerate().filter_map(|(i, arg)| {
+                match (i, run_static_analysis_on_node(arg)) {
+                    (1, _) => None,
+                    (i, shape) if i >= 3 && i % 2 == 1 => Some(shape),
+                    (_, shape @ StaticResult::Array(..)) => Some(shape),
+                    (_, StaticResult::Unknown) => Some(StaticResult::Unknown),
+                    _ => None,
+                }
+            }))
+        }
         Function::Map | Function::Reduce => StaticResult::Unknown,
         Function::Scan => StaticResult::Unknown,
         Function::Textsplit => StaticResult::Unknown,

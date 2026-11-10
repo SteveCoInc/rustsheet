@@ -15,11 +15,16 @@
 //! - Beyond, and wherever E*R is below `DBL_MIN`, ERFC is 0.
 //!
 //! Negative x: ERF(-x) = -ERF(x) and ERFC(-x) = fl(2 - ERFC(x)).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 
 use crate::arithmetic::{
     extended_product, extended_quotient, extended_sqrt, extended_sum, flush_subnormal,
 };
+use crate::functions::util::poly;
 use crate::x87_exp::excel_exp;
+use crate::x87_register::Register;
 
 /// Where the small-x rational stops: x = 0.5 still takes it, 0.5 + 2^-53 does not (research
 /// update 4, "The split is at x = 0.5 + 2^-53").
@@ -183,6 +188,71 @@ pub(crate) fn erfc(x: f64) -> f64 {
     } else {
         erfc_kernel(x)
     }
+}
+
+// The inverse-erf coefficients below are from statrs 0.18.0 `function/erf.rs`
+// (`ERF_INV_IMPL_AN`/`ERF_INV_IMPL_AD` and the constant of `erf_inv_impl`),
+// https://github.com/statrs-dev/statrs, itself after Boost.Math's `erf_inv_imp`:
+//
+// MIT License. Copyright (c) 2016 Michael Ma
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+// associated documentation files (the "Software"), to deal in the Software without restriction,
+// including without limitation the rights to use, copy, modify, merge, publish, distribute,
+// sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all copies or
+// substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+// NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+// OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+/// The constant term Y of the small-argument inverse erf, `x*(x+10)*(Y + R(x))` (statrs).
+const INVERSE_ERF_SMALL_Y: f64 = 0.089_131_474_494_934_08;
+
+/// Numerator of R(x) on [0, 0.5], lowest degree first (statrs `ERF_INV_IMPL_AN`).
+const INVERSE_ERF_SMALL_N: [f64; 8] = [
+    -0.000_508_781_949_658_280_6,
+    -0.008_368_748_197_417_368,
+    0.033_480_662_540_974_46,
+    -0.012_692_614_766_297_404,
+    -0.036_563_797_141_176_27,
+    0.021_987_868_111_116_89,
+    0.008_226_878_746_769_157,
+    -0.005_387_729_650_712_429,
+];
+
+/// Denominator of R(x) on [0, 0.5], lowest degree first (statrs `ERF_INV_IMPL_AD`).
+const INVERSE_ERF_SMALL_D: [f64; 10] = [
+    1.0,
+    -0.970_005_043_303_290_6,
+    -1.565_745_582_341_758_5,
+    1.562_215_583_984_230_2,
+    0.662_328_840_472_003,
+    -0.712_289_023_415_428_4,
+    -0.052_739_638_234_009_97,
+    0.079_528_368_734_157_17,
+    -0.002_333_937_593_741_9,
+    0.000_886_216_390_456_424_7,
+];
+
+/// erfinv(x) for 0 <= x <= 0.5, the small-argument rational `g*Y + g*R(x)` with g = x*(x+10), in
+/// Excel's register discipline: x+10 is stored, g stays in an x87 register, the two summands g*Y
+/// and g*R(x) are stored and then summed through extended precision. R(x) is a plain-double
+/// rational. Rounding g early, or leaving the shift unrounded, breaks the controls (addendum 2 of
+/// the 2026-11-07 parity findings, section F: calipers `formula_stress_test` Statistical!B42/B46,
+/// `NORM.INV(0.63055865981823644,-1,3)` = 2^-50).
+pub(crate) fn inverse_erf_small(x: f64) -> f64 {
+    let shifted = extended_sum(x, 10.0);
+    let g = Register::load(x).mul(Register::load(shifted));
+    let r = poly(&INVERSE_ERF_SMALL_N, x) / poly(&INVERSE_ERF_SMALL_D, x);
+    let gy = g.mul(Register::load(INVERSE_ERF_SMALL_Y)).store();
+    let gr = g.mul(Register::load(r)).store();
+    extended_sum(gy, gr)
 }
 
 /// P(1/2, z), the regularized lower incomplete gamma at shape 1/2, as Excel's

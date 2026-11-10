@@ -677,6 +677,22 @@ Implemented in: `binary_search` (functions/binary_search.rs), shared by XMATCH a
 XLOOKUP over a range searches the full vector, so cells past the used area are probed as blanks.
 Runs of equal values: see "binary search over runs of equal values" below (T-1135).
 
+Text under search_mode 2/-2 compares as every other lookup compares it: through Excel's collation,
+the pairwise form of `<` and `=` (docs/excel-semantics/coercion.md), not by upper-cased code points.
+Over Data sorted by SORT (`_x`, `1a`, `ab`, `a-b`, `Äb`, `ac`, `coop`, `co-op`, `cop`, `rest`,
+`resume`, `résumé`, `ß`, `ss`, `st`, `zebra`), every exact binary XMATCH finds its text: ascending at
+the same position as the linear search (B1:B16 = C1:C16), and over the descending SORT as well. `ß`
+and `ss` are equal, so an equal run decides: ascending both find the first of the pair (13, B5:B6),
+descending both find the last (4, E5:E6, the pair being D3:D4), as "binary search over runs of equal
+values" below says. Match modes -1 and 1 return the neighbours the
+collation gives (`XMATCH("SS",A1#,-1,2)` is 13, `XMATCH("su",A1#,-1,2)` is 15), the same as the
+linear `XMATCH(..,-1,1)`; XLOOKUP agrees.
+Evidence: probes/t4847-xmatch-binary-text-collation Calc!B1:B16, C1:C16, E1:E16, F1:F16, G1:L16
+(excel-graph, 2026-11-07, T-4847).
+Status: VERIFIED
+Implemented in: `cmp_searched` (functions/lookup_and_reference/lookup_table.rs), which calls
+`cmp_text_pairwise`; `Ord for CalcResult` orders text by the total `cmp_text`.
+
 Performance invariant (T-0119, T-0127, not an Excel rule): MATCH, LOOKUP, HLOOKUP, VLOOKUP and XMATCH evaluate a
 search vector only up to the sheet's last used row (column, for ranges running to XFD); the rest
 is a virtual run of blanks of the full length (`SearchVector`,
@@ -990,6 +1006,9 @@ out-of-range index: the T-2273 entry).
       sheet `#VALUE!` (H7, H13), all Data `#N/A` (H8). `MAX` is 50 either order (H11, H12). A mixed XLOOKUP grid has
       a value hit, so only its reference element has a sheet: a reference on the formula's sheet is `#VALUE!` (H14)
       and one on Data `#N/A` (H15). `LARGE(CHOOSE({1;2},A1,Data!G1),1)` makes values, not references: 50 (H10).
+    - A `#REF!` element from a failed INDIRECT (bad sheet name) does not outrank the off-sheet `#N/A`. `LARGE(INDIRECT({"nosuch!A1";"A1";"Data!G1"}),1)`, SMALL and MEDIAN are `#N/A`
+      (probes/t4791-large-small-median-mixed-first-element H4:H6, excel-graph, T-4862), where a `#DIV/0!` element still
+      propagates (t4704). The implementation skips every `#REF!` element by kind; a cell-held `#REF!` (XLOOKUP hit on a `#REF!` cell) beside an off-sheet reference is UNEVIDENCED (follow-up probe task).
     - A first element that is an error or a value (probes/t4791-large-small-median-mixed-first-element, excel-graph
       2026-11-07, T-4791; Local formulas, `INDIRECT` with `nosuch!A1` as the error element): `{"A1";"nosuch!A1";"Data!G1"}`
       (own, error, off) is `#VALUE!` for LARGE, SMALL and MEDIAN (H1:H3), as the first-element rule says. With the error
@@ -1619,8 +1638,9 @@ Rule (excel-graph, gen-m6, 2026-10-21):
   `ADDRESS(9,3,4,FALSE,"1E3")` = `'1E3'!R[9]C[3]`, and quotes "1A", "A1" and "R1C1" sheet_text alike.
 Status: VERIFIED (web).
 Implemented in: `address_index` and `r1c1_part` (crates/rustsheet-engine/src/functions/lookup_and_reference/address_areas.rs,
-T-2275, T-2274); every argument is cast before abs_num and the bounds are checked, and `address_sheet_text`
-quotes a `sheet_text` of "TRUE" or "FALSE" (T-2274; other spellings are unprobed).
+T-2275, T-2274); every argument is cast before abs_num and the bounds are checked, and `quote_name` quotes a
+`sheet_text` that reads as TRUE or FALSE in any ASCII case (`ADDRESS(1,1,1,TRUE,"tRuE")` = `'tRuE'!$A$1`, but
+`"falſe"` stays bare: probes/t4853-boolean-text H1:H7; coercion.md "TRUE and FALSE text fold ASCII case only (T-4853)").
 Ours: implemented (T-2274, T-2275).
 Tasks: T-2274, T-2275
 
@@ -1805,9 +1825,36 @@ Per-element readers of a mixed grid: FORMULATEXT gives `#VALUE!` then `#N/A` (A1
 `#VALUE!` (A10:A11), OFFSET a 2x1 of `#VALUE!` (A4:A5, A7:A8; matched since T-4739), RANK, RANK.EQ and RANK.AVG
 `#VALUE!` for the hit and the rank in G1:G2 for the miss (`RANK(60,X)` 1, `RANK(20,X)` `#N/A`, `RANK(50,X)` 2;
 A25:A38; matched since T-4740). COUNTIF and SUMIF over an XLOOKUP with a text if_not_found spill a
-2x1 of `#VALUE!` whether the lookup misses or hits (A64:A74; ours a scalar, T-4742). TAKE and DROP keep the shape
+2x1 of `#VALUE!` whether the lookup misses or hits (A64:A74; matched since T-4742). A lifted XLOOKUP is a grid
+of its elements in every criteria call's range argument, whatever its if_not_found (probes/t4742-countif-array-
+range-arg, excel-graph, 2026-11-07): with no if_not_found `COUNTIF(XLOOKUP({2;9},..),">0")` is `#VALUE!` then the
+miss's `#N/A` (A13:A14) and `{2;3}` `#VALUE!` twice (A10:A11), all hits with a range if_not_found `#VALUE!` twice
+(A16:A17), all misses with "x" too (A19:A20), a 1x1 `{2}` a 1x1 `#VALUE!` (A22:C22), a 1x2 `{2,3}` a 1x2 result
+(A28:C28), and SUMIF's sum_range, COUNTIFS and AVERAGEIF lift the same way (A31:A38). A scalar lookup is the
+reference it picks: `COUNTIF(XLOOKUP(2,..,"x"),">0")` is 1 (A25). An array criterion beside the grid broadcasts,
+2x2 for `{">0",">5"}` (A40:C40). With
+room to spill every element is `#VALUE!`, since a hit is a value, not a reference: COUNTIF 2x2, SUMIF 2x2, COUNTIFS
+2x2, and a 2x1 criteria array beside the 2x1 grid a 2x1 (`INDEX(..,2,2)` `#VALUE!`; ROWS and COLUMNS 2x2 and 2x1;
+probes/t4826-criteria-array-beside-grid, excel-graph, 2026-11-08). Matched since T-4826
+(`PerElement::broadcasts_criteria`, which pairs each grid element with the criterion at its broadcast position;
+since every element is `#VALUE!` here, that pairing is UNVERIFIED: a grid of references would show it). A workbook with COUNTIF over `SEQUENCE(2)`, `A1:A2+0` or
+`SORT(A1:A2)` as its range failed to open on Excel for the web (createSession 501 unsupportedWorkbook), so those
+forms are not probed and no cell says what COUNTIF gives for a computed array as its range (desktop question, M14
+Phase 4). A COUNTIF or SUMIF over an XLOOKUP lifted only by match_mode or search_mode gives the same array of
+`#VALUE!` as a lookup_value lift (probes/t4863-xlookup-mode-lift-criteria, excel-graph, 2026-11-07, T-4863):
+`COUNTIF(XLOOKUP(2,A1:A3,B1:B3,"x",{0;1}),">0")` is a 2x1 of `#VALUE!`, `{0,1}` a 1x2, `{0}` a scalar `#VALUE!`;
+a range if_not_found does not lift (`COUNTIF(XLOOKUP(9,..,G1:G2),">0")` 2). Matched since T-5037 (the static shape broadcasts lookup_value, match_mode and search_mode). TAKE and DROP keep the shape
 and match (A13:C22).
-Tasks: T-2065, T-2063, T-2064, T-2823, T-2824, T-4570, T-4704, T-4739, T-4740, T-4741, T-4742
+RANK, RANK.EQ and RANK.AVG over a lifted OFFSET or INDIRECT `ref` (probes/t4801-rank-lifted-offset-indirect, excel-graph,
+2026-11-07, T-4801; Data A1:A3 = 5,8,2, B1:B3 = 9,5,1; 27 probes on the references' own sheet and the same 27 off-sheet,
+identical results, so RANK does not split on that axis as LARGE/SMALL do): each element ranks against its own range.
+`RANK(5,OFFSET(A1,{0;1},0,2))` is `{2;#N/A}` (A1:A2 = 5,8; A2:A3 = 8,2 lacks 5); the 2-D shift `OFFSET(A1,{0;1},{0;1},2)`
+`{2;1}`; `INDIRECT({"A1:A2";"B1:B2"})` `{2;2}`; one-cell references `INDIRECT({"A1";"B1"})` `{1;#N/A}`; a bad address element
+is `#REF!` for that element only (`{2;#REF!}`). A lifted `number` ({5;9}) or `order` ({0;1}) beside the grid gives a
+two-row result (`{2;#N/A}`), but these probes do not show how its elements pair with the grid's: the second element is
+`#N/A` whether it is zipped or the first is broadcast, as A2:A3 holds neither 5 nor 9 (UNVERIFIED, T-4951); an error `number` or `order` gives that error in every element. ROWS is 2 and COLUMNS 1 for each.
+Matches ours in all 217 cells, no fix needed.
+Tasks: T-2065, T-2063, T-2064, T-2823, T-2824, T-4570, T-4704, T-4739, T-4740, T-4741, T-4742, T-4801, T-4826
 
 ## MATCH match_type that is a reference to an error cell is #REF! (excel-graph)
 Rule: `MATCH(30,A1:A5,M2)` with M2 `=NA()` gives `#REF!` (ERROR.TYPE 4) in Excel for the web, not the #N/A the

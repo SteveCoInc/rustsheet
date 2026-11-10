@@ -1,9 +1,13 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::manual_let_else)]
+// LINT-DEBT-END
 use chrono::DateTime;
 use rustsheet_engine::{
     new_empty::{APPLICATION, APP_VERSION, IRONCALC_USER},
     types::Workbook,
 };
 
+use super::escape::escape_xml;
 use crate::error::XlsxError;
 
 // Application-Defined File Properties part
@@ -29,10 +33,18 @@ pub(crate) fn get_app_xml(_: &Workbook) -> String {
 pub(crate) fn get_core_xml(workbook: &Workbook, milliseconds: i64) -> Result<String, XlsxError> {
     // contains the name of the creator, last modified and date
     let metadata = &workbook.metadata;
-    let creator = metadata.creator.to_string();
+    let creator = escape_xml(&metadata.creator);
     let last_modified_by = IRONCALC_USER.to_string();
-    let created = metadata.created.to_string();
-    // FIXME add now
+    // Excel for the web refuses a package with an empty W3CDTF `created` (T-4909,
+    // docs/excel-semantics/xlsx-storage.md): a source that records no date gets no element.
+    let created = if metadata.created.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "<dcterms:created xsi:type=\"dcterms:W3CDTF\">{}</dcterms:created>",
+            escape_xml(&metadata.created)
+        )
+    };
 
     let seconds = milliseconds / 1000;
     let dt = match DateTime::from_timestamp(seconds, 0) {
@@ -53,7 +65,7 @@ pub(crate) fn get_core_xml(workbook: &Workbook, milliseconds: i64) -> Result<Str
 <dc:description></dc:description>\
 <cp:lastModifiedBy>{last_modified_by}</cp:lastModifiedBy>\
 <cp:revision></cp:revision>\
-<dcterms:created xsi:type=\"dcterms:W3CDTF\">{created}</dcterms:created>\
+{created}\
 <dcterms:modified xsi:type=\"dcterms:W3CDTF\">{last_modified}</dcterms:modified>\
 <cp:category></cp:category>\
 <cp:contentStatus></cp:contentStatus>\

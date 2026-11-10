@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss,
+    clippy::float_cmp
+)]
+// LINT-DEBT-END
 use crate::constants::{LAST_COLUMN, LAST_ROW};
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
@@ -8,7 +16,7 @@ use super::array_node_to_calc_result;
 use crate::functions::binary_search::Sequence;
 use crate::functions::criteria::{folded_units, WildcardPattern};
 use crate::functions::util::collation::{
-    collation_key, fold_exact_lookup, note_compared, CollationKey, BYTE_TICKS,
+    cmp_text_pairwise, collation_key, fold_exact_lookup, note_compared, CollationKey, BYTE_TICKS,
 };
 use crate::functions::util::{compare_values, compare_values_pairwise};
 use std::cmp::Ordering;
@@ -43,7 +51,7 @@ impl LookupTable {
     pub(super) fn columns(&self) -> i32 {
         match self {
             LookupTable::Range { left, right } => right.column - left.column + 1,
-            LookupTable::Array(array) => array.first().map_or(0, |row| row.len()) as i32,
+            LookupTable::Array(array) => array.first().map_or(0, std::vec::Vec::len) as i32,
             LookupTable::External(area) => area.last_column - area.first_column + 1,
         }
     }
@@ -524,12 +532,15 @@ pub(crate) fn compare_searched(value: &CalcResult, target: &CalcResult) -> i32 {
 }
 
 /// [`compare_searched`] as an `Ordering`, for the binary modes of XMATCH and XLOOKUP, which order a
-/// blank, an error and mixed types as `CalcResult`'s `Ord` does (T-3132).
+/// blank, an error and mixed types as `CalcResult`'s `Ord` does (T-3132). Two texts compare as
+/// `compare_searched` does, through the pairwise collation, so a range SORT ordered is searched in
+/// that order (probes/t4847-xmatch-binary-text-collation; T-4847).
 pub(crate) fn cmp_searched(value: &CalcResult, target: &CalcResult) -> Ordering {
     match (value, target) {
         (CalcResult::Number(a), CalcResult::Number(b)) => {
             a.partial_cmp(b).unwrap_or(Ordering::Equal)
         }
+        (CalcResult::String(a), CalcResult::String(b)) => cmp_text_pairwise(a, b),
         _ => value.cmp(target),
     }
 }
@@ -613,7 +624,7 @@ impl Model {
         let last_used = self
             .workbook
             .worksheet(sheet)
-            .map_or(LAST_ROW, |ws| ws.last_used_row());
+            .map_or(LAST_ROW, crate::types::Worksheet::last_used_row);
         let last = row2.min(last_used);
         self.record_seen_empty_range(sheet, last.max(row1 - 1) + 1, column, row2, column);
         last
@@ -629,7 +640,7 @@ impl Model {
         let last_used = self
             .workbook
             .worksheet(sheet)
-            .map_or(LAST_COLUMN, |ws| ws.last_used_column());
+            .map_or(LAST_COLUMN, crate::types::Worksheet::last_used_column);
         let last = column2.min(last_used);
         self.record_seen_empty_range(sheet, row, last.max(column1 - 1) + 1, row, column2);
         last

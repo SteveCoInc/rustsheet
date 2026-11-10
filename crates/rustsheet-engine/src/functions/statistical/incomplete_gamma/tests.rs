@@ -1,3 +1,13 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(
+    test,
+    expect(
+        clippy::cast_precision_loss,
+        clippy::float_cmp,
+        clippy::unreadable_literal
+    )
+)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 use super::half_integer::accurate_half_integer_upper;
 use super::huge_shape::{huge_shape_quantile, wilson_hilferty_quantile};
@@ -791,7 +801,7 @@ fn a_tiny_quantile_above_shape_one_is_the_leading_factor_root() {
 }
 
 /// Within half a unit of the 15th significant digit of `expected` (decision 0083).
-fn within_15_digits(actual: f64, expected: f64) -> bool {
+pub(super) fn within_15_digits(actual: f64, expected: f64) -> bool {
     let unit = 10f64.powf(expected.abs().log10().floor() - 14.0);
     (actual - expected).abs() <= unit / 2.0
 }
@@ -840,7 +850,7 @@ fn newton_steps_from_the_leading_factor_root_reach_excel_deep_lower_tail() {
 }
 
 /// Units in the last place between two positive doubles.
-fn ulp_distance(a: f64, b: f64) -> u64 {
+pub(super) fn ulp_distance(a: f64, b: f64) -> u64 {
     a.to_bits().abs_diff(b.to_bits())
 }
 

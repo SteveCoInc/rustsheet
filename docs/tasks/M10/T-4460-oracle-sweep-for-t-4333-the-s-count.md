@@ -3,8 +3,8 @@ id: T-4460
 title: "Oracle sweep for T-4333: the [s] count at the t4333 tie serials beside no fraction, .0, .00 and .000, scored against its two reopen hypotheses"
 milestone: M10
 lane: research
-status: todo
-priority: P2
+status: dropped
+priority: P1
 size: M
 tier: opus
 depends_on: []
@@ -16,6 +16,7 @@ hypothesis explains how Excel computes the elapsed `[h]`/`[m]`/`[s]` count befor
 decimal tie. Then T-4333 either reopens with a named model or stays blocked with both recorded as tested.
 
 ## Context
+- Decision 0355: this task owns foundational-tier cells, which the tier gate needs 100% right on type, error and text, so it is P1.
 - Gap triage 2026-11-06 (`make eval` on origin/main 16a00ebc7). The M10 probe row is "not met" with 79 visibly-off
   cells. Every one is a TEXT cell. 17 belong to T-4333, which is `blocked` (time-boxed, decision 0056) after two
   attempts:
@@ -66,3 +67,6 @@ decimal tie. Then T-4333 either reopens with a named model or stays blocked with
 
 ## Out of scope
 - Implementing the count model (T-4333). The fraction digits below 0.06 s (T-4389).
+
+## Outcome
+Superseded by the t4466 sweeps (probes/t4466-count-hypotheses, t4466-count-fresh), which separate the count models; the adopted rule is T-4333's Outcome.

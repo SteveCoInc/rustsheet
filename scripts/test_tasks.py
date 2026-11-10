@@ -102,6 +102,7 @@ class NewTask(unittest.TestCase):
             priority="P2",
             size="S",
             tier="opus",
+            usage="",
         )
         self.assertIn('title: "TEXT(x,\\"0;-0\\") is \\\\ \\";;;\\" `$x`"', text)
         self.assertEqual(tasks.front_matter(text, Path("t"))["title"], title)
@@ -133,6 +134,8 @@ def write_task(
     issue: str | None = None,
     issue_author: str | None = None,
     issue_origin: str | None = None,
+    title: str = "x",
+    usage: str | None = None,
 ) -> Path:
     path = root / "docs/tasks" / milestone / f"{tid}-x.md"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -142,8 +145,9 @@ def write_task(
     campaign_line += f"issue: {issue}\n" if issue is not None else ""
     campaign_line += f"issue_author: {issue_author}\n" if issue_author is not None else ""
     campaign_line += f"issue_origin: {issue_origin}\n" if issue_origin is not None else ""
+    campaign_line += f"usage: {usage}\n" if usage is not None else ""
     path.write_text(
-        f'---\nid: {tid}\ntitle: "x"\nmilestone: {milestone}\nlane: {lane}\nstatus: {status}\npriority: {priority}\n'
+        f'---\nid: {tid}\ntitle: "{title}"\nmilestone: {milestone}\nlane: {lane}\nstatus: {status}\npriority: {priority}\n'
         f"size: S\n{tier_line}{campaign_line}depends_on: [{depends_on}]\n---\n{body}"
     )
     return path

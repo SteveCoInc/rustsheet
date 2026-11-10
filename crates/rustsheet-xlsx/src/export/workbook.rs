@@ -23,6 +23,9 @@
 //! of the workbook.
 //!
 //! It also may hold state properties like the selected tab
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 
 //! # bookViews
 //!
@@ -38,11 +41,14 @@ use super::xml_constants::XML_DECLARATION;
 use crate::error::XlsxError;
 use crate::util::name_to_xlsx;
 
-/// `pivot_caches` is the `<pivotCaches>` element, empty without one (`PivotPlan`).
+/// `pivot_caches` is the `<pivotCaches>` element, empty without one (`PivotPlan`), and
+/// `external_references` the `<externalReferences>` element, empty without a linked workbook
+/// (`external_links::external_references_xml`).
 pub(crate) fn get_workbook_xml(
     workbook: &Workbook,
     selected_sheet: u32,
     pivot_caches: &str,
+    external_references: &str,
 ) -> Result<String, XlsxError> {
     // sheets
     // <sheet name="Sheet1" sheetId="1" r:id="rId1"/>
@@ -81,8 +87,7 @@ pub(crate) fn get_workbook_xml(
         sheet: workbook
             .worksheets
             .first()
-            .map(|ws| ws.name.clone())
-            .unwrap_or_else(|| "Sheet1".to_string()),
+            .map_or_else(|| "Sheet1".to_string(), |ws| ws.name.clone()),
         row: 1,
         column: 1,
     };
@@ -100,7 +105,7 @@ pub(crate) fn get_workbook_xml(
             })?;
             format!(" localSheetId=\"{excel_local_sheet_id}\"")
         } else {
-            "".to_string()
+            String::new()
         };
         // A formula that fails to parse stringifies back to itself unchanged.
         let formula_body = defined_name
@@ -151,6 +156,7 @@ pub(crate) fn get_workbook_xml(
       <sheets>\
         {sheets}\
       </sheets>\
+      {external_references}\
       <definedNames>\
         {defined_names}\
       </definedNames>\

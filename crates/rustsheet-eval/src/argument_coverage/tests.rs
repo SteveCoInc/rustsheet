@@ -50,6 +50,7 @@ fn param(name: &str, mode: &str, repeat: Option<usize>) -> CatalogParam {
 
 fn function(name: &str, params: Vec<CatalogParam>) -> CatalogFunction {
     CatalogFunction {
+        usage: crate::catalog::Usage::default(),
         name: name.into(),
         category: "math".into(),
         milestone: "M2".into(),

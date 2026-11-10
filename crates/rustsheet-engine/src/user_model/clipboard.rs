@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::assigning_clones,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 #![deny(missing_docs)]
 
 use std::{
@@ -134,6 +142,46 @@ impl UserModel {
         Ok(())
     }
 
+    // Recreates the source merge `merge` of a copy- or cut-paste at the target,
+    // translated from the source range's top left corner to the pasted block
+    // `pasted`'s, and appends the undo diffs of what it clears. The covered
+    // cells inside the pasted block keep what the paste wrote: a merged range
+    // keeps its covered content (docs/excel-semantics/xlsx-storage.md "A
+    // merged range keeps the values of its covered cells"; docs/specs/SPEC-0036,
+    // whose paste row is UNVERIFIED). Only cells the merge swallows outside the
+    // block are cleared: it can stick out of it, since the copied range is
+    // clamped to the sheet dimension while a merge always travels whole.
+    //
+    // A translated merge can conflict outside the checked target area (another
+    // merge, an array formula) or fall off the sheet: it is dropped, and the
+    // rest of the paste still lands. merge_cells_keep_styles: the pasted cells
+    // already carry the merged style pattern of the source; stamping the
+    // anchor's style would drop the perimeter borders of non-anchor cells.
+    fn recreate_pasted_merge(
+        &mut self,
+        merge: &MergedCell,
+        pasted: &Area,
+        (source_first_row, source_first_column, _, _): ClipboardTuple,
+        diff_list: &mut Vec<Diff>,
+    ) -> Result<(), String> {
+        let merge_area = Area {
+            sheet: pasted.sheet,
+            row: merge.row + pasted.row - source_first_row,
+            column: merge.column + pasted.column - source_first_column,
+            width: merge.width,
+            height: merge.height,
+        };
+        let mut merge_diffs = self.covered_cells_clear_diffs(&merge_area, Some(pasted))?;
+        if self
+            .model
+            .merge_cells_keep_styles(&merge_area, Some(pasted))
+            .is_ok()
+        {
+            diff_list.append(&mut merge_diffs);
+        }
+        Ok(())
+    }
+
     /// Returns a copy of the selected area
     pub fn copy_to_clipboard(&self) -> Result<Clipboard, String> {
         let selected_area = self.get_selected_view();
@@ -221,6 +269,13 @@ impl UserModel {
             width: source_last_column - source_first_column + 1,
             height: source_last_row - source_first_row + 1,
         };
+        // Refused before anything changes: a paste over part of a data table's results, which
+        // its clear of the target would refuse later, and a cut from them (T-0452).
+        self.model.refuse_data_table_clear(target_area)?;
+        if is_cut {
+            let source = crate::data_table_edits::area_bounds(area);
+            self.model.refuse_data_table_overlap(source_sheet, source)?;
+        }
 
         // The merges of the copied area, captured before the containment
         // step below can remove target merges: when the paste overlaps its
@@ -405,27 +460,8 @@ impl UserModel {
                 width: source_last_column - source_first_column + 1,
                 height: source_last_row - source_first_row + 1,
             })?;
-            for m in source_merges {
-                let merge_area = Area {
-                    sheet,
-                    row: m.row + selected_row - source_first_row,
-                    column: m.column + selected_column - source_first_column,
-                    width: m.width,
-                    height: m.height,
-                };
-                // Capture the content and links the merge will clear: a merge
-                // sticking out of the pasted block can swallow cells that were
-                // not part of the paste
-                let mut merge_diffs = self.covered_cells_clear_diffs(&merge_area)?;
-                // A translated merge can conflict outside the checked target
-                // area (another merge, an array formula) or fall off the
-                // sheet: those are dropped, the rest of the cut still lands
-                // merge_cells_keep_styles: the pasted cells already carry the
-                // merged style pattern of the source; stamping the anchor's
-                // style would drop the perimeter borders of non-anchor cells
-                if self.model.merge_cells_keep_styles(&merge_area).is_ok() {
-                    diff_list.append(&mut merge_diffs);
-                }
+            for m in &source_merges {
+                self.recreate_pasted_merge(m, target_area, source_range, &mut diff_list)?;
             }
             // One snapshot per touched sheet (source and target coincide on a
             // same-sheet cut)
@@ -628,28 +664,8 @@ impl UserModel {
             // range is clamped to the sheet dimension), and is recreated whole.
             if !source_merges.is_empty() {
                 let old_merged_cells = self.model.get_merged_cells(sheet)?.to_vec();
-                for m in source_merges {
-                    let merge_area = Area {
-                        sheet,
-                        row: m.row + selected_row - source_first_row,
-                        column: m.column + selected_column - source_first_column,
-                        width: m.width,
-                        height: m.height,
-                    };
-                    // Capture the content and links the merge will clear: a
-                    // merge sticking out of the pasted block can swallow cells
-                    // that were not part of the paste
-                    let mut merge_diffs = self.covered_cells_clear_diffs(&merge_area)?;
-                    // A translated merge can conflict outside the checked
-                    // target area (another merge, an array formula) or fall
-                    // off the sheet: those are skipped, the rest still paste
-                    // merge_cells_keep_styles: the pasted cells already carry
-                    // the merged style pattern of the source; stamping the
-                    // anchor's style would drop the perimeter borders of
-                    // non-anchor cells
-                    if self.model.merge_cells_keep_styles(&merge_area).is_ok() {
-                        diff_list.append(&mut merge_diffs);
-                    }
+                for m in &source_merges {
+                    self.recreate_pasted_merge(m, target_area, source_range, &mut diff_list)?;
                 }
                 let new_merged_cells = self.model.get_merged_cells(sheet)?.to_vec();
                 if old_merged_cells != new_merged_cells {
@@ -680,8 +696,7 @@ impl UserModel {
                     .iter()
                     .map(|cf| cf.priority)
                     .max()
-                    .map(|m| m + 1)
-                    .unwrap_or(1);
+                    .map_or(1, |m| m + 1);
                 self.model
                     .workbook
                     .worksheet_mut(sheet)?
@@ -719,7 +734,7 @@ impl UserModel {
             .has_headers(false)
             .from_reader(csv_reader);
         for r in reader.records().flatten() {
-            let row_data: Vec<String> = r.iter().map(|v| v.to_string()).collect();
+            let row_data: Vec<String> = r.iter().map(std::string::ToString::to_string).collect();
             max_width = max_width.max(row_data.len() as i32);
             records.push(row_data);
         }
@@ -739,6 +754,8 @@ impl UserModel {
         // Merged cells in the target are replaced by the paste (or reject
         // it); plain text carries no merges, so contained ones just go
         let mut diff_list = Vec::new();
+        // Refused before the merges go: its clear would refuse it (T-0452).
+        self.model.refuse_data_table_clear(&paste_area)?;
         self.remove_merges_replaced_by_paste(&paste_area, &[], &mut diff_list)?;
 
         // Capture old values BEFORE clearing so undo can restore them correctly.
@@ -767,7 +784,7 @@ impl UserModel {
                     sheet,
                     row,
                     column,
-                    new_value: value.to_string(),
+                    new_value: value.clone(),
                     legacy: false,
                     external: true,
                     old_value: Box::new(old_value),
@@ -777,7 +794,7 @@ impl UserModel {
                     sheet,
                     row,
                     column,
-                    value.to_string(),
+                    value.clone(),
                     &mut diff_list,
                 )?;
                 column += 1;

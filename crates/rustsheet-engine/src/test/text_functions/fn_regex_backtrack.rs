@@ -6,9 +6,9 @@ use crate::test::util::new_empty_model;
 /// The displayed value of `formula`, evaluated alone.
 fn value(formula: &str) -> String {
     let mut model = new_empty_model();
-    model._set("A1", formula);
+    model.set_a1("A1", formula);
     model.evaluate();
-    model._get_text("A1")
+    model.get_text_a1("A1")
 }
 
 #[test]
@@ -216,7 +216,7 @@ fn empty_repeat_bodies_are_charged_at_compile() {
 fn line_breaks_and_grapheme_clusters_are_atomic() {
     // probes/t2287-regex-r-x-spans (excel-graph): `\r\n` is one `\R` and one `\X`, and neither
     // gives a character back.
-    let cr_lf = r#"CHAR(13)&CHAR(10)"#;
+    let cr_lf = r"CHAR(13)&CHAR(10)";
     assert_eq!(value(&format!(r#"=REGEXTEST({cr_lf},"^\R$")"#)), "TRUE");
     assert_eq!(value(&format!(r#"=REGEXTEST({cr_lf},"^\R\n$")"#)), "FALSE");
     assert_eq!(value(&format!(r#"=REGEXTEST({cr_lf},"^\X\n$")"#)), "FALSE");

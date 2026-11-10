@@ -29,14 +29,14 @@ use std::{
     io::{BufReader, Cursor, Read, Seek},
 };
 
-use xml::XmlNode;
+pub(crate) use xml::{reference_of, XmlNode};
 
 use rustsheet_engine::{
     expressions::{
         parser::{new_parser_english, stringify::to_english_string},
         types::CellReferenceRC,
     },
-    types::{Metadata, Table, Workbook, WorkbookSettings, WorkbookView},
+    types::{Table, Workbook, WorkbookSettings, WorkbookView},
     Model,
 };
 
@@ -48,7 +48,7 @@ pub use encryption::{
 pub use iso_date::{iso8601_to_date_system_serial, iso8601_to_serial};
 pub use ole::{classify_ole_compound_file, decrypt_ole_package};
 pub use package::{is_ole_compound_file, part_key, ImportLimits, PartNames};
-pub(crate) use pivots::SUBTOTAL_FUNCTIONS as PIVOT_SUBTOTAL_FUNCTIONS;
+pub(crate) use pivots::{data_field_x14_show_as, SUBTOTAL_FUNCTIONS as PIVOT_SUBTOTAL_FUNCTIONS};
 pub use pivots::{read_pivot_parts, PivotParts, MAX_PIVOTS};
 pub use shared_strings::decode_xlsx_escapes;
 use shared_strings::read_shared_strings;
@@ -57,7 +57,10 @@ pub use workbook::date_system_from_attribute;
 use call_cap::refuse_too_many_calls;
 use external_links::load_external_books;
 use metadata::load_metadata;
-use package::{resolve_target, Package};
+pub(crate) use package::{
+    is_rels, part_folder_and_rels, rels_owner_part, resolve_relative_target, resolve_target,
+    zip_entry_names, Package,
+};
 use pivots::{load_pivots, PivotSheet};
 use styles::load_styles;
 use util::get_attribute;
@@ -77,6 +80,12 @@ pub(crate) struct Relationship {
     pub(crate) external: bool,
 }
 
+/// The last segment of a relationship type (`…/relationships/drawing` → `drawing`), which names
+/// the kind whatever namespace defines it.
+pub(crate) fn rel_kind(rel_type: &str) -> &str {
+    rel_type.rsplit('/').next().unwrap_or(rel_type)
+}
+
 fn load_relationships<R: Read + Seek>(
     archive: &mut Package<R>,
 ) -> Result<HashMap<String, Relationship>, XlsxError> {
@@ -84,6 +93,17 @@ fn load_relationships<R: Read + Seek>(
     Ok(parse_relationships(&XmlNode::parse(file)?)?
         .into_iter()
         .collect())
+}
+
+/// The relationships of a part in document order; none when the part has no relationships part.
+pub(crate) fn part_relationships<R: Read + Seek>(
+    archive: &mut Package<R>,
+    rels_path: &str,
+) -> Result<Vec<(String, Relationship)>, XlsxError> {
+    match archive.open_optional(rels_path)? {
+        Some(file) => parse_relationships(&XmlNode::parse(file)?),
+        None => Ok(Vec::new()),
+    }
 }
 
 /// The `<Relationship>` elements of a relationships part with their `Id`s, in document order.
@@ -228,6 +248,7 @@ fn load_package<R: Read + Seek>(
         archive,
         &rels,
         &workbook.pivot_caches,
+        &workbook.slicer_caches,
         &pivot_sheets,
         date_system,
     );
@@ -240,20 +261,7 @@ fn load_package<R: Read + Seek>(
         dn.formula = reparse_formula_hack(&dn.name, &dn.formula, &worksheet_names, &tables)?;
     }
     let external_books = load_external_books(archive, &rels, &workbook.external_references);
-    let metadata = match load_metadata(archive) {
-        Ok(metadata) => metadata,
-        Err(_) => {
-            // In case there is no metadata, add some
-            Metadata {
-                application: "Unknown application".to_string(),
-                app_version: "".to_string(),
-                creator: "".to_string(),
-                last_modified_by: "".to_string(),
-                created: "".to_string(),
-                last_modified: "".to_string(),
-            }
-        }
-    };
+    let metadata = load_metadata(archive);
     let mut views = HashMap::new();
     views.insert(
         0,

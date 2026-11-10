@@ -1,0 +1,12 @@
+name = "roundtrip-excel-saved"
+description = "Round-trip fidelity (SPEC-0033) of packages Excel for the web saved in oracle runs, committed byte for byte as repository evidence of what Excel writes (each file is the oracle's download of the probe case of the same name)"
+kind = "roundtrip"
+root = "cases"
+include = ["**/*.xlsx"]
+license = "Apache-2.0"
+origin = "Excel for the web (excel-graph oracle downloads of eval/suites/probes cases)"
+# The fixtures' scenario set (SPEC-0033 D1, D8; T-4514).
+scenarios = ["R0", "R0/again", "R1/E1", "R1/E2", "R1/E3", "R1/E4", "R1/E5", "R1/E6", "R1/all"]
+gate = true
+baseline = "cells"
+milestone = ["M15", "M16"]

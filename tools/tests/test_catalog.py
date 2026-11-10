@@ -46,6 +46,8 @@ def test_every_entry_has_category_milestone_and_scope() -> None:
         assert f.get("oracle") in {None, "none"}, f["name"]
         # decision 0094: an exemption from the 400-cell rule says why (T-0062)
         assert f.get("v15") in {None, "exempt"} and bool(f.get("v15_reason")) == ("v15" in f), f["name"]
+        # decision 0355: `usage: foundational` is the only value written; absent means expert
+        assert f.get("usage") in {None, "foundational"}, f["name"]
 
 
 def test_source_list_rows_are_well_formed() -> None:
@@ -78,3 +80,15 @@ def test_dynamic_array_marks_exactly_the_array_returning_functions() -> None:
     # Only `true` is written: an unmarked function is not dynamic.
     assert all(f["dynamic_array"] is True for f in _functions() if "dynamic_array" in f)
     assert marked == DYNAMIC_ARRAY
+
+
+def test_usage_tiers_match_the_committed_usage_table() -> None:
+    """The catalog's foundational functions are exactly decision 0355's table (eval/catalog/usage.tsv)."""
+    table = CATALOG.with_name("usage.tsv")
+    rows = [
+        line.split("\t")
+        for line in table.read_text().splitlines()
+        if line and not line.startswith(("#", "function\t"))
+    ]
+    tagged = {f["name"] for f in _functions() if f.get("usage") == "foundational"}
+    assert tagged == {r[0] for r in rows if r[4] == "foundational"}

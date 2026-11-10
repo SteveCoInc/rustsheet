@@ -1,0 +1,95 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "Which TRUE/FALSE text each boolean reader takes (T-4853); the COUNTIF columns are in t4853-boolean-text-criteria. Rows 1-10: \"TRUE\", \"true\", \"tRuE\", \"FALSE\", \"false\", \"FALſE\" and \"falſe\" (U+017F long s, which upper-cases to S), \" TRUE\", \"TRUE \", \"1\" (text in A). B NORM.DIST's cumulative (cast_bool_ref), C BETA.DIST's cumulative, D DAYS360's method (EU 31, US 30 from 2020-02-29 to 2020-03-31), G TEXTJOIN's ignore_empty, H ADDRESS's sheet_text. J1:J6: references to sheets named TRUE and false, their FORMULATEXT and CELL(\"address\").",
+ "tags": [
+  "M9",
+  "coercion",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "TRUE",
+    "B1": "=NORM.DIST(0,0,1,\"TRUE\")",
+    "C1": "=BETA.DIST(0.5,2,3,\"TRUE\")",
+    "D1": "=DAYS360(DATE(2020,2,29),DATE(2020,3,31),\"TRUE\")",
+    "G1": "=TEXTJOIN(\",\",\"TRUE\",\"a\",\"\",\"b\")",
+    "H1": "=ADDRESS(1,1,1,TRUE,\"TRUE\")",
+    "A2": "true",
+    "B2": "=NORM.DIST(0,0,1,\"true\")",
+    "C2": "=BETA.DIST(0.5,2,3,\"true\")",
+    "D2": "=DAYS360(DATE(2020,2,29),DATE(2020,3,31),\"true\")",
+    "G2": "=TEXTJOIN(\",\",\"true\",\"a\",\"\",\"b\")",
+    "H2": "=ADDRESS(1,1,1,TRUE,\"true\")",
+    "A3": "tRuE",
+    "B3": "=NORM.DIST(0,0,1,\"tRuE\")",
+    "C3": "=BETA.DIST(0.5,2,3,\"tRuE\")",
+    "D3": "=DAYS360(DATE(2020,2,29),DATE(2020,3,31),\"tRuE\")",
+    "G3": "=TEXTJOIN(\",\",\"tRuE\",\"a\",\"\",\"b\")",
+    "H3": "=ADDRESS(1,1,1,TRUE,\"tRuE\")",
+    "A4": "FALSE",
+    "B4": "=NORM.DIST(0,0,1,\"FALSE\")",
+    "C4": "=BETA.DIST(0.5,2,3,\"FALSE\")",
+    "D4": "=DAYS360(DATE(2020,2,29),DATE(2020,3,31),\"FALSE\")",
+    "G4": "=TEXTJOIN(\",\",\"FALSE\",\"a\",\"\",\"b\")",
+    "H4": "=ADDRESS(1,1,1,TRUE,\"FALSE\")",
+    "A5": "false",
+    "B5": "=NORM.DIST(0,0,1,\"false\")",
+    "C5": "=BETA.DIST(0.5,2,3,\"false\")",
+    "D5": "=DAYS360(DATE(2020,2,29),DATE(2020,3,31),\"false\")",
+    "G5": "=TEXTJOIN(\",\",\"false\",\"a\",\"\",\"b\")",
+    "H5": "=ADDRESS(1,1,1,TRUE,\"false\")",
+    "A6": "FALſE",
+    "B6": "=NORM.DIST(0,0,1,\"FALſE\")",
+    "C6": "=BETA.DIST(0.5,2,3,\"FALſE\")",
+    "D6": "=DAYS360(DATE(2020,2,29),DATE(2020,3,31),\"FALſE\")",
+    "G6": "=TEXTJOIN(\",\",\"FALſE\",\"a\",\"\",\"b\")",
+    "H6": "=ADDRESS(1,1,1,TRUE,\"FALſE\")",
+    "A7": "falſe",
+    "B7": "=NORM.DIST(0,0,1,\"falſe\")",
+    "C7": "=BETA.DIST(0.5,2,3,\"falſe\")",
+    "D7": "=DAYS360(DATE(2020,2,29),DATE(2020,3,31),\"falſe\")",
+    "G7": "=TEXTJOIN(\",\",\"falſe\",\"a\",\"\",\"b\")",
+    "H7": "=ADDRESS(1,1,1,TRUE,\"falſe\")",
+    "A8": " TRUE",
+    "B8": "=NORM.DIST(0,0,1,\" TRUE\")",
+    "C8": "=BETA.DIST(0.5,2,3,\" TRUE\")",
+    "D8": "=DAYS360(DATE(2020,2,29),DATE(2020,3,31),\" TRUE\")",
+    "G8": "=TEXTJOIN(\",\",\" TRUE\",\"a\",\"\",\"b\")",
+    "H8": "=ADDRESS(1,1,1,TRUE,\" TRUE\")",
+    "A9": "TRUE ",
+    "B9": "=NORM.DIST(0,0,1,\"TRUE \")",
+    "C9": "=BETA.DIST(0.5,2,3,\"TRUE \")",
+    "D9": "=DAYS360(DATE(2020,2,29),DATE(2020,3,31),\"TRUE \")",
+    "G9": "=TEXTJOIN(\",\",\"TRUE \",\"a\",\"\",\"b\")",
+    "H9": "=ADDRESS(1,1,1,TRUE,\"TRUE \")",
+    "A10": "'1",
+    "B10": "=NORM.DIST(0,0,1,\"1\")",
+    "C10": "=BETA.DIST(0.5,2,3,\"1\")",
+    "D10": "=DAYS360(DATE(2020,2,29),DATE(2020,3,31),\"1\")",
+    "G10": "=TEXTJOIN(\",\",\"1\",\"a\",\"\",\"b\")",
+    "H10": "=ADDRESS(1,1,1,TRUE,\"1\")",
+    "J1": "='TRUE'!A1",
+    "J2": "=FORMULATEXT(J1)",
+    "J3": "=CELL(\"address\",'TRUE'!A1)",
+    "J4": "='false'!A1",
+    "J5": "=FORMULATEXT(J4)",
+    "J6": "=CELL(\"address\",'false'!A1)"
+   }
+  },
+  {
+   "name": "TRUE",
+   "cells": {
+    "A1": "5"
+   }
+  },
+  {
+   "name": "false",
+   "cells": {
+    "A1": "6"
+   }
+  }
+ ],
+ "expected": {}
+}

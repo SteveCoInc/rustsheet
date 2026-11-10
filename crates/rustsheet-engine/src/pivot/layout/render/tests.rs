@@ -14,7 +14,8 @@
 
 use super::*;
 use crate::pivot::probe_cases::{
-    probe_pivot, read, sidecar_differences, T4634_SHEETS, T4745_SHEETS,
+    probe_pivot, probe_pivot_over, read, sidecar_differences, T4634_SHEETS, T4699_SHEETS,
+    T4745_SHEETS,
 };
 use crate::pivot::{compute, lay_out, MAX_PIVOT_WORK};
 
@@ -143,6 +144,12 @@ fn the_layout_option_probes_cells_are_excels() {
         "t4168-pivot-layout-options",
         &["F1", "F2", "F3", "BR", "BR2", "SD", "SD2"],
     );
+    // Blank rows and collapsed items beyond an outer row field (pivots.md "Layout lines").
+    for &sheet in T4699_SHEETS.iter().filter(|&&s| s != "CV4") {
+        check("t4699-pivot-blank-collapsed", sheet, &[]);
+    }
+    // CV4!C3 is the Values field's `Values` header in tabular form (T-4914).
+    check("t4699-pivot-blank-collapsed", "CV4", &["C3"]);
     // Repeat item labels: per field in tabular (X14F, T3R to TBL), outline (OST, OB, O3), compact
     // (CF, MX) form and on columns (CC); the table-wide default alone fills nothing (X14, TW,
     // TWE, OW).
@@ -206,7 +213,7 @@ fn the_cells_text_is_bounded() {
     let mut work = MAX_PIVOT_WORK;
     let result = compute(&table, &cache, &mut work).unwrap();
     let layout = lay_out(&table, &cache, &result, &mut work).unwrap();
-    let cells = render(&table, &cache, &result, &layout).unwrap();
+    let cells = render(&table, &cache, &result, &layout, &[]).unwrap();
     let bytes: usize = cells
         .iter()
         .map(|c| match &c.value {
@@ -221,11 +228,11 @@ fn the_cells_text_is_bounded() {
         number_format: None,
     }));
     assert_eq!(
-        render_within(&table, &cache, &result, &layout, bytes),
+        render_within(&table, &cache, &result, &layout, &[], bytes),
         Ok(cells)
     );
     assert_eq!(
-        render_within(&table, &cache, &result, &layout, bytes - 1),
+        render_within(&table, &cache, &result, &layout, &[], bytes - 1),
         Err(PivotComputeError::Limit)
     );
 }
@@ -243,7 +250,7 @@ fn a_subtotal_captions_item_copies_are_bounded_before_they_are_made() {
     let mut work = MAX_PIVOT_WORK;
     let result = compute(&table, &cache, &mut work).unwrap();
     let layout = lay_out(&table, &cache, &result, &mut work).unwrap();
-    let cells = render(&table, &cache, &result, &layout).unwrap();
+    let cells = render(&table, &cache, &result, &layout, &[]).unwrap();
     let label = |text: &str| {
         cells
             .iter()
@@ -252,7 +259,113 @@ fn a_subtotal_captions_item_copies_are_bounded_before_they_are_made() {
     assert!(label("0-0") && label("2-2"));
     table.fields[0].subtotal_caption = Some("?".repeat(1_000));
     assert_eq!(
-        render_within(&table, &cache, &result, &layout, 999),
+        render_within(&table, &cache, &result, &layout, &[], 999),
         Err(PivotComputeError::Limit)
     );
+}
+
+/// probes/t4767-pivot-group-items GD and GDA: the manual group Product2 of Product (Group2 = A,
+/// B; Group1 = C, D; E alone; F ungrouped) with the group item of E written `<d
+/// v="2020-01-01T00:00:00"/>`. The sidecar cannot tell a saved `d` from an `s` (its
+/// `group_items` read both as text), so the date item is the case's, as the serial Excel's A6
+/// holds; its label cell is that number shown in m/d/yyyy, as Excel's A6 text reads.
+#[test]
+fn a_date_group_item_shows_as_a_date() {
+    use crate::number_format::{format_number, get_num_fmt};
+    use crate::pivot::{group_by_discrete, probe_cases::source_cache, AddedGroup};
+
+    let case = read("t4767-pivot-group-items", "case");
+    let oracle = read("t4767-pivot-group-items", "oracle");
+    for sheet in ["GD", "GDA"] {
+        let pivot = (oracle["pivots"].as_array().unwrap().iter())
+            .find(|p| p["sheet"] == sheet)
+            .unwrap();
+        let serial = pivot["cells"]["A6"]["v"].as_f64().unwrap();
+        let mut cache = source_cache(&case, "Groups!A1:B9");
+        let labels = ["F", "Group2", "Group1"]
+            .map(|t| CacheItem::Text(t.to_string()))
+            .into_iter()
+            .chain([CacheItem::Date(serial)])
+            .collect();
+        let discrete: Vec<u32> = (cache.fields[0].items.iter())
+            .map(|item| match item {
+                CacheItem::Text(t) if t == "A" || t == "B" => 1,
+                CacheItem::Text(t) if t == "C" || t == "D" => 2,
+                CacheItem::Text(t) if t == "E" => 3,
+                _ => 0,
+            })
+            .collect();
+        let mut added = group_by_discrete(&cache.fields[0], &discrete, labels).unwrap();
+        added.name = "Product2".to_string();
+        added.added_group = Some(AddedGroup {
+            base: 0,
+            discrete: Some(discrete),
+        });
+        cache.fields.push(added);
+        let (cache, table) = probe_pivot_over(&case, sheet, cache);
+        let mut work = MAX_PIVOT_WORK;
+        let result = compute(&table, &cache, &mut work).unwrap();
+        let layout = lay_out(&table, &cache, &result, &mut work).unwrap();
+        let cells = render(&table, &cache, &result, &layout, &[]).unwrap();
+        let label = (cells.iter())
+            .find(|c| c.column == 0 && c.value == PivotCell::Number(serial))
+            .unwrap();
+        let Some(CellFormat::Id(id)) = label.number_format else {
+            panic!("{sheet}: a date group item's label has a numFmtId");
+        };
+        let id = i32::try_from(id).unwrap();
+        let text = format_number(serial, &get_num_fmt(id, &[]), "en").text;
+        assert_eq!(text, pivot["text"]["A6"].as_str().unwrap(), "{sheet}");
+        // Every other label is text, and keeps its cell's format.
+        assert!((cells.iter())
+            .filter(|c| c.column == 0 && c != &label)
+            .all(|c| matches!(c.value, PivotCell::Text(_)) && c.number_format.is_none()));
+    }
+}
+
+/// An ungrouped field's date item takes a short-date format code (T-4807: m/d/yyyy whatever the
+/// source cells' format), not a group item's `numFmtId`.
+#[test]
+fn an_ungrouped_date_item_takes_no_group_item_format() {
+    let (mut cache, table) = crate::pivot::probe_cases::diagonal(3, true);
+    cache.fields[0].items[0] = CacheItem::Date(43831.0);
+    let mut work = MAX_PIVOT_WORK;
+    let result = compute(&table, &cache, &mut work).unwrap();
+    let layout = lay_out(&table, &cache, &result, &mut work).unwrap();
+    let cells = render(&table, &cache, &result, &layout, &[]).unwrap();
+    let label = (cells.iter())
+        .find(|c| c.value == PivotCell::Number(43831.0))
+        .unwrap();
+    assert_eq!(label.number_format, Some(CellFormat::Code("m/d/yyyy")));
+}
+
+/// A date item's subtotal label shows the item as its label cell does, not its serial (T-5059;
+/// gen-pivot 36996978427905b2 P02!L35 `12/30/1900 18:00 Total`, 462f10551d480f9d P04!M38
+/// `3/31/2024 Total`).
+#[test]
+fn a_date_items_subtotal_label_shows_the_date() {
+    let (mut cache, mut table) = crate::pivot::probe_cases::diagonal(2, true);
+    cache.fields[0].items[0] = CacheItem::Date(365.75);
+    cache.fields[0].items[1] = CacheItem::Date(45382.0);
+    table.fields[1].axis = Some(crate::pivot::Axis::Row);
+    // Subtotals below their items, so each is a line of its own.
+    table.fields[0].subtotal_top = false;
+    table.row_fields = vec![
+        crate::pivot::AxisField::Field(0),
+        crate::pivot::AxisField::Field(1),
+    ];
+    table.column_fields = vec![];
+    let mut work = MAX_PIVOT_WORK;
+    let result = compute(&table, &cache, &mut work).unwrap();
+    let layout = lay_out(&table, &cache, &result, &mut work).unwrap();
+    let cells = render(&table, &cache, &result, &layout, &[]).unwrap();
+    let texts: Vec<_> = (cells.iter())
+        .filter_map(|c| match &c.value {
+            PivotCell::Text(text) => Some(text.as_str()),
+            _ => None,
+        })
+        .collect();
+    for label in ["12/30/1900 18:00 Total", "3/31/2024 Total"] {
+        assert!(texts.contains(&label), "{label} not in {texts:?}");
+    }
 }

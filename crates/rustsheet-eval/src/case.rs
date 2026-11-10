@@ -137,6 +137,16 @@ pub struct SheetSpec {
     /// `rendered` cells and registers the pivot over its source (T-2084).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub pivot_tables: Vec<PivotTableSpec>,
+    /// Slicers, each on a field of a defined pivot or a table column, written by spec2xlsx
+    /// (`tools/src/rustsheet_tools/pivot_slicers.py`, T-4767), as the builder's JSON. The engine
+    /// adapter loads a pivot slicer's cache part with the pivot it drives (T-4188); a table
+    /// slicer is not modelled.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub slicers: Vec<serde_json::Value>,
+    /// Timelines, each on a date field of a defined pivot (`pivot_slicers.py`, T-4767); the
+    /// engine adapter loads each one's cache part with its pivot (T-4188).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub timelines: Vec<serde_json::Value>,
     /// A1 address → number format code (`"[h]:mm"`), applied to that cell whatever it holds
     /// (T-1268). spec2xlsx writes it as the cell's `numFmt`.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
@@ -613,6 +623,10 @@ pub struct OracleFile {
     /// T-4124.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub pivots: Vec<OraclePivot>,
+    /// Excel's error text when it would not open the workbook (an engine-export case, T-4177):
+    /// SPEC-0033's `excel-refused` verdict, which always fails. `sheets` is then empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refused: Option<String>,
 }
 
 /// A pivot of an oracle sidecar: Excel's saved definition (location, layout lines, group labels)
@@ -641,17 +655,50 @@ pub(crate) fn kept_nonzero_formulas(spec: &CaseSpec, oracle: &OracleFile) -> BTr
         .iter()
         .flat_map(|sheet| {
             let answers = oracle.sheets.get(&sheet.name);
-            sheet.cells.iter().filter_map(move |(a1, input)| {
-                let addr = Addr::parse(a1)?;
+            sheet.cells.iter().flat_map(move |(a1, input)| {
                 // Sidecars are written with canonical `A1` keys; a missed key leaves the flag off.
-                if answers?.get(&addr.to_string()) != Some(&Value::Bool(false)) {
-                    return None;
-                }
-                let x = input.formula()?.strip_prefix('(')?.strip_suffix(")=0")?;
-                Some(x.to_string())
+                let answered_false = Addr::parse(a1).is_some_and(|addr| {
+                    answers.and_then(|a| a.get(&addr.to_string())) == Some(&Value::Bool(false))
+                });
+                let companion = input.formula().filter(|_| answered_false);
+                let whole = companion
+                    .and_then(|c| c.strip_prefix('('))
+                    .and_then(|c| c.strip_suffix(")=0"))
+                    .map(str::to_string);
+                let first = companion.and_then(|c| first_element_companion(c, &sheet.cells));
+                whole.into_iter().chain(first)
             })
         })
         .collect()
+}
+
+/// The array formula whose first element a scalar companion proves non-zero (decision 0042 as
+/// extended for spilled elements): `INDEX(<x>,1)=0` or `(INDEX(<x>,1)=0)` or `(INDEX(<x>,1))=0`,
+/// where `<x>` is the formula itself or `<anchor>#` naming a cell of the same sheet. In array
+/// context Excel reads a number below 2^-1026 as equal to 0, so `(<x>)=0` is TRUE for a spilled
+/// kept subnormal (probes/subnormal-saved-negative-and-array D1, T-4766), while the scalar INDEX
+/// read is FALSE (A4; probes/t4766-array-subnormal-compare A5). Only element 1, the anchor cell
+/// that holds the formula, is covered.
+fn first_element_companion(companion: &str, cells: &BTreeMap<String, CellInput>) -> Option<String> {
+    let body = companion
+        .strip_prefix('(')
+        .and_then(|c| c.strip_suffix(')'))
+        .unwrap_or(companion);
+    let inner = body
+        .strip_suffix(",1)=0")
+        .or_else(|| body.strip_suffix(",1))=0"))
+        .and_then(|b| {
+            b.strip_prefix("INDEX(")
+                .or_else(|| b.strip_prefix("(INDEX("))
+        })?;
+    match inner.strip_suffix('#').and_then(Addr::parse) {
+        Some(anchor) => cells
+            .iter()
+            .find(|(a1, _)| Addr::parse(a1) == Some(anchor))
+            .and_then(|(_, input)| input.formula())
+            .map(str::to_string),
+        None => Some(inner.to_string()),
+    }
 }
 
 /// Splits `Sheet!A1` / `'My Sheet'!A1` into (sheet, cell).
@@ -742,6 +789,45 @@ mod tests {
         )
         .expect("parses");
         assert!(old.pivots.is_empty());
+    }
+
+    #[test]
+    fn an_index_companion_proves_a_spilled_first_element_non_zero() {
+        // probes/subnormal-saved-negative-and-array (A4, D1) and t4766-array-subnormal-compare
+        // (A5), excel-graph 2026-11-07: the array-context companion is TRUE, the INDEX one FALSE.
+        let spec: CaseSpec = serde_json::from_str(
+            r#"{"format":"rustsheet-case/v1","sheets":[{"name":"S","cells":{
+                "A1":"=0-EXP(-745)","B1":"=(0-EXP(-745))=0",
+                "A3":"=EXP({-745,-708})","A4":"=(INDEX(A3#,1)=0)","D1":"=(EXP({-745,-708}))=0",
+                "A6":"=EXP({-720,-708})","A7":"=INDEX(EXP({-720,-708}),1)=0",
+                "A8":"=EXP({-730,-708})","A9":"=(INDEX(EXP({-730,-708}),1))=0",
+                "A10":"=EXP({-740,-708})","A11":"=INDEX(EXP({-740,-708}),2)=0"}}]}"#,
+        )
+        .expect("spec");
+        let answers = |kind: &str| -> OracleFile {
+            serde_json::from_str(&format!(
+                r#"{{"format":"rustsheet-oracle/v1","source":{{"kind":"{kind}"}},"sheets":{{"S":{{
+                "B1":{{"t":"b","v":false}},"A4":{{"t":"b","v":false}},"D1":{{"t":"b","v":true}},
+                "A7":{{"t":"b","v":false}},"A9":{{"t":"b","v":false}},"A11":{{"t":"b","v":false}}}}}}}}"#
+            ))
+            .expect("oracle")
+        };
+        let kept = kept_nonzero_formulas(&spec, &answers(GRAPH_ORACLE));
+        assert!(
+            kept.contains("0-EXP(-745)"),
+            "the scalar companion still counts"
+        );
+        assert!(
+            kept.contains("EXP({-745,-708})"),
+            "an anchor# companion names A3's formula"
+        );
+        assert!(kept.contains("EXP({-720,-708})"), "INDEX(<x>,1)=0");
+        assert!(kept.contains("EXP({-730,-708})"), "(INDEX(<x>,1))=0");
+        assert!(
+            !kept.contains("EXP({-740,-708})"),
+            "only element 1 is the anchor cell"
+        );
+        assert!(kept_nonzero_formulas(&spec, &answers("excel-desktop")).is_empty());
     }
 
     #[test]

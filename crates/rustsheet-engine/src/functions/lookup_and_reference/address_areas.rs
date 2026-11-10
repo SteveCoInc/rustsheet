@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::manual_let_else
+)]
+// LINT-DEBT-END
 use crate::external_reference::PickedReference;
 use crate::functions::Function;
 use crate::{
@@ -9,20 +16,6 @@ use crate::{
 };
 
 use crate::expressions::utils::number_to_column;
-
-/// Quotes `sheet_text` for ADDRESS. A leading `[workbook]` part does not by
-/// itself force quotes: the decision is made on the text after the `]`
-/// (Excel-cached poi EverythingTests!F128; docs/excel-semantics/references.md).
-///
-/// "TRUE" and "FALSE" are quoted like any other name that reads as something else:
-/// `ADDRESS(9,26,3,TRUE,"TRUE")` is `'TRUE'!$Z9` (gen-m6/c96ac1ada46179c4 A197; other spellings
-/// of them are unprobed).
-fn address_sheet_text(s: &str) -> String {
-    if s == "TRUE" || s == "FALSE" {
-        return format!("'{s}'");
-    }
-    quote_name(s)
-}
 
 /// ADDRESS's row or column index from `n` (an index up to `last`, or a relative R1C1 offset),
 /// or `None` when it is out of range. Excel floors the number in every mode (2.9 is 2, -2.5,
@@ -108,7 +101,11 @@ impl Model {
         // `sheet_text` that is omitted entirely produces no prefix.
         let sheet_prefix = match rest.get(2) {
             Some(value) => match Self::cast_string_ref(value, cell) {
-                Ok(s) => format!("{}!", address_sheet_text(&s)),
+                // `quote_name`: a leading `[workbook]` part does not by itself force quotes (Excel-cached
+                // poi EverythingTests!F128), and a name that reads as TRUE or FALSE in any ASCII case
+                // is quoted, `ADDRESS(1,1,1,TRUE,"true")` = `'true'!$A$1` (probes/t4853-boolean-text
+                // H1:H7, gen-m6/c96ac1ada46179c4 A197; docs/excel-semantics/references.md).
+                Ok(s) => format!("{}!", quote_name(&s)),
                 Err(e) => return e,
             },
             None => String::new(),

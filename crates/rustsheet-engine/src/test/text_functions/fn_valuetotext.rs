@@ -6,9 +6,9 @@ use crate::test::util::new_empty_model;
 #[test]
 fn valuetotext_format_selects_quoted_text_for_one() {
     let mut model = new_empty_model();
-    model._set("A1", "ab");
-    model._set("A2", "a\"b");
-    model._set("A4", "=NA()");
+    model.set_a1("A1", "ab");
+    model.set_a1("A2", "a\"b");
+    model.set_a1("A4", "=NA()");
     let cases = [
         ("C1", "=VALUETOTEXT(A1,1)", "\"ab\""),
         ("C2", "=VALUETOTEXT(A2,1)", "\"a\"\"b\""),
@@ -28,13 +28,13 @@ fn valuetotext_format_selects_quoted_text_for_one() {
         ("E8", "=VALUETOTEXT(A1,{0,1})", "ab"),
     ];
     for (cell, formula, _) in cases {
-        model._set(cell, formula);
+        model.set_a1(cell, formula);
     }
     model.evaluate();
     for (cell, formula, expected) in cases {
-        assert_eq!(model._get_text(cell), expected, "{formula}");
+        assert_eq!(model.get_text_a1(cell), expected, "{formula}");
     }
-    assert_eq!(model._get_text("F1"), "\"ab\"");
-    assert_eq!(model._get_text("F2"), "\"a\"\"b\"");
-    assert_eq!(model._get_text("F8"), "\"ab\"");
+    assert_eq!(model.get_text_a1("F1"), "\"ab\"");
+    assert_eq!(model.get_text_a1("F2"), "\"a\"\"b\"");
+    assert_eq!(model.get_text_a1("F8"), "\"ab\"");
 }

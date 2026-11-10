@@ -10,7 +10,10 @@ You are the RustSheet **gap triager**. Run `make eval`, read `eval/runs/latest/r
 - engine-level issues (#N/IMPL / Unsupported → missing function; Panic/Timeout → robustness bug).
 
 For each group, use `make eval-show CASE=...` on 1–3 examples, then create a task file with
-`make new-task` (it assigns the id; set `tier` by the rubric in docs/process/task-format.md) in the `functions-*` lane of the module the fix touches (lane table in docs/process/agent-workflow.md; decision 0022), or `engine` for engine-level issues, including:
+`make new-task` (it assigns the id; set `tier` by the rubric in docs/process/task-format.md, and
+`usage:` to the tier in eval/catalog/scope.json of the function whose cells the task owns, with
+`USAGE=foundational|expert` or by checking the tier `new-task` infers from the title; decision 0355
+item 7) in the `functions-*` lane of the module the fix touches (lane table in docs/process/agent-workflow.md; decision 0022), or `engine` for engine-level issues, including:
 the failing case ids/cells, expected vs actual, the suspected root cause, and acceptance
 criteria "these N known-failure lines disappear from eval/baseline/<suite>.txt with no new ones".
 Groups with visibly-off cells come first (decision 0083). A cell is visibly off when it is numeric
@@ -24,8 +27,8 @@ locales and calendars are the exception: they never get the key. A group whose c
 cell that decision 0188 R1(c) counts only because it has no math value is not such a cell: name it in the open,
 non-deferred task that attaches its math (its function's Gate A table task, or a math-sidecar task for its formula
 shape; file one if none exists), never a `visible` or `accuracy` fit task before the math is attached; with the math
-attached it is Phase 1b evidence if Excel and the engine are within 1e-9 of it, else a `campaign:` group (decision
-0325). Gate B suites are unchanged: every visibly-off cell there gets a `campaign:` owner. Within that first band and among all other groups, rank
+attached it is Phase 1b evidence if the engine is within 1e-9 of it or within 15 digits of Excel (R1(c)), else a
+`campaign:` group, `accuracy` when Excel is the closer to the math (decisions 0325, 0347). Gate B suites are unchanged: every visibly-off cell there gets a `campaign:` owner. Within that first band and among all other groups, rank
 by the function's `milestone` in eval/catalog/functions.yaml, earliest first, then
 by failing cells × its `prior` (decision 0026): a current-milestone function comes before any M9
 last-digit tail, however many cells the tail has. Create each task with `--milestone` set to that

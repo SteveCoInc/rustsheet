@@ -26,6 +26,9 @@
 //!
 //! Every loop is bounded: at most [`MAX_FRACTION_TERMS`] continued-fraction steps (Cephes' own
 //! cap) and [`RLOG1_TERMS`] series terms, so one call costs a fixed amount of work.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp, clippy::many_single_char_names)]
+// LINT-DEBT-END
 
 use super::half_integer_beta::{half_integer_remainder, is_half_integer_shape};
 use super::large_shape_beta::large_shape_lower;
@@ -241,7 +244,21 @@ fn beta_tails(x: f64, y: f64, a: f64, b: f64, kernel: Kernel) -> (f64, f64) {
         v
     } else if a + b < MAXGAM {
         let w = cephes_fraction(a, b, x, y);
-        (a * x.ln()).exp() * (b * y.ln()).exp() * gamma_ratio(a, b) / a * w
+        let ratio = gamma_ratio(a, b);
+        let direct = (a * x.ln()).exp() * (b * y.ln()).exp() * ratio / a * w;
+        // The product of the separately rounded factors underflows (or overflows) where the tail
+        // is representable: exp(85 ln 1E-4) is 0 while Gamma(170)/Gamma(85)^2 is about 1E50, so
+        // I_1E-4(85, 85) = 4.5346145057366762E-291 (mpmath) came out 0 (audit item 5 of the
+        // 2026-11-07 findings, T-4979). There the prefactor is taken in log space. Where the
+        // Gamma product itself overflows (a shape near DBL_MIN) the old 0 stays: Excel's BETA.INV
+        // reads that tail as its search's start (accuracy/BETA.INV/s1 A135, Excel 0.5, T-4663).
+        let ratio_finite = ratio.is_finite() && ratio > 0.0;
+        if (direct == 0.0 || !direct.is_finite()) && ratio_finite && w.is_finite() && w > 0.0 {
+            let ln_ratio = ln_gamma(a + b) - ln_gamma(a) - ln_gamma(b);
+            (a * x.ln() + b * y.ln() + ln_ratio + (w / a).ln()).exp()
+        } else {
+            direct
+        }
     } else {
         large_prefactor(a, b, x, y) * cephes_fraction(a, b, x, y) / a
     };
@@ -321,36 +338,45 @@ fn gamma_ratio(a: f64, b: f64) -> f64 {
 
 /// Cephes' `incbcf` below x (a+b-2) = a-1 and `incbd` / y above it, y = 1 - x: the continued
 /// fraction w with `I_x(a,b) = x^a y^b / (a B(a,b)) * w`, at most [`MAX_FRACTION_TERMS`] steps.
+/// A fraction that has not converged keeps its last convergent: audit item 5 of the 2026-11-07
+/// findings (T-4979) calls that a probability returned on exhaustion, but Excel's value is that
+/// convergent's to Gate A's envelope where it happens (`FDIST(1.09318173579934,49,888336)` =
+/// 0.3034459528338627, accuracy/FDIST/s1 A176, and 16 BETA.INV/BETAINV points that are
+/// 1 - 2^-53 or 2^-53 in Excel go `#NUM!` with an error there), so no error is reported.
 fn cephes_fraction(a: f64, b: f64, x: f64, y: f64) -> f64 {
     if x * (a + b - 2.0) - (a - 1.0) < 0.0 {
-        incbcf(a, b, x)
+        fraction(x, incbcf_terms(a, b), false).0
     } else {
-        incbd(a, b, x / y) / y
+        fraction(x / y, incbd_terms(a, b), true).0 / y
     }
+}
+
+/// `incbcf`'s eight term counters.
+fn incbcf_terms(a: f64, b: f64) -> [f64; 8] {
+    [a, a + b, a, a + 1.0, 1.0, b - 1.0, a + 1.0, a + 2.0]
+}
+
+/// `incbd`'s eight term counters.
+fn incbd_terms(a: f64, b: f64) -> [f64; 8] {
+    [a, b - 1.0, a, a + 1.0, 1.0, a + b, a + 1.0, a + 2.0]
 }
 
 /// Cephes' `incbcf`: the continued fraction w with `I_x(a,b) = x^a (1-x)^b / (a B(a,b)) * w`.
 pub(super) fn incbcf(a: f64, b: f64, x: f64) -> f64 {
-    fraction(
-        x,
-        [a, a + b, a, a + 1.0, 1.0, b - 1.0, a + 1.0, a + 2.0],
-        false,
-    )
+    fraction(x, incbcf_terms(a, b), false).0
 }
 
 /// Cephes' `incbd` before its final division by 1 - x, taking `ratio` = x/(1-x) from the caller:
 /// `I_x(a,b) = x^a (1-x)^b / (a B(a,b)) * incbd(a, b, ratio) / (1-x)`. A caller that knows 1 - x
 /// better than x forms the ratio without rounding x first (the Student-t tails, `student_t.rs`).
 pub(super) fn incbd(a: f64, b: f64, ratio: f64) -> f64 {
-    fraction(
-        ratio,
-        [a, b - 1.0, a, a + 1.0, 1.0, a + b, a + 1.0, a + 2.0],
-        true,
-    )
+    fraction(ratio, incbd_terms(a, b), true).0
 }
 
-/// The convergent loop shared by `incbcf` (`second` false) and `incbd`.
-fn fraction(x: f64, k: [f64; 8], second: bool) -> f64 {
+/// The convergent loop shared by `incbcf` (`second` false) and `incbd`: the last convergent and
+/// whether it converged within [`MAX_FRACTION_TERMS`] steps (`fraction(0.5, incbcf_terms(2E5,
+/// 2E5), false)` does not).
+fn fraction(x: f64, k: [f64; 8], second: bool) -> (f64, bool) {
     let [mut k1, mut k2, mut k3, mut k4, mut k5, mut k6, mut k7, mut k8] = k;
     let (mut pkm2, mut qkm2, mut pkm1, mut qkm1) = (0.0, 1.0, 1.0, 1.0);
     let mut ans = 1.0;
@@ -377,7 +403,7 @@ fn fraction(x: f64, k: [f64; 8], second: bool) -> f64 {
             t
         };
         if t < thresh {
-            break;
+            return (ans, true);
         }
         k1 += 1.0;
         k2 += step;
@@ -400,7 +426,7 @@ fn fraction(x: f64, k: [f64; 8], second: bool) -> f64 {
             qkm1 *= BIG;
         }
     }
-    ans
+    (ans, false)
 }
 
 /// x^a y^b / B(a, b), y = 1 - x, for a + b of [`MAXGAM`] or more (so the larger shape is above
@@ -514,6 +540,22 @@ pub(super) fn rlog1(t: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Audit item 5 of the 2026-11-07 findings (T-4979): an underflowing product of the
+    // prefactor's factors no longer zeroes a representable tail; an exhausted fraction is
+    // detected (and kept, as Excel's values there are its convergent's).
+    #[test]
+    fn exhausted_fraction_is_detected_and_the_prefactor_does_not_underflow() {
+        assert!(!fraction(0.5, incbcf_terms(2e5, 2e5), false).1);
+        assert!(fraction(0.2, incbcf_terms(2.5, 3.5), false).1);
+        // mpmath betainc(85, 85, 0, 1e-4, regularized=True) = 4.5346145057366762E-291.
+        let tail = search_tails(1e-4, 1.0 - 1e-4, 85.0, 85.0).0;
+        assert!(
+            (tail / 4.534_614_505_736_676e-291 - 1.0).abs() < 1e-12,
+            "{tail}"
+        );
+    }
+
     use crate::test::util::ulps;
 
     // T-2465: with one shape below 8 and a huge other, ln x of a rounded x near 1 lost most of its

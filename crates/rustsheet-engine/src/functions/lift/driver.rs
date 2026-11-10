@@ -1,6 +1,9 @@
 //! The lifting driver's broadcasting core (SPEC-0011 "The driver"), moved from
 //! `statistical/if_ifs.rs` by T-1784 with no result change; T-1770 adds the spec's cost model,
 //! the in-place single-grid path and the text budget.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::match_same_arms, clippy::needless_pass_by_value)]
+// LINT-DEBT-END
 
 use super::arg_buf::ArgBuf;
 use super::kinds::{ArgKinds, ArgValue, CallResult, KernelWork, ValueWork};
@@ -12,7 +15,7 @@ use crate::area_budget::{text_units, visit_units};
 use crate::arithmetic::{bcast_get, MISSING};
 use crate::cast::{calc_result_to_array_node, MAX_NUMBER_TEXT_LEN};
 use crate::expressions::types::CellReferenceIndex;
-use crate::functions::text::util::within_text_budget;
+use crate::functions::text::util::{text_budget_error, within_text_budget};
 use crate::functions::util::{array_element_value, top_left_of_array};
 use crate::limits::{check_array_cells, too_many_visits};
 use crate::reference_operators::{RefArg, RefElement, RefGrid};
@@ -481,11 +484,7 @@ fn over_text_budget(
 ) -> Option<CalcResult> {
     match value {
         ArrayNode::String(text) if !within_text_budget(total, text.len()) => {
-            Some(CalcResult::new_error(
-                Error::VALUE,
-                cell,
-                "Total text result is too large".to_string(),
-            ))
+            Some(text_budget_error(cell))
         }
         _ => None,
     }

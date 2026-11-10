@@ -164,6 +164,15 @@ description: Repo-specific conventions for driving RustSheet PRs to merge autono
   commit docs/progress.md and docs/progress/ in the `steward: <date> health` PR. Per-suite, parity,
   Phase 1 and milestone-exit numbers live on the dashboard, not in docs/status.md, whose snapshot
   links it on its first line.
+- **Tier gate line** (decision 0355 item 8, SPEC-0037 design 7): the one Phase 1 number the daily
+  status carries. The snapshot's first bullet is `**Tier gates:** <line>`, where the line is what
+  `make progress-report` prints after `usage tiers:` (the bold line of the dashboard's
+  `usage-tiers` block), copied unchanged: per tier its wrong-type and outside cells, its failing
+  functions and met or not, for example "foundational 31 wrong type, 1 outside, 3 failing
+  functions: not met; expert 1,355 wrong type, 405 outside, 12 failing functions: not met". Add the
+  worst failing functions of each tier from the block's table. On a stale run, give the last
+  complete run's line and say which run it is; when the line reads "not measured", write that.
+  Never write Gate A or Gate B in its place: they are information once the tiers are measured.
 - **Issue intake sweep** (decision 0158): issue webhooks can be dropped at the hourly caps, so
   the daily run lists open issues on SteveCoInc/rustsheet with the GitHub tools (`list_issues`,
   state open; skip pull requests). An issue with no task (`python3 scripts/tasks.py issue <N>`
@@ -233,7 +242,10 @@ description: Repo-specific conventions for driving RustSheet PRs to merge autono
 - **Deferred owners on the exit line** (decision 0325): a `defer: phase-1b` task alone does not own a visibly-off
   cell for `make phase1-exit`'s `owners` line. A probes or probes-numeric cell that R1(c) counts only for want of a
   math value is owned by the open task that attaches its math (a Gate A table task or a math-sidecar task); when the
-  line lists one, file or amend that task, not a fit task. A Gate B cell gets a `campaign:` task.
+  line lists one, file or amend that task, not a fit task. Once its math is attached, R1(c) leaves it out (Phase 1b
+  evidence, its deferred task keeps it) when the engine is within ε of the math or within 15 digits of Excel; otherwise
+  it needs a `campaign:` task, `accuracy` when Excel is the closer to the math (decision 0347). A Gate B cell gets a
+  `campaign:` task.
 - **Time-boxed numeric fits** (decision 0056): a task "Blocked because: time-boxed (decision 0056)"
   is not reopened when its dependencies land, only when a new hypothesis is recorded there.
   Read with decision 0188 R4.1, an attempt raises the bit-exact count only if it raises the

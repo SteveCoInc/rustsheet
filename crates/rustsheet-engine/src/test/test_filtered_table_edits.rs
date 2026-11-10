@@ -166,3 +166,106 @@ fn filter_table_column_derives_the_values_filter() {
     assert!(m.filter_table_column("Sales", 3, &[5]).is_err());
     assert!(m.filter_table_column("Nope", 0, &[5]).is_err());
 }
+
+/// Excel re-applies the kept criterion to every data row, so a visible row it rejects is hidden
+/// too. With Ext formatted `0.00`, a kept values filter listing the General text "10" .. "60"
+/// keeps no row (probes/t4895-two-criteria-number-format-delete-one: every row hidden), and one
+/// listing the displayed "10.00" .. "60.00" keeps all but row 5 (docs/research/t4939/uploads/
+/// display-delete). The undo puts every row back. Row 2 has no row record before the delete.
+#[test]
+fn the_kept_criterion_is_matched_by_display_text_and_hides_visible_rows() {
+    for (values, hidden) in [
+        (["10", "20", "30", "50", "60"], vec![2, 3, 4, 5, 6, 7]),
+        (["10.00", "20.00", "30.00", "50.00", "60.00"], vec![5]),
+    ] {
+        let mut m = two_criteria();
+        for row in 2..=7 {
+            let mut style = m.get_style_for_cell(0, row, 3).unwrap();
+            style.num_fmt = "0.00".to_string();
+            m.set_cell_style(0, row, 3, &style).unwrap();
+        }
+        if let Some(table) = m.workbook.tables.get_mut("Sales") {
+            table.filter_columns[1].criterion = crate::types::FilterCriterion::Values {
+                values: values.map(String::from).to_vec(),
+                blank: false,
+                calendar_type: None,
+                date_groups: Vec::new(),
+            };
+        }
+        assert!(m
+            .workbook
+            .worksheet(0)
+            .unwrap()
+            .rows
+            .iter()
+            .all(|r| r.r != 2));
+        let mut user = UserModel::from_model(m);
+        user.delete_columns(0, 1, 1).unwrap();
+        assert_eq!(hidden_rows(user.get_model()), hidden, "{values:?}");
+        user.undo().unwrap();
+        assert_eq!(hidden_rows(user.get_model()), vec![3, 5, 7], "{values:?}");
+    }
+}
+
+/// [`two_criteria`] with Cat in A6 (a visible "a") cleared: without `blank` the kept Cat filter
+/// rejects the blank row, which the delete of Ext hides; with `blank` it stays visible
+/// (docs/research/t4895/uploads/blank-rejected and blank-kept: rows 2, 4, 5 and 2, 4, 5, 6
+/// visible; T-4939).
+#[test]
+fn a_kept_values_filter_hides_a_blank_row_unless_it_keeps_blanks() {
+    for (blank, hidden) in [(false, vec![3, 6, 7]), (true, vec![3, 7])] {
+        let mut m = two_criteria();
+        m.set_user_input(0, 6, 1, String::new()).unwrap();
+        if let Some(table) = m.workbook.tables.get_mut("Sales") {
+            if let crate::types::FilterCriterion::Values { blank: b, .. } =
+                &mut table.filter_columns[0].criterion
+            {
+                *b = blank;
+            }
+        }
+        m.delete_columns(0, 3, 1).unwrap();
+        assert_eq!(hidden_rows(&m), hidden, "blank {blank}");
+    }
+}
+
+/// A kept custom filter (equals a, or equals c) is evaluated: row 5, which only the deleted Ext
+/// criterion hid, is shown (docs/research/t4895/uploads/custom: rows 2, 4, 5 and 6 visible;
+/// T-4939). An operator nothing here evaluates keeps the rows as they are.
+#[test]
+fn a_kept_custom_equal_filter_is_re_applied() {
+    use crate::types::{CustomFilter, FilterCriterion};
+    let equal = |operator: Option<&str>, val: &str| CustomFilter {
+        operator: operator.map(String::from),
+        val: val.to_string(),
+    };
+    for (operator, hidden) in [
+        (None, vec![3, 7]),
+        (Some("equal"), vec![3, 7]),
+        (Some("greaterThan"), vec![3, 5, 7]),
+    ] {
+        let mut m = two_criteria();
+        if let Some(table) = m.workbook.tables.get_mut("Sales") {
+            table.filter_columns[0].criterion = FilterCriterion::Custom {
+                and: false,
+                conditions: vec![equal(operator, "a"), equal(operator, "c")],
+            };
+        }
+        m.delete_columns(0, 3, 1).unwrap();
+        assert_eq!(hidden_rows(&m), hidden, "{operator:?}");
+    }
+    let condition = |op: Option<&str>, val: &str, text: &str| equal(op, val).keeps_text(text);
+    // Excel (T-4965 probe, custom-upper): operands "A"/"C" over cells a/c change no row, so a
+    // match that differs in case is no verdict.
+    assert_eq!(condition(None, "A", "a"), None);
+    assert_eq!(condition(None, "a", "a"), Some(true));
+    assert_eq!(condition(None, "A", "b"), Some(false));
+    assert_eq!(condition(None, "a", ""), Some(false));
+    assert_eq!(condition(None, "a*", "ab"), None);
+    assert_eq!(condition(None, "10", "10"), None);
+    assert_eq!(condition(Some("notEqual"), "a", "b"), None);
+    let both = FilterCriterion::Custom {
+        and: true,
+        conditions: vec![equal(None, "a"), equal(None, "b")],
+    };
+    assert_eq!(both.keeps_text("a"), Some(false));
+}

@@ -12,8 +12,8 @@ use crate::{Model, UserModel};
 /// A one-sheet workbook with a number in A1 and a formula in A2.
 fn workbook() -> Workbook {
     let mut model = new_empty_model();
-    model._set("A1", "1");
-    model._set("A2", "=A1+1");
+    model.set_a1("A1", "1");
+    model.set_a1("A2", "=A1+1");
     model.workbook
 }
 
@@ -40,7 +40,7 @@ fn a_dangling_shared_string_still_loads() {
     let mut workbook = workbook();
     set_cell(&mut workbook, 1, 2, Cell::SharedString { si: 40, s: 0 });
     let model = Model::from_workbook(workbook, "en").unwrap();
-    assert_eq!(model._get_text("B1"), "");
+    assert_eq!(model.get_text_a1("B1"), "");
 }
 
 /// The selected sheet of a view, the frozen panes and the sheet list are read through checked
@@ -74,7 +74,7 @@ fn an_intact_workbook_loads_and_round_trips() {
     let mut model = Model::from_workbook(workbook(), "en").unwrap();
     model.evaluate();
     let model = Model::from_bytes(&model.to_bytes(), "en").unwrap();
-    assert_eq!(model._get_text("A2"), "2");
+    assert_eq!(model.get_text_a1("A2"), "2");
 }
 
 // T-2882's two reproductions: each panicked after loading.
@@ -234,12 +234,12 @@ fn anchors_claiming_more_cells_than_are_stored_are_refused() {
 #[test]
 fn spills_the_engine_writes_still_load() {
     let mut model = new_empty_model();
-    model._set("A1", "=SEQUENCE(2000)");
-    model._set("B1", "=SEQUENCE(3,4)");
-    model._set("C2", "x");
-    model._set("D1", "=SEQUENCE(5)");
+    model.set_a1("A1", "=SEQUENCE(2000)");
+    model.set_a1("B1", "=SEQUENCE(3,4)");
+    model.set_a1("C2", "x");
+    model.set_a1("D1", "=SEQUENCE(5)");
     model.evaluate();
     let model = Model::from_bytes(&model.to_bytes(), "en").unwrap();
-    assert_eq!(model._get_text("A2000"), "2000");
-    assert_eq!(model._get_text("B1"), "#SPILL!");
+    assert_eq!(model.get_text_a1("A2000"), "2000");
+    assert_eq!(model.get_text_a1("B1"), "#SPILL!");
 }

@@ -5,7 +5,7 @@ use crate::calc_result::Range;
 use crate::expressions::parser::{ArrayNode, Node};
 use crate::expressions::token::Error;
 use crate::expressions::types::CellReferenceIndex;
-use crate::functions::text::util::within_text_budget;
+use crate::functions::text::util::{text_budget_error, within_text_budget};
 use crate::limits::check_range_size;
 use crate::reference_operators::{
     not_a_reference_array, several_areas, Ranges, RefArg, RefElement, RefGrid,
@@ -158,11 +158,7 @@ impl Model {
             CalcResult::String(text) if within_text_budget(text_bytes, text.len()) => {
                 Ok(ArrayNode::String(text))
             }
-            CalcResult::String(_) => Err(CalcResult::new_error(
-                Error::VALUE,
-                cell,
-                "Total text result is too large".to_string(),
-            )),
+            CalcResult::String(_) => Err(text_budget_error(cell)),
             _ => Ok(ArrayNode::Error(Error::NA)),
         }
     }

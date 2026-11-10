@@ -1,5 +1,15 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::float_cmp,
+    clippy::unused_self
+)]
+// LINT-DEBT-END
+use super::util::collation::cmp_text_pairwise;
 use crate::functions::util::array_node_to_calc_result;
 use crate::functions::util::near_integer::near_integer_whole;
+use crate::number_format::cmp_excel_precision;
 use std::cmp::Ordering;
 
 use crate::{
@@ -45,9 +55,20 @@ pub(crate) fn sort_key_cmp(
         (true, false) => Ordering::Greater,
         (false, true) => Ordering::Less,
         (false, false) => {
-            let key_a = array_node_to_calc_result(a, cell);
-            let key_b = array_node_to_calc_result(b, cell);
-            let cmp = compare_values_pairwise(&key_a, &key_b);
+            // The common pairs compare in place (what `compare_values_pairwise` does for them), so
+            // a comparison clones no text and builds no `CalcResult` (T-1599).
+            let cmp = match (a, b) {
+                (ArrayNode::Number(x), ArrayNode::Number(y)) => match cmp_excel_precision(*x, *y) {
+                    Ordering::Less => -1,
+                    Ordering::Equal => 0,
+                    Ordering::Greater => 1,
+                },
+                (ArrayNode::String(x), ArrayNode::String(y)) => cmp_text_pairwise(x, y) as i32,
+                _ => compare_values_pairwise(
+                    &array_node_to_calc_result(a, cell),
+                    &array_node_to_calc_result(b, cell),
+                ),
+            };
             if ascending {
                 cmp.cmp(&0)
             } else {
@@ -480,19 +501,7 @@ impl Model {
             keys.push((index as usize - 1, ascending));
         }
 
-        if !by_col {
-            // Sort rows by the key columns.
-            let mut row_indices: Vec<usize> = (0..num_rows).collect();
-            stoppable(|| {
-                sort_indices_pairwise(&mut row_indices, |a, b| {
-                    first_unequal(keys.iter().map(|&(key, ascending)| {
-                        sort_key_cmp(&data[a][key], &data[b][key], ascending, cell)
-                    }))
-                });
-            });
-
-            CalcResult::Array(row_indices.iter().map(|&r| data[r].clone()).collect())
-        } else {
+        if by_col {
             // Sort columns by the key rows.
             let mut col_indices: Vec<usize> = (0..num_cols).collect();
             stoppable(|| {
@@ -508,6 +517,18 @@ impl Model {
                     .map(|row| col_indices.iter().map(|&c| row[c].clone()).collect())
                     .collect(),
             )
+        } else {
+            // Sort rows by the key columns.
+            let mut row_indices: Vec<usize> = (0..num_rows).collect();
+            stoppable(|| {
+                sort_indices_pairwise(&mut row_indices, |a, b| {
+                    first_unequal(keys.iter().map(|&(key, ascending)| {
+                        sort_key_cmp(&data[a][key], &data[b][key], ascending, cell)
+                    }))
+                });
+            });
+
+            CalcResult::Array(row_indices.iter().map(|&r| data[r].clone()).collect())
         }
     }
 

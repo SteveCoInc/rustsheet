@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss)]
+// LINT-DEBT-END
 use crate::{
     calc_result::{CalcResult, Range},
     constants::{LAST_COLUMN, LAST_ROW},
@@ -74,126 +77,6 @@ impl Model {
             handle_empty_cell,
             handle_non_number_cell,
         )
-    }
-
-    /// [`Self::get_array_of_numbers_generic`] on an argument already evaluated.
-    fn array_of_numbers_from(
-        &mut self,
-        result: CalcResult,
-        cell: &CellReferenceIndex,
-        accept_number_node: bool,
-        text_as_number: bool,
-        handle_empty_cell: impl Fn() -> Result<Option<f64>, CalcResult>,
-        handle_non_number_cell: impl Fn() -> Result<Option<f64>, CalcResult>,
-    ) -> Result<Vec<f64>, CalcResult> {
-        let mut values = Vec::new();
-        match result {
-            CalcResult::Number(value) if accept_number_node => values.push(value),
-            CalcResult::Number(_) => {
-                return Err(CalcResult::new_error(
-                    Error::VALUE,
-                    *cell,
-                    "Expected range of numbers".to_string(),
-                ));
-            }
-            CalcResult::Range { left, right } => {
-                if left.sheet != right.sheet {
-                    return Err(CalcResult::new_error(
-                        Error::VALUE,
-                        *cell,
-                        "Ranges are in different sheets".to_string(),
-                    ));
-                }
-                let sheet = left.sheet;
-                let row1 = left.row;
-                let column1 = left.column;
-                let (row2, column2) = self.flow_range_end(&left, &right).ok_or_else(|| {
-                    CalcResult::new_error(
-                        Error::ERROR,
-                        *cell,
-                        format!("Invalid worksheet index: '{sheet}'"),
-                    )
-                })?;
-                for row in row1..=row2 {
-                    for column in column1..=column2 {
-                        let cell_ref = CellReferenceIndex { sheet, row, column };
-                        match self.evaluate_cell(cell_ref) {
-                            CalcResult::Number(value) => values.push(value),
-                            error @ CalcResult::Error { .. } => return Err(error),
-                            CalcResult::EmptyCell => {
-                                if let Some(value) = handle_empty_cell()? {
-                                    values.push(value);
-                                }
-                            }
-                            CalcResult::String(text) if text_as_number => {
-                                match self.cast_number(&text) {
-                                    Some(value) => values.push(value),
-                                    None => {
-                                        if let Some(value) = handle_non_number_cell()? {
-                                            values.push(value);
-                                        }
-                                    }
-                                }
-                            }
-                            _ => {
-                                if let Some(value) = handle_non_number_cell()? {
-                                    values.push(value);
-                                }
-                            }
-                        }
-                    }
-                }
-                // The clip skips empty cells Excel still walks, so an empty-cell error applies after
-                // the used area: `XNPV(0.1,A:A,B:B)` is #NUM! (probes/xirr-xnpv-whole-column-nogaps A1).
-                if row2 < right.row || column2 < right.column {
-                    handle_empty_cell()?;
-                }
-            }
-            CalcResult::Array(arr) => {
-                for row in arr {
-                    for node in row {
-                        match node {
-                            ArrayNode::Number(f) => values.push(f),
-                            ArrayNode::Error(e) => {
-                                return Err(CalcResult::new_error(
-                                    e,
-                                    *cell,
-                                    "Error in array".to_string(),
-                                ));
-                            }
-                            ArrayNode::Lambda(_) | ArrayNode::Nested(_) => {
-                                return Err(Model::lambda_as_number_error(*cell))
-                            }
-                            ArrayNode::Empty => {
-                                if let Some(value) = handle_empty_cell()? {
-                                    values.push(value);
-                                }
-                            }
-                            ArrayNode::String(text) if text_as_number => {
-                                match self.cast_number(&text) {
-                                    Some(value) => values.push(value),
-                                    None => {
-                                        if let Some(value) = handle_non_number_cell()? {
-                                            values.push(value);
-                                        }
-                                    }
-                                }
-                            }
-                            _ => {
-                                if let Some(value) = handle_non_number_cell()? {
-                                    values.push(value);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            error @ CalcResult::Error { .. } => return Err(error),
-            _ => {
-                handle_non_number_cell()?;
-            }
-        }
-        Ok(values)
     }
 
     fn get_array_of_numbers(

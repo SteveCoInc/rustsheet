@@ -369,3 +369,77 @@ fn unknown_locale_is_an_options_error() {
     };
     assert!(matches!(Workbook::new(&opts), Err(LoadError::Options(_))));
 }
+
+/// The part `name` of the package `bytes`.
+fn package_part(bytes: &[u8], name: &str) -> Vec<u8> {
+    use std::io::Read;
+    let mut archive = zip::ZipArchive::new(Cursor::new(bytes)).expect("zip");
+    let mut part = Vec::new();
+    archive
+        .by_name(name)
+        .expect("part")
+        .read_to_end(&mut part)
+        .expect("read");
+    part
+}
+
+/// A `refreshOnLoad` pivot that nothing edited is refreshed at the load, lays out to the cells it
+/// already shows, and so saves as read: its cache definition, its records and its table, cacheId
+/// and saved `rowItems`/`colItems` included, are the source's bytes (T-4825, SPEC-0034). Before,
+/// the refresh dropped the saved lines, the save regenerated the pivot parts, and
+/// `roundtrip-poi/54436.xlsx` lost them.
+#[test]
+fn an_unedited_refresh_on_load_pivot_saves_its_parts_as_read() {
+    let source = without_formula_cells(
+        &std::fs::read("../rustsheet-xlsx/tests/pivot_tables.xlsx").expect("fixture"),
+        "xl/worksheets/sheet2.xml",
+    );
+    assert!(String::from_utf8_lossy(&package_part(
+        &source,
+        "xl/pivotCache/pivotCacheDefinition1.xml"
+    ))
+    .contains(r#"refreshOnLoad="1""#));
+    let loaded = Workbook::from_xlsx_bytes(&source, &LoadOptions::default()).expect("load");
+    let saved = loaded.to_xlsx_bytes(SaveOptions::default()).expect("save");
+    for name in [
+        "xl/pivotCache/pivotCacheDefinition1.xml",
+        "xl/pivotCache/pivotCacheRecords1.xml",
+        "xl/pivotTables/pivotTable1.xml",
+        "xl/pivotCache/pivotCacheDefinition2.xml",
+        "xl/pivotCache/pivotCacheRecords2.xml",
+        "xl/pivotTables/pivotTable2.xml",
+        "xl/workbook.xml",
+    ] {
+        assert_eq!(
+            package_part(&saved, name),
+            package_part(&source, name),
+            "{name}"
+        );
+    }
+}
+
+/// `bytes` with the formula cells of its part `sheet` taken out. The fixture's GETPIVOTDATA cells
+/// cache a placeholder 0, so the load's recalculation changes them, and the save then regenerates
+/// for them, whatever the pivots do.
+fn without_formula_cells(bytes: &[u8], sheet: &str) -> Vec<u8> {
+    use std::io::{Read, Write};
+    let mut archive = zip::ZipArchive::new(Cursor::new(bytes)).expect("zip");
+    let mut out = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    for index in 0..archive.len() {
+        let mut entry = archive.by_index(index).expect("entry");
+        let name = entry.name().expect("name").to_string();
+        let mut text = String::new();
+        entry.read_to_string(&mut text).expect("text part");
+        if name == sheet {
+            while let Some(start) = text.find(r#" cm="1"><f"#) {
+                let open = text[..start].rfind("<c ").expect("cell start");
+                let close = start + text[start..].find("</c>").expect("cell end") + "</c>".len();
+                text.replace_range(open..close, "");
+            }
+        }
+        out.start_file(name, zip::write::SimpleFileOptions::default())
+            .expect("start");
+        out.write_all(text.as_bytes()).expect("write");
+    }
+    out.finish().expect("finish").into_inner()
+}

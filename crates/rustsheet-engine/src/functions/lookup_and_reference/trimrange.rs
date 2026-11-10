@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_possible_truncation)]
+// LINT-DEBT-END
 use super::drop_take::sub_range;
 use super::ref_lift::lifts;
 use crate::functions::lift::{ArgBuf, Kernel, LiftCost, LiftOptions};

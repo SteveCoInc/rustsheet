@@ -1,0 +1,61 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "Precision": {
+   "B2": {
+    "t": "n",
+    "v": 0.9999999999999998
+   },
+   "B3": {
+    "t": "n",
+    "v": 1.0
+   },
+   "B4": {
+    "t": "n",
+    "v": 1.0000000000000002
+   },
+   "C2": {
+    "t": "n",
+    "v": -1.0
+   },
+   "C3": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C4": {
+    "t": "n",
+    "v": 1.0
+   }
+  },
+  "Probe": {
+   "B1": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B2": {
+    "t": "n",
+    "v": 1.0
+   },
+   "B3": {
+    "t": "b",
+    "v": true
+   },
+   "B4": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B5": {
+    "t": "n",
+    "v": 0.0
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "ffd32ffae62182e716fa8e752775f413cb31e06c6a59c2f8f2c87868fb747eaa",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-09T08:24:59+00:00",
+  "version": null,
+  "workbook_name": "9cdb2f6f5146cf90197a098435467aa4dc629faad9bae39b3ea09b37ee8c32dc.xlsx"
+ }
+}

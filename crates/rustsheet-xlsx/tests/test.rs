@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::assigning_clones,
+    clippy::float_cmp,
+    clippy::format_push_string,
+    clippy::needless_pass_by_value
+)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
 
@@ -407,7 +415,7 @@ fn test_exporting_merged_cells() {
                 .unwrap()
                 .merged_cells
                 .len();
-            assert!(*got_merged_cells_count == 0);
+            assert_eq!(*got_merged_cells_count, 0);
         }
     }
 
@@ -418,8 +426,9 @@ fn test_exporting_merged_cells() {
 // section with the entries B2:C3 (valid), C3:D4 (overlaps the previous one),
 // A10:A10 (single cell), FOO (garbage) and E5:F6 (valid). The anchor B2 holds
 // the number 42 and the covered cell C2 the number 43. Import must keep only
-// the two valid ranges, keep the anchor content and clear the content left in
-// covered cells.
+// the two valid ranges and keep the content of the anchor and of the covered
+// cell, as Excel does (docs/excel-semantics/xlsx-storage.md "A merged range
+// keeps the values of its covered cells", T-4722).
 #[test]
 fn test_import_sanitizes_merged_cells() {
     let model = load_from_xlsx("tests/bad_merge_cells.xlsx", "en", "UTC", "en").unwrap();
@@ -443,8 +452,8 @@ fn test_import_sanitizes_merged_cells() {
     );
     // the anchor keeps its content
     assert_eq!(model.is_empty_cell(0, 2, 2), Ok(false));
-    // the covered cell is cleared
-    assert_eq!(model.is_empty_cell(0, 2, 3), Ok(true));
+    // the covered cell keeps its content, as in Excel (SPEC-0036 I1)
+    assert_eq!(model.get_formatted_cell_value(0, 2, 3).unwrap(), "43");
 }
 
 #[test]
@@ -487,8 +496,12 @@ fn test_pyopenxl_example() {
     let a2 = model.get_formatted_cell_value(0, 2, 1).unwrap();
     assert_eq!(a2, "2");
 
+    // openpyxl stores `CONCAT(...)` bare, without the `_xlfn.` prefix Excel needs for a function
+    // added after Excel 2007 (openpyxl's own docs say such formulas "must be prefixed with
+    // _xlfn. to work"), so Excel loads it as `#NAME?` (xlsx-storage.md "Newer functions need
+    // `_xlfn.` in the file", probes/catalog/function-name-forms A1, T-1089).
     let b1 = model.get_formatted_cell_value(0, 1, 2).unwrap();
-    assert_eq!(b1, "It is what it is");
+    assert_eq!(b1, "#NAME?");
 }
 
 fn assert_eq_ignoring_metadata_and_name(
@@ -712,4 +725,20 @@ fn example_pivot_lines_are_the_saved_ones() {
     );
     assert_eq!(layout.location, table.location);
     assert_eq!(layout.geometry, table.geometry);
+}
+
+/// A covered cell's content survives a save and reload, as Excel keeps it (SPEC-0036 W1;
+/// `tests/bad_merge_cells.xlsx` covers C2 of the merge at B2:C3 with 43).
+#[test]
+fn covered_cell_content_round_trips() {
+    let model = load_from_xlsx("tests/bad_merge_cells.xlsx", "en", "UTC", "en").unwrap();
+    let mut bytes = std::io::Cursor::new(Vec::new());
+    rustsheet_xlsx::export::save_xlsx_to_writer(&model, &mut bytes).unwrap();
+    let reloaded =
+        rustsheet_xlsx::import::load_from_xlsx_bytes(bytes.get_ref(), "m", "en", "UTC").unwrap();
+    let mut again = rustsheet_engine::Model::from_workbook(reloaded, "en").unwrap();
+    again.set_user_input(0, 20, 1, "=C2+1".to_string()).unwrap();
+    again.evaluate();
+    assert_eq!(again.get_formatted_cell_value(0, 2, 3).unwrap(), "43");
+    assert_eq!(again.get_formatted_cell_value(0, 20, 1).unwrap(), "44");
 }

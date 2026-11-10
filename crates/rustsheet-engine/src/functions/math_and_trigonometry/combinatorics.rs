@@ -1,4 +1,5 @@
 use crate::functions::lift::num_error;
+use crate::functions::util::empty_args::{written_empty_na, written_empty_or};
 use crate::functions::Function;
 use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error,
@@ -25,10 +26,15 @@ impl Model {
     /// `#VALUE!`, typed, in a cell or as an array element (probes/math-atp-array-lift-b E1-E3, E8;
     /// docs/excel-semantics/numbers.md "QUOTIENT, FACTDOUBLE and SERIESSUM argument modes").
     pub(crate) fn fn_factdouble(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        // A LET or LAMBDA omission is the `ToolPak` `#N/A` (`LET(e,,FACTDOUBLE(e))`;
+        // probes/t4923-sqrtpi-factdouble-omitted A3, A4; T-4923).
+        let empty = self.empty_arguments::<1>(args, cell);
         self.lift_call(Function::Factdouble, args, cell, &mut |model, values| {
             let [number] = values else {
                 return CalcResult::new_args_number_error(cell);
             };
+            let na = written_empty_na(cell);
+            let [number] = written_empty_or([number], empty, &na);
             let x = match model.cast_number_no_bools_ref(number, cell) {
                 Ok(x) => x.floor(),
                 Err(error) => return error,

@@ -447,6 +447,17 @@ Below serial 1, and the counts:
   probes/t4389-holdout A272; t4389-confirm A41:A80). It moves the serial only below 2^-18 days (about 0.33 s). From
   2^-19 days it is exactly half an ulp, which the double addition rounds to even, and Excel follows that in 29 of 40
   probed cells (t4389-confirm A1:A40); the other 11 (A4, A6, A9, A14:A19, A31, A36) are not explained (T-4419).
+  In that band Excel decides by one threshold per tie: probes/t4419-band-flip (excel-graph 2026-11-08) steps 13 ties
+  t/86400000 + n*2^-71 days (t 179.5 to 327.5 ms) through n = -20..-8 under `s.000`, and each tie's answer changes
+  exactly once, from down to up, at n between -15 and -11, a point that varies by tie. The engine's offset model gets
+  159 of 169 (unexplained: F5, F11, G12, H1, H7, H9, H10, H12, H13, I12). Plain double chains with no 2^-72 offset,
+  `(x*86400)*1000` or `((x*24)*60)*60*1000` then the milliseconds' 15-digit rounding and half up, get 166, missing
+  disjoint ties, so in this band the offset is not what decides (docs/research/t4419/chains.py).
+  The decision depends only on the value: probes/t4419-band-formats shows the same switch under s.000, ss.000,
+  [s].000, mm:ss.000 and h:mm:ss.000. probes/t4419-band-dense (every tie k+0.5 ms, k = 165..328) has one switch per
+  tie, about 13.8 ulps below the exact tie (close to the exact-tie frame), scattered by about 0.7 ulp. The engine gets
+  1,035 of 1,148. No family searched in docs/research/t4419/family_search.py beats 1,094 (x/(1/24)*3600*1000);
+  x/(1/24)*60*60*1000, 168 of 169 on band-flip, gets 1,085 there (T-4419).
   `.0` and `.00` show no offset (`TEXT(0.005/86400-8*2^-77,"s.00")` ".01", -12 ulp ".00", 0.45 and 0.68 units of the
   15th digit below). The constant is FITTED: every offset from 1.74E-17 to 1.86E-17 s scores all 538 `.000` cells of
   the t4323, t4332 and t4370 fraction cases, and 2^-72 days is the power of two inside that window; no operation that
@@ -454,37 +465,39 @@ Below serial 1, and the counts:
   368 of 368 (T-4370's model 337, the correctly rounded value 81); after the freeze, probes/t4389-fraction-fresh 120
   of 120 (42 and 39) and probes/t4389-confirm 69 of 80 (51 and 31); excel-graph 2026-11-05, docs/research/t4389.
   Implemented in `millisecond_offset` (formatter/elapsed.rs).
-- The elapsed `[h]`/`[m]`/`[s]` counts before the fraction mostly read the same register, `floor(y*86400/unit)`, so a
-  tie just short of a whole minute or hour carries in neither the count nor the clock:
-  `TEXT(1+3599.95/86400,"[h]:mm:ss.0")` is "24:59:59.9", `TEXT(2+3599.95/86400,"[h]:mm:ss.0")` "49:59:59.9",
-  `TEXT(3497.95/86400,"[s].0")` "3497.9" (the value rounded to the shown digit gives "25:59:59.9", "48:59:59.9",
-  "3498.9"). That count gets 350 of 358 count cells of the six earlier t4323 cases (the rounded value 346) and 117 of
-  120 of the fresh carry sweep, generated after it was frozen (the rounded value 114). It still misses where Excel's
-  count rounds up while the clock or fraction truncates: `TEXT(45000+0.95/86400,"[s].0")` is "3888000001.9"
-  (y*86400 is 3888000000.9999995), `TEXT(3+5.95/86400,"[s].0")` "259206.9", `TEXT(45000+59.95/86400,"[m]:ss.0")`
-  "64800001:59.9" (ties A90, sweep-2 A1, A24, A41, A84, sweep-3 A7, carry-ties A27, A31, carry-sweep A37, A49, A83).
-  Neither rounding the value nor any operation order of the register tried fits both sets (T-4333).
-  An ulp scan, probes/t4333-count-ulp-scan, steps eight tie serials -3 to +3 ulp from Excel's computed serial
-  (`d+k/86400`). Every cell where the count disagrees with the fraction digit is the double nearest the decimal tie:
-  the count rounded up beside ".9" at D1:D4 (offset 0 is the nearest double there, e.g.
-  `TEXT(45000+0.95/86400,"[s].0")` "3888000001.9"), and `TEXT(3733.95/86400+1*2^-57,"[s].0")` "3733.0" at E6, the
-  fraction carried and the count not (row 6's computed serial is 0.61 ulp below the tie, so its nearest double is
-  +1 ulp). One ulp or more from the nearest double, the count and the fraction always agree
-  (`45000+0.95/86400-1*2^-37` "3888000000.9", `+1*2^-37` "3888000001.0"). The other nearest-double cells (D5, D7, D8)
-  agree too. D7 truncates where the register carries. The fraction digit is the field-by-field cut in all 56 cells.
-  No count model tried beats the register: 573 of 590 count cells; the candidates are in docs/research/t4333.
+- **Elapsed counts beside fraction digits** (T-4333). The `[h]`/`[m]`/`[s]` count before the fraction is the half-step
+  serial `y` multiplied by 60, 60 and 24 in that order, each product rounded to a double, keeping as many factors as the
+  unit needs, then truncated: `[h]` is `floor(y*24)`, `[m]` `floor((y*60)*24)` and `[s]` `floor(((y*60)*60)*24)`. The
+  order's double rounding decides a tie, so the count is not a function of `y*86400` and each unit carries on its own,
+  apart from the clock and the fraction digits (which the field cut gives):
+  - `TEXT(45000+0.95/86400,"[s].0")` is "3888000001.9" (the count carries, the fraction does not);
+  - `TEXT(3733.95/86400+1*2^-57,"[s].0")` is "3733.0" and `+2*2^-57` "3734.0": the same register, one ulp of `y` apart
+    in the product chain (probes/t4466-count-hypotheses B29, B30; t4333-count-ulp-scan E6);
+  - `TEXT(60000+82799.95/86400,"[h]:mm:ss.0")` is "1440023:59:59.9": the hour carries while `[s]` and `[m]` on the
+    same serial do not (t4466-count-hypotheses F33, B33, E33);
+  - `TEXT(1+3599.95/86400,"[h]:mm:ss.0")` stays "24:59:59.9" (t4323-carry-ties).
+  The rule matches all 2,617 count cells with fraction digits of the t4323, t4332, t4333, t4370, t4389 and t4466
+  probes; no constant is fitted. Guards (decision 0188 R4): on the t4466 sha256 hold-out split it gets 1,407 of 1,407
+  train and 610 of 610 hold-out cells (the correctly rounded value 1,343 and 584); probes/t4466-count-fresh was in the
+  search, so the fresh sweep is probes/t4466-chain-fresh, drawn with a new seed after the rule was frozen and predicted
+  before its fill: 600 of 600 (the old register 556, the correctly rounded value 490). Every other order of the same factors scores lower (86400 at once 2,495, `(y*60)*1440`
+  2,543), and so do day-first splits (about 2,355). Search: docs/research/t4466/count_chain.py.
+- With fraction digits the `General` register is the remainder of a second the field cut leaves, times the scale
+  (`TEXT(3733.95/86400+1*2^-57,"[s].0 General")` ends in "1.63425E-12"): t4466-count-hypotheses G1:G40, B121:B152 (72
+  of 72) and the fresh sweep probes/t4466-register-fresh (120 of 120), T-4466.
 - From serial 1 up the field-by-field cut also gives `TEXT(30+39474.05/86400,"mm:ss.0")` "57:54.0" (sweep-3 A2),
   where the register is exactly 394741 and printed "57:54.1".
 Evidence: probes/t4323-fraction-ties (150 cells), probes/t4323-fraction-sweep (96), t4323-fraction-sweep-2 (160),
 t4323-fraction-sweep-3 (120), t4323-fraction-holdout (100), t4323-carry-ties (32), t4323-carry-sweep (120),
 t4332-fraction-fresh (120), t4333-count-ulp-scan (56), t4370-ulp-map (340), t4370-ulp-map-2 (462),
-t4370-fraction-fresh (120), excel-graph 2026-11-05; scoring scripts in docs/research/t4323, docs/research/t4332,
-docs/research/t4333 and docs/research/t4370.
-Status: VERIFIED for the clock and the fraction digits; PARTIAL for `.000` below 0.06 s (T-4389) and OPEN for the `[s]`
-count (T-4333)
+t4370-fraction-fresh (120), excel-graph 2026-11-05; t4466-count-hypotheses (536), t4466-count-fresh (600),
+t4466-register-fresh (120), t4466-chain-fresh (600), excel-graph 2026-11-08; scoring scripts in docs/research/t4323, docs/research/t4332,
+docs/research/t4333, docs/research/t4370 and docs/research/t4466.
+Status: VERIFIED for the clock, the fraction digits and the elapsed counts; PARTIAL for `.000` between 0.165 and 0.33 s
+(T-4419: 11 of the 40 probed ties there round down where the 2^-72-day offset rounds up)
 Implemented in: `field_split`, `fraction_digits`, `half_step_split` (the `General` register) and `FractionalSeconds`
 (formatter/elapsed.rs).
-Tasks: T-4323, T-4332, T-4333, T-4370, T-4389
+Tasks: T-4323, T-4332, T-4333, T-4370, T-4389, T-4466
 
 ## Elapsed-time tokens
 Rule (observed, ElapsedFormatTests, a 1904-date-system workbook):
@@ -695,6 +708,21 @@ fixed when the digit counts are equal: `0.000123456789` → "0.000123457", `1.23
 "0.000012345". When fixed shows fewer digits than E, E wins: `1.5E-09` → "1.5E-09" (fixed
 "0.000000002", 1 digit), `2.5E-09` → "2.5E-09", `1.4E-09` → "1.4E-09", `1.23456789E-06` →
 "1.23457E-06".
+The digits compared are the ones each form has room for, capped by the value's own digits at 15, not the digits left
+after rounding trims zeros. Fixed's room runs from the value's own leading digit to the last decimal (9 decimals below
+1), so a rounding that carries into a new digit gains none; E's room is 6 digits (5 from exponent 99). So
+`1.5459954738616943E-06` is "1.546E-06" (room 6 against 4; the value has 14 digits), `6.2183E-05` "6.2183E-05" (6
+against 5), `9.7E-09` "9.7E-09" (fixed "0.00000001" has room for 1), while `1.2345E-05`, whose 5 digits both forms
+hold, stays "0.000012345". The E mantissa rounds the 15-digit decimal half away from zero, not the binary value:
+`1.133925E-06` (stored just below the tie) is "1.13393E-06", `2.059915E-08` "2.05992E-08". Evidence:
+probes/t4466-general-fixed-or-e (120 cells, excel-graph 2026-11-08, values drawn and both rules' predictions committed
+before the fill: the room rule 78 of the 80 cells where the rules disagree, the trimmed-digit rule 2, and 38 of the 40
+controls; the 4 misses were 2 carries, A18 and A47, and 2 mantissas, A82 and A96, which the two refinements above
+fixed, so that sweep is training data for them), t4466-count-hypotheses G24, and the fresh sweep drawn after both
+refinements were frozen, probes/t4466-general-full (240 cells over the whole magnitude range: both E-only regions, the
+1E-09 and 1E+11 boundaries, ties at the 6th digit and at the 5th from exponent 99, the [1E-09, 1E-04) band and the
+fixed range; the frozen engine's answers committed before the excel-graph fill, 240 of 240; in the band the trimmed-digit
+rule gets 39 of 51 and 0 of the 12 cells where the rules differ).
 The 11-character limit also applies from 1 on: the sign does not count, the decimal point does,
 and the value is rounded to fit, so decimals are cut to `11 - integer digits - 1`:
 `123456.123456789` → "123456.1235", `-123456.123456789` → "-123456.1235", `22.712470704` →

@@ -1,4 +1,7 @@
 //! Unit tests of the grouping core (`super`).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![cfg_attr(test, expect(clippy::many_single_char_names))]
+// LINT-DEBT-END
 
 use super::{Axis, Grouping, Line, ParentOrder};
 use crate::expressions::{parser::ArrayNode, types::CellReferenceIndex};
@@ -577,15 +580,13 @@ fn a_leaf_no_row_reaches_is_charged_per_row() {
         },
         CELL,
     );
-    let all = grouping
-        .map(|grouping| {
-            grouping
-                .groups
-                .iter()
-                .filter(|group| !group.reached)
-                .count()
-        })
-        .unwrap_or(0);
+    let all = grouping.map_or(0, |grouping| {
+        grouping
+            .groups
+            .iter()
+            .filter(|group| !group.reached)
+            .count()
+    });
     assert_eq!(all, 1);
     assert!(charges.contains(&10), "{charges:?}");
     let refused = Grouping::new(

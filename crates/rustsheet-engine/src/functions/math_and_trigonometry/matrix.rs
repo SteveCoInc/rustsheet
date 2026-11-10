@@ -1,3 +1,11 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::manual_let_else
+)]
+// LINT-DEBT-END
+use crate::area_budget::multiply_add_units;
 use crate::{
     calc_result::CalcResult,
     expressions::{
@@ -153,6 +161,10 @@ impl Model {
             Ok(v) => v,
             Err(e) => return e,
         };
+        // The elimination is about n³ multiply-adds, charged before it runs.
+        if let Err(error) = self.spend_work(multiply_add_units(&[n, n, n]), cell) {
+            return error;
+        }
 
         // Excel eliminates the same way and keeps the rounding residual of a tiny last pivot: only an
         // exactly-zero pivot column gives 0. MDETERM({1,2,3;4,5,6;7,8,9}) = 6.661338147750939E-16 and
@@ -189,6 +201,11 @@ impl Model {
             Ok(v) => v,
             Err(e) => return e,
         };
+        // The elimination and the n substitutions are about 2n³ multiply-adds, charged before
+        // they run.
+        if let Err(error) = self.spend_work(multiply_add_units(&[2, n, n, n]), cell) {
+            return error;
+        }
 
         // Only an exactly-zero pivot is singular: Excel inverts a tiny residual pivot and returns
         // the huge residual inverse, MINVERSE({1,2,3;4,5,6;7,8,9}) = {-4503599627370498, ...}, bit

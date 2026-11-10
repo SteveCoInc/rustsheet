@@ -1,5 +1,12 @@
 //! The holidays of WORKDAY, WORKDAY.INTL, NETWORKDAYS and NETWORKDAYS.INTL, read once per call
 //! and prepared so that each lifted element counts them in O(log holidays) (T-1236).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::trivially_copy_pass_by_ref
+)]
+// LINT-DEBT-END
 
 use super::out_of_range_date;
 use crate::{
@@ -20,7 +27,7 @@ impl Model {
     /// (`WORKDAY(45000,10,)` is `WORKDAY(45000,10)` and `NETWORKDAYS(45000,45030,)` 23:
     /// probes/t4870-r2-empty-optional A1, A3, A9, A11, A13; T-4870).
     pub(super) fn holidays_arg<'a>(
-        &self,
+        &mut self,
         args: &'a [Node],
         holidays_at: usize,
         cell: CellReferenceIndex,
@@ -30,7 +37,7 @@ impl Model {
         }
         Ok(args
             .get(holidays_at)
-            .filter(|arg| !self.is_empty_argument(arg)))
+            .filter(|arg| !self.is_empty_argument(arg, cell)))
     }
 
     /// The serials of a holidays argument, read whole: a range is not intersected

@@ -1,6 +1,9 @@
 //! Rewriting the stored text of every formula and defined name for a workbook edit (a table or
 //! sheet delete, a sheet move), keeping what changed so the undo can put it back; and the formula
 //! cells a row or column delete rewrote past what re-inserting them undoes.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 
 use std::collections::HashMap;
 
@@ -255,10 +258,16 @@ impl Model {
     /// cell formula's references are rewritten: Excel shifts a name over the lines after the edit,
     /// shrinks a range that loses an edge and makes a name on a deleted cell `#REF!`
     /// (probes/sheet-ops/t4702-names-*, t4702-name-deleted-cell-*, excel-graph, 2026-11-07).
-    /// Moves are left alone (unprobed). Names are stored in English and have no cell of their
-    /// own: A1 of the edited sheet anchors them, which only a relative reference reads (unprobed).
+    /// Moves are left alone (unprobed). A relative row (for a row edit) or column (for a column
+    /// edit) keeps its text: Excel leaves it where it is, used from another sheet or from the
+    /// edited one, and moves only the absolute parts of a mixed reference
+    /// (probes/sheet-ops/t4747-name-relative-*, t4760-name-*, excel-graph, 2026-11-07/08).
     /// A name the edit does not change keeps its text as stored.
     pub(crate) fn displace_defined_names(&mut self, sheet: u32, displacement: Displacement) {
+        let displacement = Displacement {
+            relative_stays: true,
+            ..displacement
+        };
         if !matches!(
             displacement.data,
             DisplaceData::Row { .. } | DisplaceData::Column { .. }

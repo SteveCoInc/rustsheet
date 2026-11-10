@@ -1,3 +1,10 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(
+    clippy::format_push_string,
+    clippy::match_same_arms,
+    clippy::too_many_lines
+)]
+// LINT-DEBT-END
 #![allow(clippy::unwrap_used, clippy::panic)]
 
 use std::path::Path;
@@ -5,7 +12,7 @@ use std::path::Path;
 use rustsheet_engine::cell::CellValue;
 use rustsheet_engine::clock::Clock;
 use rustsheet_engine::expressions::token::Error;
-use rustsheet_engine::types::*;
+use rustsheet_engine::types::{Cell, FormulaValue, SpillValue};
 use rustsheet_engine::{expressions::utils::number_to_column, Model};
 
 use crate::export::{exported_error_literal, rich_error_vm, save_to_xlsx};
@@ -364,7 +371,7 @@ pub fn test_file(file_path: &str, skip: &[&str]) -> Result<(), String> {
 
 /// Gives the error constants of `model` the kind the exporter saves them as, then recalculates,
 /// so a saved-and-reloaded copy compares equal: the engine-only `#CIRC!`, `#ERROR!` and
-/// `#N/IMPL` are written as `#VALUE!` (`exported_error_literal`), and cells that read them
+/// `#N/IMPL!` are written as `#VALUE!` (`exported_error_literal`), and cells that read them
 /// (ERROR.TYPE) follow. The rich kinds (`#CALC!`, `#SPILL!`, ...) keep theirs through `vm`
 /// (T-1014).
 fn save_error_constants_as_exported(model: &mut Model) {

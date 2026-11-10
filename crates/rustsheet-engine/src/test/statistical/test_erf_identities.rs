@@ -244,8 +244,8 @@ fn gauss_is_norm_s_dist_minus_one_half() {
 fn assert_same_values(pairs: &[(&str, &str)]) {
     let mut model = crate::test::util::new_empty_model();
     for (row, (left, right)) in (1..).zip(pairs) {
-        model._set(&format!("A{row}"), left);
-        model._set(&format!("B{row}"), right);
+        model.set_a1(&format!("A{row}"), left);
+        model.set_a1(&format!("B{row}"), right);
     }
     model.evaluate();
     for (row, (left, right)) in (1..).zip(pairs) {

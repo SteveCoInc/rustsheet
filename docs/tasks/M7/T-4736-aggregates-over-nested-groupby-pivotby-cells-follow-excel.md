@@ -3,7 +3,7 @@ id: T-4736
 title: "Aggregates over nested GROUPBY/PIVOTBY cells follow Excel's 2026-11 reads: SUM #N/A, COUNT skips, COUNTA one per cell"
 milestone: M7
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -33,6 +33,9 @@ Cells this task supersedes (decision 0329 item 3; they become F lines against th
 - t2592-nested-groupby-cells P!A6:A8;
 - t2594-nested-aggregates P!A26:A29;
 - t2625-nested-consumers P!A13, A17, A20, A25, A26;
+- earlier-only, each confirmed by a committed refill (excel-graph, 2026-11-07, identical sheets): gen-m9/e85daedce5c2675e
+  Calc!A35 (probes/gen-m9-e85daedce5c2675e-refill-1107) and probes/t2436/e85daedce5c2675e Calc!A31, A46
+  (probes/t2436-e85daedce5c2675e-refill-1107). gen-m9/81bcdc0bec0c8e6b A121 and d8f44d556674c2fd A78 did not move.
 
 
 Earlier-only candidates (decision 0329 item 3). These are cells with an October fill only that hold SUM or COUNT over a nested
@@ -47,14 +50,33 @@ Any other cell that the eval run shows moving is handled the same way, and it is
   (review round 3 of T-4661).
 
 ## Acceptance criteria
-- [ ] Every cell under "fixes" passes; `make eval-show` shows each one.
-- [ ] Each earlier-only candidate that moves has a committed refill, and is superseded or kept passing as that refill shows.
-- [ ] The baseline diff adds F lines for exactly the cells under "supersedes", made by one
+- [x] Every cell under "fixes" passes; `make eval-show` shows each one.
+- [x] Each earlier-only candidate that moves has a committed refill, and is superseded or kept passing as that refill shows.
+- [x] The baseline diff adds F lines for exactly the cells under "supersedes", made by one
       `update-baseline --allow-regressions` run under decision 0329, and no other regression.
-- [ ] `NestedReading::Flatten` is removed, or kept only where a probe still shows flattening; arrays.md "Aggregates over
+- [x] `NestedReading::Flatten` is removed, or kept only where a probe still shows flattening; arrays.md "Aggregates over
       nested GROUPBY and PIVOTBY cells" states the November reads as ours.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - The element-wise lift reads (T-4737) and the lifted INDEX (T-4738).
 - Aggregates whose nested reading did not change (`NotAvailable`, `Value`).
+
+## Outcome
+- `NestedReading::Flatten` is removed. SUM takes `NotAvailableReferenceValue` (`#N/A` for an array cell, the value for a
+  reference-body cell), and COUNT and COUNTA take `NotAvailable`, as Excel's 2026-11 fills read nested GROUPBY/PIVOTBY
+  cells (decision 0329). arrays.md states the November reads as ours. The unit tests in test_nested_groupby_cells.rs use
+  them, under main's renamed helpers (`get_text_a1`, `set_a1`, T-4856).
+- Refills (excel-graph, 2026-11-07) confirm the earlier-only cells: probes/gen-m9-e85daedce5c2675e-refill-1107 (400/400)
+  and probes/t2436-e85daedce5c2675e-refill-1107 (12/12).
+- Baseline, under decision 0329 item 3, with the owner's go-ahead (2026-11-07) for the `--allow-regressions` run:
+  - after merging main (b54e1c1 and later), `update-baseline --suite probes --suite gen-m9 --allow-regressions` fixed 13
+    cells and added F lines for 14 superseded cells. These are t2592 A6:A8, t2594 A26:A29, t2625 A13, A17, A20, A25, A26,
+    and t2436/e85daedce5c2675e A31, A46. The 15th, gen-m9/e85daedce5c2675e Calc!A35, got its F line in eval/baseline/
+    gen-m9.txt from this branch's first run. Against main, the PR adds F lines for exactly the 15 superseded cells;
+  - the unrestricted `update-baseline --allow-regressions` run then raised exactly the five visible-parity lines by their
+    superseded counts: gen-m9/e85daedce5c2675e +1, t2436/e85daedce5c2675e +2, t2592 +3, t2594 +4, t2625 1 -> 6. Every
+    other suite reports 0 regressions;
+  - the October sidecars are kept, not re-filled (decision 0329).
+- History: the PR was blocked from 2026-11-07 05:xx to 23:4x UTC because the routine sessions' permission check refused
+  the regression run. The owner allowed it in this session.

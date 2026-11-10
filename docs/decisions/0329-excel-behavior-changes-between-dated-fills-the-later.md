@@ -1,6 +1,8 @@
 # 0329 — Excel behavior changes between dated fills: the later reproduced fill is the target
 
 - **Status:** accepted (2026-11-07, T-4661)
+- **Amended by:** decision 0358 (a superseded cell is scored against its later fill, not kept a known failure;
+  item 3's regression run no longer applies to the cells it lists).
 - **Context:**
   - CLAUDE.md directive 1 sets the bar at *current* Microsoft 365 Excel. The oracle (excel-graph, Excel for the web) is
     a live service, so the same input bytes can give a different value on a later date because Excel changed.

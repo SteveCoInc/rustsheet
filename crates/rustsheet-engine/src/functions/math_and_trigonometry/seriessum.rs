@@ -1,3 +1,6 @@
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss)]
+// LINT-DEBT-END
 use crate::{
     arithmetic::{flush_subnormal, power},
     calc_result::CalcResult,
@@ -40,7 +43,7 @@ impl Model {
             let count = rows.iter().map(Vec::len).sum::<usize>().max(1);
             u64::try_from(count).unwrap_or(u64::MAX)
         });
-        let empty = self.empty_arguments::<3>(args);
+        let empty = self.empty_arguments::<3>(args, cell);
         self.lift_call_costed(
             Function::Seriessum,
             args,
@@ -64,7 +67,7 @@ impl Model {
         // Excel: written-empty coefficients are `#N/A`, as an empty x, n or m is
         // (probes/t4873-empty-arg-quotient-ceiling Calc!B4:B5). Reported after the x, n and m
         // checks, as every coefficient error is.
-        if self.is_empty_argument(node) {
+        if self.is_empty_argument(node, cell) {
             return Err(CalcResult::new_error(Error::NA, cell, String::new()));
         }
         let result = self.evaluate_node_in_context(node, cell);

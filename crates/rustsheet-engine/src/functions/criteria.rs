@@ -1,13 +1,21 @@
 //! Excel criteria and wildcard matching: the one place that parses `COUNTIF`-style
 //! criteria strings (operators, wildcards, `~` escapes, number/date/bool/error
 //! literals) and wildcard text patterns used by MATCH/XMATCH/XLOOKUP and D-functions.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::cast_precision_loss, elided_lifetimes_in_paths)]
+// LINT-DEBT-END
 
 use crate::{
     calc_result::CalcResult,
     cast::value_number_text_with,
-    expressions::token::{is_english_error_string, Error},
+    expressions::{
+        token::{english_criterion_error, Error},
+        utils::boolean_text,
+    },
     formatter::date_text::{parse_date, CurrentYear},
-    functions::util::collation::{cmp_text_pairwise, fold_lookup, note_compared, BYTE_TICKS},
+    functions::util::collation::{
+        cmp_text_pairwise, fold_lookup, note_compared, out_of_ticks, BYTE_TICKS,
+    },
     locale::Locale,
     number_format::{cmp_excel_precision, parse_excel_number, parse_finite_number},
     text::Text,
@@ -272,16 +280,16 @@ fn result_is_greater_or_equal_than_string(calc_result: &CalcResult, target: &Tex
 // ERRORS ///
 //********///
 
-fn result_is_equal_to_error(calc_result: &CalcResult, target: &str) -> bool {
+fn result_is_equal_to_error(calc_result: &CalcResult, target: &Error) -> bool {
     match calc_result {
-        CalcResult::Error { error, .. } => target == error.to_string(),
+        CalcResult::Error { error, .. } => error == target,
         _ => false,
     }
 }
 
-fn result_is_not_equal_to_error(calc_result: &CalcResult, target: &str) -> bool {
+fn result_is_not_equal_to_error(calc_result: &CalcResult, target: &Error) -> bool {
     match calc_result {
-        CalcResult::Error { error, .. } => target != error.to_string(),
+        CalcResult::Error { error, .. } => error != target,
         _ => true,
     }
 }
@@ -337,19 +345,16 @@ type CriteriaMatcher<'a> = Box<dyn Fn(&CalcResult) -> bool + 'a>;
 /// Excel: `<TRUE`, `>TRUE`, `<#N/A` and `>#N/A` match nothing, while `<=` and `>=` behave as
 /// equality (`COUNTIF` over 10, "abc", TRUE, #N/A, "abd", 5 gives 0 for `>TRUE`/`<TRUE`/`>#N/A`/
 /// `<#N/A` and 1 for `>=TRUE`/`<=TRUE`/`>=#N/A`/`<=#N/A`; probes/criteria-operands C1-C8).
-fn bool_or_error_operand_matcher<'a>(
-    operand: &'a str,
-    inclusive: bool,
-) -> Option<CriteriaMatcher<'a>> {
-    if let Ok(b) = operand.to_lowercase().parse::<bool>() {
+fn bool_or_error_operand_matcher(operand: &str, inclusive: bool) -> Option<CriteriaMatcher<'_>> {
+    if let Some(b) = boolean_text(operand) {
         Some(if inclusive {
             Box::new(move |x| result_is_equal_to_bool(x, b))
         } else {
             Box::new(|_| false)
         })
-    } else if is_english_error_string(operand) {
+    } else if let Some(target) = english_criterion_error(operand) {
         Some(if inclusive {
-            Box::new(move |x| result_is_equal_to_error(x, operand))
+            Box::new(move |x| result_is_equal_to_error(x, &target))
         } else {
             Box::new(|_| false)
         })
@@ -457,7 +462,7 @@ pub(crate) fn indexed_criterion(
     if let Some(f) = parse_criterion_number(v) {
         return Some(IndexedCriterion::Number(op, f));
     }
-    if v.is_empty() || v.to_lowercase().parse::<bool>().is_ok() || is_english_error_string(v) {
+    if v.is_empty() || boolean_text(v).is_some() || english_criterion_error(v).is_some() {
         return None;
     }
     let wildcard = v.contains('*') || v.contains('?');
@@ -513,10 +518,10 @@ pub(crate) fn build_criteria_with<'a>(
                 }
                 // Same for both flavors: `<>ab` is an exact not-equal, never a prefix test.
                 CriterionOp::Ne => {
-                    if let Ok(b) = v.to_lowercase().parse::<bool>() {
+                    if let Some(b) = boolean_text(v) {
                         Box::new(move |x| result_is_not_equal_to_bool(x, b))
-                    } else if is_english_error_string(v) {
-                        Box::new(move |x| result_is_not_equal_to_error(x, v))
+                    } else if let Some(target) = english_criterion_error(v) {
+                        Box::new(move |x| result_is_not_equal_to_error(x, &target))
                     } else if v.contains('*') || v.contains('?') {
                         let pattern = WildcardPattern::new(&operand_text(s, prefix));
                         Box::new(move |x| !pattern.matches_result(x))
@@ -529,10 +534,10 @@ pub(crate) fn build_criteria_with<'a>(
                 }
                 CriterionOp::Eq => {
                     let explicit_equals = !prefix.is_empty();
-                    if let Ok(b) = v.to_lowercase().parse::<bool>() {
+                    if let Some(b) = boolean_text(v) {
                         Box::new(move |x| result_is_equal_to_bool(x, b))
-                    } else if is_english_error_string(v) {
-                        Box::new(move |x| result_is_equal_to_error(x, v))
+                    } else if let Some(target) = english_criterion_error(v) {
+                        Box::new(move |x| result_is_equal_to_error(x, &target))
                     } else if v.contains('*') || v.contains('?') {
                         let mut pattern = WildcardPattern::new(&operand_text(s, prefix));
                         if flavor == CriteriaFlavor::Database && !explicit_equals {
@@ -567,7 +572,7 @@ pub(crate) fn build_criteria_with<'a>(
             if *error == Error::BUSY {
                 return Box::new(|_| false);
             }
-            Box::new(move |x| result_is_equal_to_error(x, &error.to_string()))
+            Box::new(move |x| result_is_equal_to_error(x, error))
         }
         // `indexed_criterion` takes every number and every empty criterion above.
         CalcResult::Number(target) => {
@@ -720,7 +725,10 @@ impl WildcardPattern {
                 note_compared(s.len(), BYTE_TICKS);
                 self.matches_units(s.as_bytes(), |byte| u16::from(byte.to_ascii_lowercase()))
             }
-            _ => self.matches_units(&folded_units(text), |unit| unit),
+            _ => {
+                // `folded_units` charges its fold; the matcher charges steps past the length.
+                self.matches_units(&folded_units(text), |unit| unit)
+            }
         }
     }
 
@@ -760,14 +768,34 @@ impl WildcardPattern {
 
     /// Glob matching with backtracking to the last `*` only, which suffices because `*` matches
     /// any run: on a mismatch the last `*` takes one more unit. At most `text.len()` restarts,
-    /// each of at most `tokens.len()` steps.
+    /// each of at most `tokens.len()` steps, so O(n*m) steps for n units and m tokens.
+    ///
+    /// The caller charged the text's length (one step a unit); every step past it is charged
+    /// too, as it is taken (audit 2 item 2, directive 5: `XMATCH("*"&REPT("a",16000)&"b",..,2)`
+    /// over 32767-unit texts takes about 2.7E8 steps a text, which a length charge never saw).
+    /// Inside a `stoppable` reader (XMATCH's and XLOOKUP's wildcard scan) it stops once the run's
+    /// work allowance is spent; `out_of_ticks` then marks the run cut short, so its value is the
+    /// work budget's error, never this "no match".
     fn matches_units<T: Copy>(&self, text: &[T], unit: impl Fn(T) -> u16) -> bool {
+        /// Steps between two charges (and allowance checks).
+        const CHARGE_EVERY: usize = 1 << 12;
         let tokens = &self.tokens;
         let mut next_token = 0;
         let mut next_unit = 0;
         // The token after the last `*` seen, and the text position that `*` now runs to.
         let mut last_star: Option<(usize, usize)> = None;
+        // Steps taken, and steps charged (the caller's length charge first).
+        let mut steps = 0usize;
+        let mut charged = text.len();
         while let Some(&current) = text.get(next_unit) {
+            steps += 1;
+            if steps.is_multiple_of(CHARGE_EVERY) && steps > charged {
+                note_compared(steps - charged, BYTE_TICKS);
+                charged = steps;
+                if out_of_ticks() {
+                    return false;
+                }
+            }
             match tokens.get(next_token) {
                 Some(WildcardToken::AnyRun) => {
                     next_token += 1;
@@ -792,6 +820,9 @@ impl WildcardPattern {
             next_token = after_star;
             next_unit = star_end + 1;
             last_star = Some((after_star, next_unit));
+        }
+        if steps > charged {
+            note_compared(steps - charged, BYTE_TICKS);
         }
         tokens
             .get(next_token..)

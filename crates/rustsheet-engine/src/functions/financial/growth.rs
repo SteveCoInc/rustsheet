@@ -1,4 +1,7 @@
 //! RRI and PDURATION: the growth rate and the number of periods that take `pv` to `fv`.
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::float_cmp)]
+// LINT-DEBT-END
 
 use crate::functions::lift::{div_error, num_error, number_or_error};
 use crate::x87_exp::excel_exp;

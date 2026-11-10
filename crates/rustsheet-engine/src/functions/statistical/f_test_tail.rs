@@ -15,10 +15,14 @@
 //! docs/research/t2681/README.md, docs/excel-semantics/statistics.md "F.TEST / FTEST").
 //!
 //! Every loop is bounded (bratio's series bound, and `bup`'s n below 40).
+// LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
+#![expect(clippy::many_single_char_names)]
+#![cfg_attr(test, expect(clippy::float_cmp))]
+// LINT-DEBT-END
 
 use super::beta_density::beta_density_small_shape;
-use super::bratio::bpser::bpser_with_ln_beta;
-use super::bratio::ln_beta::neg_ln_beta_half_integer;
+use super::bratio::bpser::{bpser_with_ln_beta, ExpFinish};
+use super::bratio::ln_beta::{neg_ln_beta_balanced, neg_ln_beta_half_integer};
 use super::bratio::EPS;
 use super::gammaln::excel_gammaln;
 use crate::arithmetic::{extended_quotient, extended_sum};
@@ -75,8 +79,14 @@ pub(super) fn f_test_bratio_p(x: f64, y: f64, a: f64, b: f64) -> Option<f64> {
 
 /// w3's `bpser`: bratio's series and EXP ([`bpser_with_ln_beta`]) with L [`neg_ln_beta`]'s
 /// ln B(a, b).
+/// With both shapes above 1 and one above 8 the ln B is the balanced gamma ratio
+/// ([`neg_ln_beta_balanced`]) paired with the split EXP finish (T-4975, addendum section D):
+/// changing only ln B regresses gen-m9/a790a4d4a6a82756 A289.
 fn bpser(a: f64, b: f64, x: f64) -> Option<f64> {
-    bpser_with_ln_beta(a, b, x, neg_ln_beta(a, b))
+    if a.min(b) > 1.0 && a.max(b) > 8.0 {
+        return bpser_with_ln_beta(a, b, x, neg_ln_beta_balanced(a, b), ExpFinish::Split);
+    }
+    bpser_with_ln_beta(a, b, x, neg_ln_beta(a, b), ExpFinish::Single)
 }
 
 /// -ln B(a, b) in a register as w3's `lnb_w3` forms it: above a shape of 8 the accurate value

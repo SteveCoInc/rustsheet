@@ -13,36 +13,39 @@ whose exit criteria are not met.
 
 | Phase | Milestones, in order | Status |
 |---|---|---|
-| 1. Parity (fifteen digits) | M0, M1, M2, M5, M6, M7, M8, M9, M10, M11, M16 | active |
+| 1. Parity (fifteen digits) | M0, M1, M2, M5, M6, M7, M8, M9, M10, M11 | active |
 | 1b. Bit parity | the `defer: phase-1b` tasks of every milestone | after Phase 1 exits (decision 0114) |
-| 2. Architecture and performance | M3, M4, M13, M15 | deferred until Phase 1 exits |
+| 2. Architecture and performance | M3, M4, M13, M15, M16 (decision 0354) | deferred until Phase 1 exits |
 | 3. Release | M12 | after Phase 2 |
 | 4. Desktop oracle | M14 | out of scope; tasks dropped (decision 0266) |
 
-**Phase 1 exit (decisions 0114, 0188):** every Excel function is in the catalog with its parity scope
+**Phase 1 exit (decisions 0114, 0188, 0355):** every Excel function is in the catalog with its parity scope
 (T-0040). Every in-scope function has oracle-backed cases covering each parameter mode and edge
 pool (decision 0094's coverage: 400 Excel cells, 200 of them generated). Each remaining failure, attributed to a
 function or not, has a filed task or a `DEVIATION` entry. Percentages here and in every milestone count only scored
 cells not listed as accepted deviations, which are scored in their own column (decision 0036). Accepted deviations
 are directive-5 limits only (decision 0052); cells where the engine follows the math under decision 0188 R3
-(`MATH-OVER-EXCEL`) count as passing where it returns the math. In addition, two gates hold (decision 0188 R1):
-- **Gate A (accuracy, priority 1):** every numeric function in scope has a committed, stratified reference table
-  (about 40% typical inputs, 30% tails and domain edges, 20% extreme-but-valid, 10% log-uniform), each point with a
-  50-digit mpmath value and, where filled, Excel's value. `make check` fails on a point that is neither within
-  1e-9 relative of the math (absolute 1e-300 near 0) nor within 15 significant digits of Excel, and on an error
-  where the other side is a number. Points where decision 0188 R3 follows the math are checked against the math only.
-- **Gate B (user-representative parity):** every in-scope function has **≥ 99.9% of its attributed Excel cells within
-  15 significant digits** of Excel's value with the right type, error and text (decision 0083's rule: not visibly
-  off), counted only on the gen-* suites, ironcalc-calc, corpus-bench, calipers, poi, smoke and fixtures. A
-  function's cells are counted as decision 0118 says: its attributed Excel cells, those whose formula calls it as the
-  only function outside the harness glue list, or every Excel cell that calls it when it has fewer than 20 attributed
-  cells. The stricter count over every cell that calls it, and the count over every suite, are reported beside it as
-  information and gate nothing.
+(`MATH-OVER-EXCEL`) count as passing where it returns the math.
 
-The exit criteria of M1, M2, M5–M10 and M11 are met, read this way (decision 0188 R1(c)): each milestone's probe row
-and ironcalc-calc row counts only visibly-off type, error or text cells, cells whose wrong number comes from a semantic
-rule, and numeric cells outside Gate A's envelope (neither within 15 digits of Excel nor within 1e-9 of the math; a
-cell with no math reference yet counts as outside). The other visibly-off numeric cells of probes and probes-numeric,
+Two gates by usage tier hold (decision 0355, which replaces decision 0188's Gate A and Gate B as SPEC-0037's
+tasks land; until each lands, the rule it replaces holds). A function's tier is its catalog `usage:`: foundational
+(122 common functions: catalog prior at least 0.5, or called in at least 6 of the 1,136 SpreadsheetBench workbooks
+with formulas), otherwise expert. A value is inside the **envelope** when it is within 12 significant digits of
+Excel's value or within 1e-9 relative of the 50-digit math (absolute 1e-300); a wrong type, error or text is never
+inside, and decision 0188 R3 cells are checked against the math only.
+- **Foundational gate:** 100% of the tier's cells right on type, error and text, and ≥ 99.99% of them inside the
+  envelope.
+- **Expert gate:** ≥ 99.9% of the tier's cells right on type, error and text and ≥ 99.9% inside the envelope, and
+  each expert function ≥ 99% on both.
+
+Both count the probes, probes-numeric, the eval/accuracy tables and the gen-* suites, ironcalc-calc, corpus-bench,
+calipers, poi, smoke and fixtures, with cells attributed as decision 0118 says, leaving out decision 0134
+exceptions, deviations, and the pivot suites and GETPIVOTDATA (Phase 2, decision 0354). The old Gate A (15 digits
+or 1e-9) and Gate B (99.9% of each function within 15 digits) are reported beside them as information.
+
+The exit criteria of M1, M2, M5–M10 and M11 are met, read this way (decisions 0188 R1(c), 0355 item 4): each
+milestone's probe row and ironcalc-calc row counts only cells outside the envelope or with a wrong type, error or
+text, and is met when those cells, by tier, meet the tier gates' bars. The other visibly-off numeric cells of probes and probes-numeric,
 the fit-lab research sweeps included, are measured and reported on every run as **Phase 1b evidence**. The semantic
 probe-row criteria and the ironcalc-calc allowance are unchanged.
 
@@ -52,7 +55,9 @@ rates), Phase 1 reads it as "not visibly off"; the eval report's milestone exit 
 **Phase 1b**: ≥ 99.9% bit-exact and 100% within 4 ulp per function, worked after Phase 1 exits and
 before Phase 3. Tasks that only move cells already within 15 digits, and last-digit work on the BETA.DIST and F.DIST
 densities and on other dense-sweep cells already within Gate A (decision 0188 R5), carry `defer: phase-1b` and are
-not picked before then. The CI gate is unchanged: no cell may regress, bit for bit.
+not picked before then. The CI gate (decision 0355 item 6, once T-5093 lands) blocks a cell leaving the envelope,
+a wrong type, error or text, and a tier gate going from met to unmet; bit drift inside the envelope is recorded in
+the baseline, not blocked. Until T-5093 lands, no cell may regress, bit for bit.
 
 Phase 1 works visibly-off cells in campaign stages (decision 0114): semantic fixes first (wrong
 type, error or text), then accurate kernels where Excel is close to correctly rounded, then
@@ -356,9 +361,10 @@ docs/research/xlsx-round-trip-2026-11-04.md.
 7. The hostile set never panics and stays within bounded memory.
 8. Untouched parts are byte-identical under R1 on index-stable files.
 
-## M16 — Pivot tables (Phase 1)
+## M16 — Pivot tables (Phase 2)
 
-Added by decision 0274 (owner request, 2026-11-04). Research and plan:
+Added to Phase 1 by decision 0274 (owner request, 2026-11-04); moved to Phase 2 by decision 0354 (owner request,
+2026-11-08). Its exit row is still measured every run, and its tasks keep their M16 milestone. Research and plan:
 docs/research/pivot-tables-2026-11-04/plan.md. Design: SPEC-0032 (a task of PV0). Today the engine only imports
 pivots read-only and answers GETPIVOTDATA (SPEC-0015).
 
@@ -386,7 +392,18 @@ styles and conditional formats beyond preservation, UI-only commands.
   accepted deviations; rendered layouts match Excel's `rowItems`/`colItems`.
 - Every remaining catalog row has a filed task or an out-of-scope ruling; rows Excel for the web cannot
   render are M14 tasks and do not block (decision 0039).
-- Measured by report.json's `milestone_exit` M16 row; until that row exists M16 counts as not met.
+- Measured by report.json's `milestone_exit` M16 row (T-4127): gen-pivot, pivot-corpus-lo and
+  pivot-corpus-closedxml with none of their scored cells visibly off (`n/a`, so not met, when a
+  fetched suite is absent), the M16 probe row (the pivot probes) with no visibly-off cell, and per
+  catalog stage the 30-oracle-cell floor for every in-scope row the web can render, the layout
+  check, and the owners of the remaining rows: each needs its catalog `owner` to be an open M16 task
+  (T-4952; the row lists the unowned ids). The
+  probe row leaves out only R3 passes and M14-owned cells.
+  The corpus suites measure import and formula cells (plan check (a)); the re-render of fresh corpus
+  pivots (check (b)) is `corpus_render_met`, read from report.json's `fresh_pivot_render` (freshness
+  decided without the renderer, T-4906; wired by T-4971): met when both corpus suites have render cells
+  and none visibly off, not measured when either suite is absent.
+  Since decision 0354, `scripts/phase1_exit.py` no longer lists M16 among the Phase 1 milestones.
 
 ## M14 — Desktop-oracle parity (Phase 4)
 
