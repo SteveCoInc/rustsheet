@@ -1,0 +1,4416 @@
+{
+ "notice": "Frozen kernel values for the T-5109 / T-2481 fresh sweep, written 2026-11-10 before any value returned. Research metadata, NOT oracle values. cells: sheet Calc (the identified kernel; for HYPGEOM the rule (H/J)*I with flushed factors, which is what the engine returns). poisson_large: sheet Poisson. closed_form_factor: sheet Closed (the engine keeps a subnormal closed-form factor; if Excel flushes it, E is 0 and H is TRUE). cdf: sheet Cdf. cdf_wide: sheet CdfWide; cdf_tie: sheet CdfTie. In both, engine is the form the engine computes (every operation stored, the mirror test on the stored products); products_held_exactly keeps the two products of each ratio exact and stores only the quotient; r_order is ((a b)/c)/d; mirror_test_on_exact_products compares x N with n K exactly. No cached Excel cell tells these apart: the fill does.",
+ "cells": [
+  {
+   "cell": "Calc!A2",
+   "formula": "BINOM.DIST(4,28,0.162424798934072,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.2024905258086947"
+  },
+  {
+   "cell": "Calc!A3",
+   "formula": "BINOM.DIST(2,38,4.86455927450401e-05,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "1.6606639243776814e-06"
+  },
+  {
+   "cell": "Calc!A4",
+   "formula": "BINOM.DIST(2122,4981,0.307482981075595,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "4.6643580449928134e-70"
+  },
+  {
+   "cell": "Calc!A5",
+   "formula": "BINOM.DIST(398,425606364,1.84287232792005e-09,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A6",
+   "formula": "BINOM.DIST(40,4311,0.0107832397182846,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.03912716895563283"
+  },
+  {
+   "cell": "Calc!A7",
+   "formula": "BINOM.DIST(13,86847,0.116435112284285,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A8",
+   "formula": "BINOM.DIST(498959,1321750,0.223811290836359,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A9",
+   "formula": "BINOM.DIST(1,73,2.69700979788898e-09,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "1.9688167701448135e-07"
+  },
+  {
+   "cell": "Calc!A10",
+   "formula": "BINOM.DIST(4,7,0.492534133351774,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.26917448113426157"
+  },
+  {
+   "cell": "Calc!A11",
+   "formula": "BINOM.DIST(10,27,2.61716779239143e-09,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "1.2719407891514571e-79"
+  },
+  {
+   "cell": "Calc!A12",
+   "formula": "BINOM.DIST(17,550,0.0264931579989777,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.08027540475706968"
+  },
+  {
+   "cell": "Calc!A13",
+   "formula": "BINOM.DIST(1752,29308056,3.25015257925985e-05,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "3.2595152613940834e-119"
+  },
+  {
+   "cell": "Calc!A14",
+   "formula": "BINOM.DIST(240,518,0.614447270038491,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "1.0990063440759317e-12"
+  },
+  {
+   "cell": "Calc!A15",
+   "formula": "BINOM.DIST(2268,6203,1.70015089645477e-08,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A16",
+   "formula": "BINOM.DIST(1,7,0.236434573610279,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.32800960211461183"
+  },
+  {
+   "cell": "Calc!A17",
+   "formula": "BINOM.DIST(1017,897782,8.55651581463207e-05,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A18",
+   "formula": "BINOM.DIST(1,7,0.241825080328314,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.32152582722258705"
+  },
+  {
+   "cell": "Calc!A19",
+   "formula": "BINOM.DIST(1715912,4463800,0.0842059311134133,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A20",
+   "formula": "BINOM.DIST(95,145112,0.000938935959462858,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "3.738734537592283e-05"
+  },
+  {
+   "cell": "Calc!A21",
+   "formula": "BINOM.DIST(2,265838,0.000158948137745799,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "3.967493447282469e-16"
+  },
+  {
+   "cell": "Calc!A22",
+   "formula": "BINOM.DIST(8,18,0.577823765681663,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.09780442045047047"
+  },
+  {
+   "cell": "Calc!A23",
+   "formula": "BINOM.DIST(88,97077888,0.146801675856239,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A24",
+   "formula": "BINOM.DIST(4,227,0.0185913569565987,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.1959389746081843"
+  },
+  {
+   "cell": "Calc!A25",
+   "formula": "BINOM.DIST(6,5190835,8.39116232324883e-06,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "1.1490519875380357e-12"
+  },
+  {
+   "cell": "Calc!A26",
+   "formula": "BINOM.DIST(45,159,0.189510710703593,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.001193415259790525"
+  },
+  {
+   "cell": "Calc!A27",
+   "formula": "BINOM.DIST(306079,155673965,0.556876565241917,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A28",
+   "formula": "BINOM.DIST(170897,462515507,0.000715319031985185,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A29",
+   "formula": "BINOM.DIST(547215,29527767,0.0184718777855661,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "2.8162858675130636e-05"
+  },
+  {
+   "cell": "Calc!A30",
+   "formula": "BINOM.DIST(2,114,0.0101022235158808,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.2108173278456223"
+  },
+  {
+   "cell": "Calc!A31",
+   "formula": "BINOM.DIST(2,19,9.02193798084551e-09,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "1.3918605268330443e-14"
+  },
+  {
+   "cell": "Calc!A32",
+   "formula": "BINOM.DIST(4,123,0.0202408322007225,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.13370102991634045"
+  },
+  {
+   "cell": "Calc!A33",
+   "formula": "BINOM.DIST(3233,34467467,0.00266240408383779,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A34",
+   "formula": "BINOM.DIST(10500,206245,0.047663204008904,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "2.604085624391368e-13"
+  },
+  {
+   "cell": "Calc!A35",
+   "formula": "BINOM.DIST(633325030,949639029,2.72943949455162e-06,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A36",
+   "formula": "BINOM.DIST(42,1039416,3.62310136212846e-05,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.04827523603182748"
+  },
+  {
+   "cell": "Calc!A37",
+   "formula": "BINOM.DIST(2426596,22309583,3.65223395452178e-05,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A38",
+   "formula": "BINOM.DIST(3103489,204199986,0.0234419173783176,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A39",
+   "formula": "BINOM.DIST(75,2035,4.11514999381649e-07,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A40",
+   "formula": "BINOM.DIST(225391,3399602,0.0648612805901607,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "8.806649627778125e-29"
+  },
+  {
+   "cell": "Calc!A41",
+   "formula": "BINOM.DIST(1984,11869885,0.00704192146538666,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A42",
+   "formula": "BINOM.DIST(36,3197,0.0145869527858938,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.017558856085876613"
+  },
+  {
+   "cell": "Calc!A43",
+   "formula": "BINOM.DIST(51040226,67147535,0.00522721237840609,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A44",
+   "formula": "BINOM.DIST(10,688,0.019756333206461,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.07398263391599862"
+  },
+  {
+   "cell": "Calc!A45",
+   "formula": "BINOM.DIST(9,131199993,2.1383155653773e-07,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "1.942164527670482e-05"
+  },
+  {
+   "cell": "Calc!A46",
+   "formula": "BINOM.DIST(2,16,0.0836506166286878,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.24715808787095567"
+  },
+  {
+   "cell": "Calc!A47",
+   "formula": "BINOM.DIST(8,988824987,0.049976793625014,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A48",
+   "formula": "BINOM.DIST(1,55464788,2.7278483904562e-08,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.3332361190581509"
+  },
+  {
+   "cell": "Calc!A49",
+   "formula": "BINOM.DIST(284742,5175895,0.0203458365512807,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A50",
+   "formula": "BINOM.DIST(3207,12017214,0.000148487203178975,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "1.305248952038438e-201"
+  },
+  {
+   "cell": "Calc!A51",
+   "formula": "BINOM.DIST(342,516,1.99368738177525e-07,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A52",
+   "formula": "BINOM.DIST(1,3,0.620744345275616,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.26785401242804585"
+  },
+  {
+   "cell": "Calc!A53",
+   "formula": "BINOM.DIST(305,130303,5.68773313567906e-05,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A54",
+   "formula": "BINOM.DIST(102692,105212,0.999999999999,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A55",
+   "formula": "BINOM.DIST(27,44898469,1.94463785436151e-06,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "2.8385562002109424e-14"
+  },
+  {
+   "cell": "Calc!A56",
+   "formula": "BINOM.DIST(3835616,192430158,0.0142243623725018,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A57",
+   "formula": "BINOM.DIST(781,180617,2.12797229145279e-06,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A58",
+   "formula": "BINOM.DIST(207,718094,0.000271746799515516,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.01946788159500402"
+  },
+  {
+   "cell": "Calc!A59",
+   "formula": "BINOM.DIST(453183,139272840,1.04278422342697e-05,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A60",
+   "formula": "BINOM.DIST(2722,10356057,0.000225160348809636,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "2.693631766476199e-16"
+  },
+  {
+   "cell": "Calc!A61",
+   "formula": "BINOM.DIST(1,2,0.235318263909505,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.35988715716024317"
+  },
+  {
+   "cell": "Calc!A62",
+   "formula": "BINOM.DIST(1036156,824802463,0.00105340215918566,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A63",
+   "formula": "BINOM.DIST(1,2518,1.41957473537336e-07,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0003573212221859778"
+  },
+  {
+   "cell": "Calc!A64",
+   "formula": "BINOM.DIST(1,2,0.741631011987465,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.38322890809182714"
+  },
+  {
+   "cell": "Calc!A65",
+   "formula": "BINOM.DIST(9526,282390,0.000872218281785157,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A66",
+   "formula": "BINOM.DIST(177,185300,0.0014334311543513,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "1.5281943764945063e-09"
+  },
+  {
+   "cell": "Calc!A67",
+   "formula": "BINOM.DIST(46,8182969,2.45234186211651e-05,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "1.051117881683072e-39"
+  },
+  {
+   "cell": "Calc!A68",
+   "formula": "BINOM.DIST(2362584,426223842,0.00829937784262668,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A69",
+   "formula": "BINOM.DIST(1678182,1916720,1.59568140438268e-07,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A70",
+   "formula": "BINOM.DIST(3,5,0.421891821044155,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.25096984684952217"
+  },
+  {
+   "cell": "Calc!A71",
+   "formula": "BINOM.DIST(1,57,4.65235684271469e-05,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.002644943331981684"
+  },
+  {
+   "cell": "Calc!A72",
+   "formula": "BINOM.DIST(38,431,0.106287372161354,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.03081985211465818"
+  },
+  {
+   "cell": "Calc!A73",
+   "formula": "BINOM.DIST(42170,646900,0.000136669782058333,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A74",
+   "formula": "BINOM.DIST(1919,2954,0.791863225322071,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "1.2480495104810411e-71"
+  },
+  {
+   "cell": "Calc!A75",
+   "formula": "BINOM.DIST(1,31,0.0126120831681339,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.2671669710756602"
+  },
+  {
+   "cell": "Calc!A76",
+   "formula": "BINOM.DIST(175470,181454,0.999999999999,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A77",
+   "formula": "BINOM.DIST(14,20145,1.87719006964566e-09,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "1.3965942795907727e-73"
+  },
+  {
+   "cell": "Calc!A78",
+   "formula": "BINOM.DIST(2,11,0.1873437201424,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.29840289419334237"
+  },
+  {
+   "cell": "Calc!A79",
+   "formula": "BINOM.DIST(65042,225109,2.00314071734989e-09,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A80",
+   "formula": "BINOM.DIST(9,22,0.377796501632159,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.16336780121004157"
+  },
+  {
+   "cell": "Calc!A81",
+   "formula": "BINOM.DIST(1,9,1.07093129554443e-05,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "9.637555927286326e-05"
+  },
+  {
+   "cell": "Calc!A82",
+   "formula": "BINOM.DIST(5,196129,4.03916826101001e-05,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.09429991341631101"
+  },
+  {
+   "cell": "Calc!A83",
+   "formula": "BINOM.DIST(40,33729253,7.27379921902058e-09,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "3.7369437759294466e-73"
+  },
+  {
+   "cell": "Calc!A84",
+   "formula": "BINOM.DIST(72,216,0.18400656219065,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "6.613829850746759e-08"
+  },
+  {
+   "cell": "Calc!A85",
+   "formula": "BINOM.DIST(7,75,6.51972286399831e-06,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "9.93424095129504e-28"
+  },
+  {
+   "cell": "Calc!A86",
+   "formula": "BINOM.DIST(325,11991,0.0256263479892687,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.013408455227494424"
+  },
+  {
+   "cell": "Calc!A87",
+   "formula": "BINOM.DIST(1,3,0.0537894745698937,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.14447546674525485"
+  },
+  {
+   "cell": "Calc!A88",
+   "formula": "BINOM.DIST(566663485,768415391,0.686139709237819,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A89",
+   "formula": "BINOM.DIST(274,202371,3.74098427016248e-09,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A90",
+   "formula": "BINOM.DIST(19,28,0.739925688406661,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.12295162864346677"
+  },
+  {
+   "cell": "Calc!A91",
+   "formula": "BINOM.DIST(987,36321253,0.000190788197977303,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A92",
+   "formula": "BINOM.DIST(16754434,935957300,0.0124215819707257,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A93",
+   "formula": "BINOM.DIST(53,996,1.63311173124611e-05,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "8.87705933186755e-166"
+  },
+  {
+   "cell": "Calc!A94",
+   "formula": "BINOM.DIST(6,10982,0.000530777291246309,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.1602681937568777"
+  },
+  {
+   "cell": "Calc!A95",
+   "formula": "BINOM.DIST(4,686,6.74159317173142e-05,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "1.8045208131771677e-07"
+  },
+  {
+   "cell": "Calc!A96",
+   "formula": "BINOM.DIST(13045,40640,0.271354739319262,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "2.8262287710860117e-109"
+  },
+  {
+   "cell": "Calc!A97",
+   "formula": "BINOM.DIST(8,35092867,0.000787090392592897,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A98",
+   "formula": "BINOM.DIST(1,663,0.00162361627422057,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.36713272880472037"
+  },
+  {
+   "cell": "Calc!A99",
+   "formula": "BINOM.DIST(8,85,8.22429022333838e-05,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "1.0009292529950812e-22"
+  },
+  {
+   "cell": "Calc!A100",
+   "formula": "BINOM.DIST(1,12,0.103624891779519,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.37327852334193523"
+  },
+  {
+   "cell": "Calc!A101",
+   "formula": "BINOM.DIST(3,98134516,1.05016492030752e-06,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "3.1900168146631547e-40"
+  },
+  {
+   "cell": "Calc!A102",
+   "formula": "BINOM.DIST(79768,81464477,0.001636541217019,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A103",
+   "formula": "BINOM.DIST(72,295,0.00109251005023983,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "3.897602004539395e-144"
+  },
+  {
+   "cell": "Calc!A104",
+   "formula": "BINOM.DIST(9,26661,0.000183213823050526,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0329838882854362"
+  },
+  {
+   "cell": "Calc!A105",
+   "formula": "BINOM.DIST(185239,1448890,2.78319494414991e-07,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A106",
+   "formula": "BINOM.DIST(6568124,716435570,0.0162707905613493,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A107",
+   "formula": "BINOM.DIST(1,3,1.60894870873726e-07,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "4.826844572982345e-07"
+  },
+  {
+   "cell": "Calc!A108",
+   "formula": "BINOM.DIST(2,3,0.999999999999,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "2.9999336348336493e-12"
+  },
+  {
+   "cell": "Calc!A109",
+   "formula": "BINOM.DIST(1339,55133733,1.78004954846206e-09,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A110",
+   "formula": "BINOM.DIST(32,120303776,4.95135123173333e-07,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "3.23941220654875e-05"
+  },
+  {
+   "cell": "Calc!A111",
+   "formula": "BINOM.DIST(89673,71159257,5.01461750793729e-06,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A112",
+   "formula": "BINOM.DIST(16,119597,0.000200953347844193,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.02161524438294248"
+  },
+  {
+   "cell": "Calc!A113",
+   "formula": "BINOM.DIST(17543,3141453,0.00608080127427828,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "7.556715096433037e-32"
+  },
+  {
+   "cell": "Calc!A114",
+   "formula": "BINOM.DIST(8193,1334855,0.00504871604003037,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "4.334814107224172e-67"
+  },
+  {
+   "cell": "Calc!A115",
+   "formula": "BINOM.DIST(1,2,6.29430577676204e-06,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "1.2588532316953655e-05"
+  },
+  {
+   "cell": "Calc!A116",
+   "formula": "BINOM.DIST(6,11,0.434486396153663,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.17976881589836663"
+  },
+  {
+   "cell": "Calc!A117",
+   "formula": "BINOM.DIST(13461,557267,0.000504045651739514,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A118",
+   "formula": "BINOM.DIST(5241,729660,0.00631697769226411,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "4.217909391968499e-21"
+  },
+  {
+   "cell": "Calc!A119",
+   "formula": "BINOM.DIST(111,631,0.0488129103997048,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "1.6274365780519535e-31"
+  },
+  {
+   "cell": "Calc!A120",
+   "formula": "BINOM.DIST(44154,346067840,0.000253708819579112,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A121",
+   "formula": "BINOM.DIST(9,11,0.0188066058103381,FALSE)",
+   "kind": "binom interior pmf",
+   "kernel": "1.558352552877625e-14"
+  },
+  {
+   "cell": "Calc!A122",
+   "formula": "POISSON.DIST(1620971,2002789.77377161,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A123",
+   "formula": "POISSON.DIST(33344053,2807.38313642963,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A124",
+   "formula": "POISSON.DIST(547822,555587.12109533,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "1.1332679748661298e-27"
+  },
+  {
+   "cell": "Calc!A125",
+   "formula": "POISSON.DIST(2687,8792.27852613628,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A126",
+   "formula": "POISSON.DIST(6858821,3927177.84192441,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A127",
+   "formula": "POISSON.DIST(68,3527.39032110763,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A128",
+   "formula": "POISSON.DIST(142446979,153937267.483739,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A129",
+   "formula": "POISSON.DIST(1928,13686896.981155,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A130",
+   "formula": "POISSON.DIST(2474472,1914666.5641395,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A131",
+   "formula": "POISSON.DIST(5800457,878700736.427777,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A132",
+   "formula": "POISSON.DIST(4,6.03971764108776,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.13208066815391722"
+  },
+  {
+   "cell": "Calc!A133",
+   "formula": "POISSON.DIST(4404286,99723486.691426,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A134",
+   "formula": "POISSON.DIST(2306,4191.03103408353,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "3.795574769714559e-223"
+  },
+  {
+   "cell": "Calc!A135",
+   "formula": "POISSON.DIST(277771635,4178.76425791398,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A136",
+   "formula": "POISSON.DIST(2,2.39081679995814,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.2616640497709035"
+  },
+  {
+   "cell": "Calc!A137",
+   "formula": "POISSON.DIST(300424,720.552891930458,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A138",
+   "formula": "POISSON.DIST(1784,982.521952339073,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "7.995943282987286e-117"
+  },
+  {
+   "cell": "Calc!A139",
+   "formula": "POISSON.DIST(37834721,3830337.40192509,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A140",
+   "formula": "POISSON.DIST(2091098,1330639.31918307,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A141",
+   "formula": "POISSON.DIST(723073,12.3368300633093,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A142",
+   "formula": "POISSON.DIST(116,206.338123051113,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "2.2341542811529763e-12"
+  },
+  {
+   "cell": "Calc!A143",
+   "formula": "POISSON.DIST(1523,4.93970753071541,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A144",
+   "formula": "POISSON.DIST(1200249,845091.973771,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A145",
+   "formula": "POISSON.DIST(60485,4666.02910678288,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A146",
+   "formula": "POISSON.DIST(93435018,65038754.1406514,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A147",
+   "formula": "POISSON.DIST(43,263.692382562985,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "6.395916496354602e-64"
+  },
+  {
+   "cell": "Calc!A148",
+   "formula": "POISSON.DIST(666366698,725922896.599346,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A149",
+   "formula": "POISSON.DIST(18767,7464.5664261961,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A150",
+   "formula": "POISSON.DIST(998,1775.72420148529,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "1.2146801014750488e-90"
+  },
+  {
+   "cell": "Calc!A151",
+   "formula": "POISSON.DIST(280186337,4016133.10575822,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A152",
+   "formula": "POISSON.DIST(96606943,95442321.9759668,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A153",
+   "formula": "POISSON.DIST(725,259429672.228911,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A154",
+   "formula": "POISSON.DIST(928111,582351.296146103,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A155",
+   "formula": "POISSON.DIST(171943864,248103.914288687,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A156",
+   "formula": "POISSON.DIST(653999,715165.950717763,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A157",
+   "formula": "POISSON.DIST(432,35749597.9951451,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A158",
+   "formula": "POISSON.DIST(354367,345158.450313552,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "8.838225754443196e-57"
+  },
+  {
+   "cell": "Calc!A159",
+   "formula": "POISSON.DIST(28,77254.3487785432,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A160",
+   "formula": "POISSON.DIST(2335,2835.6974849929,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "3.003183813069799e-23"
+  },
+  {
+   "cell": "Calc!A161",
+   "formula": "POISSON.DIST(2,186577007.061923,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A162",
+   "formula": "POISSON.DIST(69145,66140.3409432941,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "9.5484348208371e-33"
+  },
+  {
+   "cell": "Calc!A163",
+   "formula": "POISSON.DIST(251887,280437.126013696,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A164",
+   "formula": "POISSON.DIST(9,11.4635497415666,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.09898118508289962"
+  },
+  {
+   "cell": "Calc!A165",
+   "formula": "POISSON.DIST(2,883129.013628453,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A166",
+   "formula": "POISSON.DIST(4800,9532.35238993986,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A167",
+   "formula": "POISSON.DIST(6544049,773.03502774579,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A168",
+   "formula": "POISSON.DIST(2447,3624.49760406189,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "1.042201259153564e-96"
+  },
+  {
+   "cell": "Calc!A169",
+   "formula": "POISSON.DIST(64310220,6522.94715154874,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A170",
+   "formula": "POISSON.DIST(366621943,514612544.865881,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A171",
+   "formula": "POISSON.DIST(41129,30.3939052884368,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A172",
+   "formula": "POISSON.DIST(2603,2831.35837065845,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "6.049143402918791e-07"
+  },
+  {
+   "cell": "Calc!A173",
+   "formula": "POISSON.DIST(153608,10.0750648707396,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A174",
+   "formula": "POISSON.DIST(70720328,112908311.771858,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A175",
+   "formula": "POISSON.DIST(906,376544.907851087,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A176",
+   "formula": "POISSON.DIST(80935,87806.7568330059,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "1.5744557942749096e-123"
+  },
+  {
+   "cell": "Calc!A177",
+   "formula": "POISSON.DIST(219503014,692653644.032229,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A178",
+   "formula": "POISSON.DIST(553980,352955.313871336,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A179",
+   "formula": "POISSON.DIST(66,3.41023313068721,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "8.84767075190926e-60"
+  },
+  {
+   "cell": "Calc!A180",
+   "formula": "POISSON.DIST(1781,1301.95711860608,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "4.847135674039691e-37"
+  },
+  {
+   "cell": "Calc!A181",
+   "formula": "POISSON.DIST(1053524,6791.04207384707,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A182",
+   "formula": "POISSON.DIST(6045,8899.56820737766,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "2.407342024285787e-227"
+  },
+  {
+   "cell": "Calc!A183",
+   "formula": "POISSON.DIST(27734,9.49288340087901,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A184",
+   "formula": "POISSON.DIST(17,11.2359706336301,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.026890047080406605"
+  },
+  {
+   "cell": "Calc!A185",
+   "formula": "POISSON.DIST(1003,484830595.451185,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A186",
+   "formula": "POISSON.DIST(66,60.4494102967088,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.03829631685122837"
+  },
+  {
+   "cell": "Calc!A187",
+   "formula": "POISSON.DIST(57927,60721.5129458938,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "7.143855041107057e-32"
+  },
+  {
+   "cell": "Calc!A188",
+   "formula": "POISSON.DIST(39618,25741.5210494711,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A189",
+   "formula": "POISSON.DIST(26,1.62622513070746,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "1.5094465647685507e-22"
+  },
+  {
+   "cell": "Calc!A190",
+   "formula": "POISSON.DIST(445775,877015.287705984,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A191",
+   "formula": "POISSON.DIST(4384668,89125.4736692685,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A192",
+   "formula": "POISSON.DIST(24704606,14007665.2229704,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A193",
+   "formula": "POISSON.DIST(269,64.893174628307,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "8.063816172555256e-80"
+  },
+  {
+   "cell": "Calc!A194",
+   "formula": "POISSON.DIST(700379178,468584419.897399,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A195",
+   "formula": "POISSON.DIST(23285943,3516796.4443452,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A196",
+   "formula": "POISSON.DIST(788630,1395601.51110237,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A197",
+   "formula": "POISSON.DIST(316,14237.4673082917,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A198",
+   "formula": "POISSON.DIST(4143,2413.27029127202,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "4.0277468227005743e-224"
+  },
+  {
+   "cell": "Calc!A199",
+   "formula": "POISSON.DIST(737797,998.55298039553,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A200",
+   "formula": "POISSON.DIST(14,7.72943692534886,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.013702816714367164"
+  },
+  {
+   "cell": "Calc!A201",
+   "formula": "POISSON.DIST(12,1545.32054571901,FALSE)",
+   "kind": "poisson saddle pmf",
+   "kernel": "0.0"
+  },
+  {
+   "cell": "Calc!A202",
+   "formula": "HYPGEOMDIST(2,4,213,621)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.3054631832705913",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.3054631832705911"
+  },
+  {
+   "cell": "Calc!A203",
+   "formula": "HYPGEOM.DIST(0,147173,2,41097986,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9928507695468928",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9928507695468917"
+  },
+  {
+   "cell": "Calc!A204",
+   "formula": "HYPGEOMDIST(2,46549,311,1912971)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.014109398203951093",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.014109398203951105"
+  },
+  {
+   "cell": "Calc!A205",
+   "formula": "HYPGEOM.DIST(0,7716,223,773037050,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9977766094696827",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9977766094696818"
+  },
+  {
+   "cell": "Calc!A206",
+   "formula": "HYPGEOMDIST(51,433,20512,99053)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "3.5298711720277006e-07",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "3.529871172027622e-07"
+  },
+  {
+   "cell": "Calc!A207",
+   "formula": "HYPGEOM.DIST(38,2422,100,11376,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "5.612934113560584e-05",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "5.612934113560652e-05"
+  },
+  {
+   "cell": "Calc!A208",
+   "formula": "HYPGEOMDIST(13239,22271,286125417,491954841)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "2.8115279877264935e-06",
+   "branch": "fallback",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "2.8115279877265168e-06"
+  },
+  {
+   "cell": "Calc!A209",
+   "formula": "HYPGEOM.DIST(2,4,1035,2535,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.3504463697256486",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.3504463697256486"
+  },
+  {
+   "cell": "Calc!A210",
+   "formula": "HYPGEOMDIST(156,950,239,1280)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.00017679095223070433",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.0001767909522306962"
+  },
+  {
+   "cell": "Calc!A211",
+   "formula": "HYPGEOM.DIST(0,3,836,645618228,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9999961153563401",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9999961153563398"
+  },
+  {
+   "cell": "Calc!A212",
+   "formula": "HYPGEOMDIST(3,5,153,282)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.3369373743715653",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.3369373743715655"
+  },
+  {
+   "cell": "Calc!A213",
+   "formula": "HYPGEOM.DIST(0,69297,69,46680279,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9025719532629325",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9025719532629319"
+  },
+  {
+   "cell": "Calc!A214",
+   "formula": "HYPGEOMDIST(0,22671,1,399167628)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9999432043121492",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9999432043121493"
+  },
+  {
+   "cell": "Calc!A215",
+   "formula": "HYPGEOM.DIST(841,18910,43985,1058759,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.0018637728661984015",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.0018637728661981751"
+  },
+  {
+   "cell": "Calc!A216",
+   "formula": "HYPGEOMDIST(0,4,4,13)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.1762237762237763",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.17622377622377622"
+  },
+  {
+   "cell": "Calc!A217",
+   "formula": "HYPGEOM.DIST(1,1,22,534,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.04119850187265919",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.04119850187265917"
+  },
+  {
+   "cell": "Calc!A218",
+   "formula": "HYPGEOMDIST(21,1928,43,10559)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "3.672259979469872e-06",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "3.672259979469889e-06"
+  },
+  {
+   "cell": "Calc!A219",
+   "formula": "HYPGEOM.DIST(0,2,5,10210,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9990207599466927",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9990207599466929"
+  },
+  {
+   "cell": "Calc!A220",
+   "formula": "HYPGEOMDIST(5,50,897,29962)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.012920657960295952",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.012920657960295932"
+  },
+  {
+   "cell": "Calc!A221",
+   "formula": "HYPGEOM.DIST(0,17,190,27493,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.8887611723248852",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.8887611723248849"
+  },
+  {
+   "cell": "Calc!A222",
+   "formula": "HYPGEOMDIST(0,1,10,55288)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9998191289249029",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9998191289249023"
+  },
+  {
+   "cell": "Calc!A223",
+   "formula": "HYPGEOM.DIST(11863,1091854,199043,17855241,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "5.440000339362772e-05",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "5.440000339333583e-05"
+  },
+  {
+   "cell": "Calc!A224",
+   "formula": "HYPGEOMDIST(2922469,29405020,192249297,1932051627)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "2.3836954714998563e-05",
+   "branch": "fallback",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "2.3836954714979975e-05"
+  },
+  {
+   "cell": "Calc!A225",
+   "formula": "HYPGEOM.DIST(5391,12478,24139,57805,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "8.967098037855832e-06",
+   "branch": "fallback",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "8.967098037855656e-06"
+  },
+  {
+   "cell": "Calc!A226",
+   "formula": "HYPGEOMDIST(1,27,252872,32543259)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.1712857256902492",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.17128572569024914"
+  },
+  {
+   "cell": "Calc!A227",
+   "formula": "HYPGEOM.DIST(15,541,48,2539,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.033591768462715825",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.03359176846271573"
+  },
+  {
+   "cell": "Calc!A228",
+   "formula": "HYPGEOMDIST(0,15160,4752,501842413)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.8662735654369037",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.866273565436902"
+  },
+  {
+   "cell": "Calc!A229",
+   "formula": "HYPGEOM.DIST(331,2773,13040,102540,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.010679317488692013",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.01067931748869257"
+  },
+  {
+   "cell": "Calc!A230",
+   "formula": "HYPGEOMDIST(388,1613,2305378,11045570)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.0001955993907493144",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.00019559939074932444"
+  },
+  {
+   "cell": "Calc!A231",
+   "formula": "HYPGEOM.DIST(0,1,4,25,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.8400000000000003",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.84"
+  },
+  {
+   "cell": "Calc!A232",
+   "formula": "HYPGEOMDIST(41038,33266702,422299,351714400)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "1.464301063241654e-10",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "1.4643010632415213e-10"
+  },
+  {
+   "cell": "Calc!A233",
+   "formula": "HYPGEOM.DIST(0,7009,10,84670,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.4214182637302917",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.42141826373029145"
+  },
+  {
+   "cell": "Calc!A234",
+   "formula": "HYPGEOMDIST(4,163,43,505)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.00021399096468762118",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.00021399096468762089"
+  },
+  {
+   "cell": "Calc!A235",
+   "formula": "HYPGEOM.DIST(0,1,59,3040,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9805921052631585",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9805921052631579"
+  },
+  {
+   "cell": "Calc!A236",
+   "formula": "HYPGEOMDIST(17,6994,4855,1381658)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.025780578359307416",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.02578057835930764"
+  },
+  {
+   "cell": "Calc!A237",
+   "formula": "HYPGEOM.DIST(150964,284458,2480702,4707451,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "3.244222476376523e-07",
+   "branch": "fallback",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "3.244222476376103e-07"
+  },
+  {
+   "cell": "Calc!A238",
+   "formula": "HYPGEOMDIST(46,13221,93,19090)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "3.0128004463375535e-05",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "3.0128004463375602e-05"
+  },
+  {
+   "cell": "Calc!A239",
+   "formula": "HYPGEOM.DIST(0,1,2,5,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.6000000000000001",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.6"
+  },
+  {
+   "cell": "Calc!A240",
+   "formula": "HYPGEOMDIST(0,3,732,887473)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9975275961328429",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9975275961328421"
+  },
+  {
+   "cell": "Calc!A241",
+   "formula": "HYPGEOM.DIST(13519,175417265,14514,187928431,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.008322951932228541",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.008322951932217283"
+  },
+  {
+   "cell": "Calc!A242",
+   "formula": "HYPGEOMDIST(85,60628,215,171517)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.02468644681539662",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.02468644681539685"
+  },
+  {
+   "cell": "Calc!A243",
+   "formula": "HYPGEOM.DIST(0,31,1,1333018,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9999767445000748",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9999767445000742"
+  },
+  {
+   "cell": "Calc!A244",
+   "formula": "HYPGEOMDIST(1,3,249,15342)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.0471283204174775",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.04712832041747749"
+  },
+  {
+   "cell": "Calc!A245",
+   "formula": "HYPGEOM.DIST(11,73,19,118,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.1858890250590914",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.1858890250590916"
+  },
+  {
+   "cell": "Calc!A246",
+   "formula": "HYPGEOMDIST(0,232,371,166589)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.5959441621019721",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.595944162101972"
+  },
+  {
+   "cell": "Calc!A247",
+   "formula": "HYPGEOM.DIST(0,267,10,28621,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9105187262043835",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9105187262043835"
+  },
+  {
+   "cell": "Calc!A248",
+   "formula": "HYPGEOMDIST(0,1730,43876,53182001)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.23981441353555888",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.23981441353555888"
+  },
+  {
+   "cell": "Calc!A249",
+   "formula": "HYPGEOM.DIST(683,42015,52395,3030185,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.003937947823328624",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.003937947823328166"
+  },
+  {
+   "cell": "Calc!A250",
+   "formula": "HYPGEOMDIST(4,12,4,117)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "6.676823531554055e-05",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "6.676823531554061e-05"
+  },
+  {
+   "cell": "Calc!A251",
+   "formula": "HYPGEOM.DIST(0,4,1,10451,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9996172615060765",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.999617261506076"
+  },
+  {
+   "cell": "Calc!A252",
+   "formula": "HYPGEOMDIST(35066,154515,219384,945077)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "2.1521052617727207e-09",
+   "branch": "fallback",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "2.1521052617733635e-09"
+  },
+  {
+   "cell": "Calc!A253",
+   "formula": "HYPGEOM.DIST(23,1589301,23,1991295,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.005592535778068399",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.0055925357780684"
+  },
+  {
+   "cell": "Calc!A254",
+   "formula": "HYPGEOMDIST(13411,7768544,202632,116451354)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.002267800437352394",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.002267800437346105"
+  },
+  {
+   "cell": "Calc!A255",
+   "formula": "HYPGEOM.DIST(1,9,25,6105,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.03571095086043572",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.03571095086043575"
+  },
+  {
+   "cell": "Calc!A256",
+   "formula": "HYPGEOMDIST(1,2,1,7)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.2857142857142857",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.2857142857142857"
+  },
+  {
+   "cell": "Calc!A257",
+   "formula": "HYPGEOM.DIST(0,83,3725725,1052296657,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.7449870913488446",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.7449870913488456"
+  },
+  {
+   "cell": "Calc!A258",
+   "formula": "HYPGEOMDIST(0,37,75,358)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "9.777905920910986e-05",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "9.777905920910982e-05"
+  },
+  {
+   "cell": "Calc!A259",
+   "formula": "HYPGEOM.DIST(0,33,1,167020478,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9999998024194369",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9999998024194374"
+  },
+  {
+   "cell": "Calc!A260",
+   "formula": "HYPGEOMDIST(853,586718,2311,1447232)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "2.8755455743583078e-05",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "2.8755455743583688e-05"
+  },
+  {
+   "cell": "Calc!A261",
+   "formula": "HYPGEOM.DIST(272,106698,806,359742,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.0012672095568164068",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.0012672095568163726"
+  },
+  {
+   "cell": "Calc!A262",
+   "formula": "HYPGEOMDIST(0,11,14,647)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.7846358723706143",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.7846358723706145"
+  },
+  {
+   "cell": "Calc!A263",
+   "formula": "HYPGEOM.DIST(210,2817,718,9782,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.03272439691797081",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.03272439691797164"
+  },
+  {
+   "cell": "Calc!A264",
+   "formula": "HYPGEOMDIST(0,1,253,1956748718)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9999998707038887",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9999998707038887"
+  },
+  {
+   "cell": "Calc!A265",
+   "formula": "HYPGEOM.DIST(1,29,4,330,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.2689586360310926",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.2689586360310926"
+  },
+  {
+   "cell": "Calc!A266",
+   "formula": "HYPGEOMDIST(39,25384,62,55871)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.002296956881669757",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.0022969568816697543"
+  },
+  {
+   "cell": "Calc!A267",
+   "formula": "HYPGEOM.DIST(36,549,250479,8041571,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "1.810772579459461e-05",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "1.810772579459442e-05"
+  },
+  {
+   "cell": "Calc!A268",
+   "formula": "HYPGEOMDIST(1,5261,1,32524)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.16175747140573105",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.16175747140573116"
+  },
+  {
+   "cell": "Calc!A269",
+   "formula": "HYPGEOM.DIST(0,17,6,29,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.001945181255526084",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.0019451812555260832"
+  },
+  {
+   "cell": "Calc!A270",
+   "formula": "HYPGEOMDIST(5,16237312,8,181234828)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.00024392563022568615",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.00024392563022568604"
+  },
+  {
+   "cell": "Calc!A271",
+   "formula": "HYPGEOM.DIST(0,2,6905,474520727,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9999708971626512",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9999708971626518"
+  },
+  {
+   "cell": "Calc!A272",
+   "formula": "HYPGEOMDIST(39,464,20306,112386)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "1.5218359390100248e-09",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "1.521835939010002e-09"
+  },
+  {
+   "cell": "Calc!A273",
+   "formula": "HYPGEOM.DIST(0,1,24,2821,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9914923785891526",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9914923785891527"
+  },
+  {
+   "cell": "Calc!A274",
+   "formula": "HYPGEOMDIST(2,8,16,37)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.1686613299516527",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.16866132995165253"
+  },
+  {
+   "cell": "Calc!A275",
+   "formula": "HYPGEOM.DIST(2,11,323,1387,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.27516063829854465",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.2751606382985448"
+  },
+  {
+   "cell": "Calc!A276",
+   "formula": "HYPGEOMDIST(2,7,2,27)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.0598290598290598",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.05982905982905983"
+  },
+  {
+   "cell": "Calc!A277",
+   "formula": "HYPGEOM.DIST(19317,1853507,92053,8811078,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.0030140602060052006",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.003014060206027753"
+  },
+  {
+   "cell": "Calc!A278",
+   "formula": "HYPGEOMDIST(124,25588,1727221,241399786)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "7.069761303120137e-07",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "7.069761303120388e-07"
+  },
+  {
+   "cell": "Calc!A279",
+   "formula": "HYPGEOM.DIST(0,95,617,137559201,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9995739822227762",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.999573982222776"
+  },
+  {
+   "cell": "Calc!A280",
+   "formula": "HYPGEOMDIST(0,161,110,13861)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.2751954311228398",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.27519543112283973"
+  },
+  {
+   "cell": "Calc!A281",
+   "formula": "HYPGEOM.DIST(5,200,5,242,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.3821660042560527",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.3821660042560528"
+  },
+  {
+   "cell": "Calc!A282",
+   "formula": "HYPGEOMDIST(0,2,903,104658352)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9999827439264725",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9999827439264716"
+  },
+  {
+   "cell": "Calc!A283",
+   "formula": "HYPGEOM.DIST(0,1,2,26,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.923076923076923",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9230769230769231"
+  },
+  {
+   "cell": "Calc!A284",
+   "formula": "HYPGEOMDIST(40,2665,487,14618)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "9.863270103355639e-11",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "9.863270103355585e-11"
+  },
+  {
+   "cell": "Calc!A285",
+   "formula": "HYPGEOM.DIST(0,17,3,982069,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9999480696681136",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9999480696681144"
+  },
+  {
+   "cell": "Calc!A286",
+   "formula": "HYPGEOMDIST(8,15160,1298,1611961)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.06082605519651899",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.06082605519651893"
+  },
+  {
+   "cell": "Calc!A287",
+   "formula": "HYPGEOM.DIST(0,9,31,92989925,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9999969996788364",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9999969996788366"
+  },
+  {
+   "cell": "Calc!A288",
+   "formula": "HYPGEOMDIST(50,346,946,11112)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "6.640874163858356e-05",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "6.640874163858353e-05"
+  },
+  {
+   "cell": "Calc!A289",
+   "formula": "HYPGEOM.DIST(6,14,22,30,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.0005130767949358653",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.0005130767949358654"
+  },
+  {
+   "cell": "Calc!A290",
+   "formula": "HYPGEOMDIST(1,1317272,2,25085887)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.0995062652591084",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.09950626525910847"
+  },
+  {
+   "cell": "Calc!A291",
+   "formula": "HYPGEOM.DIST(0,874459,540,1954721766,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.7853490487630288",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.7853490487630281"
+  },
+  {
+   "cell": "Calc!A292",
+   "formula": "HYPGEOMDIST(0,2788,15,1615130452)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9999741076673958",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9999741076673947"
+  },
+  {
+   "cell": "Calc!A293",
+   "formula": "HYPGEOM.DIST(0,1187,62,1586874,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.954664834414945",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9546648344149449"
+  },
+  {
+   "cell": "Calc!A294",
+   "formula": "HYPGEOMDIST(0,1,988,7622)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.8703752295985312",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.8703752295985305"
+  },
+  {
+   "cell": "Calc!A295",
+   "formula": "HYPGEOM.DIST(0,22,11,910472638,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9999997342040146",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9999997342040144"
+  },
+  {
+   "cell": "Calc!A296",
+   "formula": "HYPGEOMDIST(0,1,13,631)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9793977812995245",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9793977812995246"
+  },
+  {
+   "cell": "Calc!A297",
+   "formula": "HYPGEOM.DIST(0,3,11769453,103198244,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.6953957094257038",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.6953957094257054"
+  },
+  {
+   "cell": "Calc!A298",
+   "formula": "HYPGEOMDIST(50,145,982,5869)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "7.240895271407328e-08",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "7.240895271407225e-08"
+  },
+  {
+   "cell": "Calc!A299",
+   "formula": "HYPGEOM.DIST(0,4,155592,1070922,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.5336776451577901",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.5336776451577904"
+  },
+  {
+   "cell": "Calc!A300",
+   "formula": "HYPGEOMDIST(0,8,13,145)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.46246261122300264",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.4624626112230027"
+  },
+  {
+   "cell": "Calc!A301",
+   "formula": "HYPGEOM.DIST(0,14,218,571297,FALSE)",
+   "kind": "hypgeom in-support pmf",
+   "kernel": "0.9946709397117939",
+   "branch": "primary",
+   "flushed_numerator_beside_kept_J": false,
+   "exact_pmf_as_double": "0.9946709397117938"
+  }
+ ],
+ "poisson_large": [
+  {
+   "cell": "Poisson!C2",
+   "k": 161970715,
+   "mean": "161971193.804498",
+   "sd_from_k": 0.038,
+   "kernel": "3.1324522955395154e-05"
+  },
+  {
+   "cell": "Poisson!C3",
+   "k": 141923006073872,
+   "mean": "141923359677704.0",
+   "sd_from_k": 29.682,
+   "kernel": "1.6450707159535893e-199"
+  },
+  {
+   "cell": "Poisson!C4",
+   "k": 5800840071,
+   "mean": "5801055568.25883",
+   "sd_from_k": 2.829,
+   "kernel": "9.567948680276422e-08"
+  },
+  {
+   "cell": "Poisson!C5",
+   "k": 1181130457914,
+   "mean": "1181118866139.99",
+   "sd_from_k": -10.666,
+   "kernel": "7.264845384509551e-32"
+  },
+  {
+   "cell": "Poisson!C6",
+   "k": 41922,
+   "mean": "41967.9998610311",
+   "sd_from_k": 0.225,
+   "kernel": "0.0018999223125713404"
+  },
+  {
+   "cell": "Poisson!C7",
+   "k": 48346516775317,
+   "mean": "48346354575936.4",
+   "sd_from_k": -23.327,
+   "kernel": "3.9249189584739023e-126"
+  },
+  {
+   "cell": "Poisson!C8",
+   "k": 92304,
+   "mean": "92866.9677781453",
+   "sd_from_k": 1.853,
+   "kernel": "0.00023753403751932466"
+  },
+  {
+   "cell": "Poisson!C9",
+   "k": 18925346,
+   "mean": "19007879.9002187",
+   "sd_from_k": 18.972,
+   "kernel": "1.0729005669572089e-82"
+  },
+  {
+   "cell": "Poisson!C10",
+   "k": 188354,
+   "mean": "189771.161652084",
+   "sd_from_k": 3.265,
+   "kernel": "4.566805265610857e-06"
+  },
+  {
+   "cell": "Poisson!C11",
+   "k": 35711726605,
+   "mean": "35714531357.1432",
+   "sd_from_k": 14.842,
+   "kernel": "3.1151403828382653e-54"
+  },
+  {
+   "cell": "Poisson!C12",
+   "k": 66930603340,
+   "mean": "66931153262.8568",
+   "sd_from_k": 2.126,
+   "kernel": "1.610490788192921e-07"
+  },
+  {
+   "cell": "Poisson!C13",
+   "k": 20143861156,
+   "mean": "20143119153.4352",
+   "sd_from_k": -5.228,
+   "kernel": "3.2633970569248927e-12"
+  },
+  {
+   "cell": "Poisson!C14",
+   "k": 246493668658,
+   "mean": "246494576957.565",
+   "sd_from_k": 1.829,
+   "kernel": "1.5073795582267136e-07"
+  },
+  {
+   "cell": "Poisson!C15",
+   "k": 419751365587,
+   "mean": "419765982647.977",
+   "sd_from_k": 22.561,
+   "kernel": "1.825719156417787e-117"
+  },
+  {
+   "cell": "Poisson!C16",
+   "k": 3542922241,
+   "mean": "3542753033.44039",
+   "sd_from_k": -2.843,
+   "kernel": "1.1785684803255591e-07"
+  },
+  {
+   "cell": "Poisson!C17",
+   "k": 85318,
+   "mean": "89545.7543228441",
+   "sd_from_k": 14.474,
+   "kernel": "1.2379292950114092e-47"
+  },
+  {
+   "cell": "Poisson!C18",
+   "k": 3679918079,
+   "mean": "3680010714.96674",
+   "sd_from_k": 1.527,
+   "kernel": "2.049371889366227e-06"
+  },
+  {
+   "cell": "Poisson!C19",
+   "k": 306253113,
+   "mean": "306320186.598103",
+   "sd_from_k": 3.833,
+   "kernel": "1.4737910023234442e-08"
+  },
+  {
+   "cell": "Poisson!C20",
+   "k": 2257611583218,
+   "mean": "2257616657835.51",
+   "sd_from_k": 3.377,
+   "kernel": "8.85463486910353e-10"
+  },
+  {
+   "cell": "Poisson!C21",
+   "k": 22281,
+   "mean": "26712.9834657907",
+   "sd_from_k": 29.691,
+   "kernel": "1.2885279100498e-172"
+  },
+  {
+   "cell": "Poisson!C22",
+   "k": 61958617400,
+   "mean": "61958579472.147",
+   "sd_from_k": -0.152,
+   "kernel": "1.5842276770553427e-06"
+  },
+  {
+   "cell": "Poisson!C23",
+   "k": 21913041951,
+   "mean": "21912487348.4847",
+   "sd_from_k": -3.747,
+   "kernel": "2.4127083457139545e-09"
+  },
+  {
+   "cell": "Poisson!C24",
+   "k": 58422376051,
+   "mean": "58422469209.1729",
+   "sd_from_k": 0.385,
+   "kernel": "1.5323712963830533e-06"
+  },
+  {
+   "cell": "Poisson!C25",
+   "k": 9655584590,
+   "mean": "9657743548.6918",
+   "sd_from_k": 21.971,
+   "kernel": "6.298766318222206e-111"
+  },
+  {
+   "cell": "Poisson!C26",
+   "k": 5703632753,
+   "mean": "5703402673.40237",
+   "sd_from_k": -3.047,
+   "kernel": "5.0978921412123855e-08"
+  },
+  {
+   "cell": "Poisson!C27",
+   "k": 196241081055,
+   "mean": "196230854083.534",
+   "sd_from_k": -23.086,
+   "kernel": "1.6487575272486677e-122"
+  },
+  {
+   "cell": "Poisson!C28",
+   "k": 119930095,
+   "mean": "119968698.305567",
+   "sd_from_k": 3.525,
+   "kernel": "7.30833917494798e-08"
+  },
+  {
+   "cell": "Poisson!C29",
+   "k": 5068802511944,
+   "mean": "5068758356507.26",
+   "sd_from_k": -19.612,
+   "kernel": "5.28217377422387e-91"
+  },
+  {
+   "cell": "Poisson!C30",
+   "k": 46079249733516,
+   "mean": "46079236196090.2",
+   "sd_from_k": -1.994,
+   "kernel": "8.04526534475429e-09"
+  },
+  {
+   "cell": "Poisson!C31",
+   "k": 20518534898072,
+   "mean": "20518509810814.2",
+   "sd_from_k": -5.538,
+   "kernel": "1.9240489394075736e-14"
+  },
+  {
+   "cell": "Poisson!C32",
+   "k": 187544454813,
+   "mean": "187545235405.909",
+   "sd_from_k": 1.802,
+   "kernel": "1.8149146929314844e-07"
+  },
+  {
+   "cell": "Poisson!C33",
+   "k": 18206487414,
+   "mean": "18209366577.4224",
+   "sd_from_k": 21.338,
+   "kernel": "4.093295785616734e-105"
+  },
+  {
+   "cell": "Poisson!C34",
+   "k": 649537727954457,
+   "mean": "649537643748638.0",
+   "sd_from_k": -3.304,
+   "kernel": "6.670208695258876e-11"
+  },
+  {
+   "cell": "Poisson!C35",
+   "k": 17356316,
+   "mean": "17467276.2506218",
+   "sd_from_k": 26.634,
+   "kernel": "3.937688974620924e-158"
+  },
+  {
+   "cell": "Poisson!C36",
+   "k": 159783942,
+   "mean": "159767522.52167",
+   "sd_from_k": -1.299,
+   "kernel": "1.3574740444657205e-05"
+  },
+  {
+   "cell": "Poisson!C37",
+   "k": 40085694,
+   "mean": "40091487.2401423",
+   "sd_from_k": 0.915,
+   "kernel": "4.1459778428146456e-05"
+  },
+  {
+   "cell": "Poisson!C38",
+   "k": 125895781684,
+   "mean": "125895157507.376",
+   "sd_from_k": -1.759,
+   "kernel": "2.392872104411301e-07"
+  },
+  {
+   "cell": "Poisson!C39",
+   "k": 49334,
+   "mean": "42778.607285995",
+   "sd_from_k": -29.514,
+   "kernel": "3.015286580716664e-211"
+  },
+  {
+   "cell": "Poisson!C40",
+   "k": 2159715,
+   "mean": "2156883.31152884",
+   "sd_from_k": -1.927,
+   "kernel": "4.234432842701484e-05"
+  },
+  {
+   "cell": "Poisson!C41",
+   "k": 15605,
+   "mean": "16047.5187275111",
+   "sd_from_k": 3.542,
+   "kernel": "6.757694244527014e-06"
+  }
+ ],
+ "closed_form_factor": [
+  {
+   "row": 2,
+   "tuple": [
+    100,
+    200,
+    100,
+    125893
+   ],
+   "factor_H_as_the_engine_computes_it": "9.9963561292527e-311",
+   "H_is_subnormal": true,
+   "engine_pmf": "8.78632524770997e-294",
+   "branch": "primary",
+   "pmf_if_H_were_flushed": "0.0"
+  },
+  {
+   "row": 3,
+   "tuple": [
+    100,
+    200,
+    100,
+    150000
+   ],
+   "factor_H_as_the_engine_computes_it": "2.459656e-318",
+   "H_is_subnormal": true,
+   "engine_pmf": "2.1482969805475718e-301",
+   "branch": "primary",
+   "pmf_if_H_were_flushed": "0.0"
+  },
+  {
+   "row": 4,
+   "tuple": [
+    100,
+    210,
+    100,
+    125893
+   ],
+   "factor_H_as_the_engine_computes_it": "1.3775590862803373e-306",
+   "H_is_subnormal": false,
+   "engine_pmf": "6.927671094330329e-291",
+   "branch": "primary",
+   "pmf_if_H_were_flushed": "0.0"
+  },
+  {
+   "row": 5,
+   "tuple": [
+    80,
+    160,
+    80,
+    500000
+   ],
+   "factor_H_as_the_engine_computes_it": "2.1359870359208755e-304",
+   "H_is_subnormal": false,
+   "engine_pmf": "8.014437711701714e-291",
+   "branch": "primary",
+   "pmf_if_H_were_flushed": "0.0"
+  },
+  {
+   "row": 6,
+   "tuple": [
+    60,
+    130,
+    60,
+    9000000
+   ],
+   "factor_H_as_the_engine_computes_it": "2.8270392260065656e-307",
+   "H_is_subnormal": false,
+   "engine_pmf": "3.004851164734103e-298",
+   "branch": "primary",
+   "pmf_if_H_were_flushed": "0.0"
+  },
+  {
+   "row": 7,
+   "tuple": [
+    100,
+    200,
+    100,
+    100000
+   ],
+   "factor_H_as_the_engine_computes_it": "1.0000000000000237e-300",
+   "H_is_subnormal": false,
+   "engine_pmf": "8.879524211659118e-284",
+   "branch": "primary",
+   "pmf_if_H_were_flushed": "0.0"
+  },
+  {
+   "row": 8,
+   "tuple": [
+    120,
+    250,
+    120,
+    50000
+   ],
+   "factor_H_as_the_engine_computes_it": "6.2632789792776e-311",
+   "H_is_subnormal": true,
+   "engine_pmf": "7.665834470062993e-292",
+   "branch": "primary",
+   "pmf_if_H_were_flushed": "0.0"
+  }
+ ],
+ "cdf": [
+  {
+   "cell": "Cdf!A2",
+   "formula": "HYPGEOM.DIST(0,1,27843,54984,TRUE)",
+   "kernel": "0.4936163247490178",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A3",
+   "formula": "HYPGEOM.DIST(1,749,147,1940867,TRUE)",
+   "kernel": "0.9984621667964468",
+   "terms": 145,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A4",
+   "formula": "HYPGEOM.DIST(1514,271040,4305,804345,TRUE)",
+   "kernel": "0.9802372818960428",
+   "terms": 2790,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A5",
+   "formula": "HYPGEOM.DIST(3,10209,28,183407,TRUE)",
+   "kernel": "0.9323538844011215",
+   "terms": 24,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A6",
+   "formula": "HYPGEOM.DIST(1,3,1,15,TRUE)",
+   "kernel": "1.0",
+   "terms": 0,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A7",
+   "formula": "HYPGEOM.DIST(10,129,51,298,TRUE)",
+   "kernel": "0.00010242910357373228",
+   "terms": 10,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A8",
+   "formula": "HYPGEOM.DIST(0,1,1,37,TRUE)",
+   "kernel": "0.972972972972973",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A9",
+   "formula": "HYPGEOM.DIST(0,2,14,18,TRUE)",
+   "kernel": "0.039215686274509796",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A10",
+   "formula": "HYPGEOM.DIST(0,42747,1,645819,TRUE)",
+   "kernel": "0.9338096277749653",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A11",
+   "formula": "HYPGEOM.DIST(8810,15025,37440,64815,TRUE)",
+   "kernel": "0.9933855803919446",
+   "terms": 6214,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A12",
+   "formula": "HYPGEOM.DIST(0,150,7,491360,TRUE)",
+   "kernel": "0.9978650169499403",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A13",
+   "formula": "HYPGEOM.DIST(0,12,86,3592929,TRUE)",
+   "kernel": "0.9997128065347215",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A14",
+   "formula": "HYPGEOM.DIST(1,1060,647,494407,TRUE)",
+   "kernel": "0.596043383965247",
+   "terms": 1,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A15",
+   "formula": "HYPGEOM.DIST(108,1450,477,8548,TRUE)",
+   "kernel": "0.9995918685258699",
+   "terms": 368,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A16",
+   "formula": "HYPGEOM.DIST(2,7,40,628,TRUE)",
+   "kernel": "0.9929772798775458",
+   "terms": 4,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A17",
+   "formula": "HYPGEOM.DIST(635,858,43998,64419,TRUE)",
+   "kernel": "0.999899123667322",
+   "terms": 222,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A18",
+   "formula": "HYPGEOM.DIST(129,251972,281,662648,TRUE)",
+   "kernel": "0.9970848070680984",
+   "terms": 151,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A19",
+   "formula": "HYPGEOM.DIST(0,114,1,186700,TRUE)",
+   "kernel": "0.9993893947509379",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A20",
+   "formula": "HYPGEOM.DIST(0,13,4463,720619,TRUE)",
+   "kernel": "0.9224115819224626",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A21",
+   "formula": "HYPGEOM.DIST(124,333,1943,5818,TRUE)",
+   "kernel": "0.9432026275926225",
+   "terms": 208,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A22",
+   "formula": "HYPGEOM.DIST(10,1379,258,82235,TRUE)",
+   "kernel": "0.9954192562644101",
+   "terms": 247,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A23",
+   "formula": "HYPGEOM.DIST(16,27,5516,11553,TRUE)",
+   "kernel": "0.9182242492760136",
+   "terms": 10,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A24",
+   "formula": "HYPGEOM.DIST(0,1,7729,2045428,TRUE)",
+   "kernel": "0.9962213287390208",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A25",
+   "formula": "HYPGEOM.DIST(0,24,2,1579,TRUE)",
+   "kernel": "0.9698225521760175",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A26",
+   "formula": "HYPGEOM.DIST(1,10,2,32,TRUE)",
+   "kernel": "0.9092741935483871",
+   "terms": 0,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A27",
+   "formula": "HYPGEOM.DIST(4,1429,10,13149,TRUE)",
+   "kernel": "0.9976278716847818",
+   "terms": 5,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A28",
+   "formula": "HYPGEOM.DIST(0,4,395,231740,TRUE)",
+   "kernel": "0.9931993824683124",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A29",
+   "formula": "HYPGEOM.DIST(971,17244,1550,26804,TRUE)",
+   "kernel": "0.08071286045642002",
+   "terms": 971,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A30",
+   "formula": "HYPGEOM.DIST(0,1,3220,407624,TRUE)",
+   "kernel": "0.9921005632641839",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A31",
+   "formula": "HYPGEOM.DIST(132,2365,9863,183608,TRUE)",
+   "kernel": "0.6952984897380923",
+   "terms": 2232,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A32",
+   "formula": "HYPGEOM.DIST(0,11,2,6869196,TRUE)",
+   "kernel": "0.9999967972985501",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A33",
+   "formula": "HYPGEOM.DIST(4,154,6,211,TRUE)",
+   "kernel": "0.5150951799176605",
+   "terms": 4,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A34",
+   "formula": "HYPGEOM.DIST(2,2,702,1022,TRUE)",
+   "kernel": "1.0",
+   "terms": 0,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A35",
+   "formula": "HYPGEOM.DIST(53,140337,1015,2930056,TRUE)",
+   "kernel": "0.767034226078247",
+   "terms": 961,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A36",
+   "formula": "HYPGEOM.DIST(43,53,205986,333019,TRUE)",
+   "kernel": "0.9992775953560279",
+   "terms": 9,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A37",
+   "formula": "HYPGEOM.DIST(0,5,171,2341,TRUE)",
+   "kernel": "0.6841403653043643",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A38",
+   "formula": "HYPGEOM.DIST(0,1,13693,2333566,TRUE)",
+   "kernel": "0.9941321565363905",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A39",
+   "formula": "HYPGEOM.DIST(77,58957,202,122573,TRUE)",
+   "kernel": "0.002678097193998131",
+   "terms": 77,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A40",
+   "formula": "HYPGEOM.DIST(1,53615,346,5187553,TRUE)",
+   "kernel": "0.12672480739214362",
+   "terms": 1,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A41",
+   "formula": "HYPGEOM.DIST(1,2,2,55,TRUE)",
+   "kernel": "0.9993265993265993",
+   "terms": 0,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A42",
+   "formula": "HYPGEOM.DIST(1,4605,14,694312,TRUE)",
+   "kernel": "0.9962043718963856",
+   "terms": 12,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A43",
+   "formula": "HYPGEOM.DIST(12,15,681,1907,TRUE)",
+   "kernel": "0.9999322191956901",
+   "terms": 2,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A44",
+   "formula": "HYPGEOM.DIST(341,6592,12482,291514,TRUE)",
+   "kernel": "0.9998036578719748",
+   "terms": 6250,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A45",
+   "formula": "HYPGEOM.DIST(61,145,590,1343,TRUE)",
+   "kernel": "0.34925518592491306",
+   "terms": 61,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A46",
+   "formula": "HYPGEOM.DIST(0,4,1,10102,TRUE)",
+   "kernel": "0.999604038804197",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A47",
+   "formula": "HYPGEOM.DIST(0,2,68,4491046,TRUE)",
+   "kernel": "0.9999697177482625",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A48",
+   "formula": "HYPGEOM.DIST(0,1,3,17,TRUE)",
+   "kernel": "0.8235294117647057",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A49",
+   "formula": "HYPGEOM.DIST(0,171,4,110530,TRUE)",
+   "kernel": "0.9938258973981695",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A50",
+   "formula": "HYPGEOM.DIST(18,1462,6692,274185,TRUE)",
+   "kernel": "0.0007327415323973387",
+   "terms": 18,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A51",
+   "formula": "HYPGEOM.DIST(1,4,7314,772874,TRUE)",
+   "kernel": "0.9994694926471573",
+   "terms": 2,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A52",
+   "formula": "HYPGEOM.DIST(0,1,2,320775,TRUE)",
+   "kernel": "0.9999937651001487",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A53",
+   "formula": "HYPGEOM.DIST(157,187,750,1003,TRUE)",
+   "kernel": "0.9996879925006459",
+   "terms": 29,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A54",
+   "formula": "HYPGEOM.DIST(4195,7020,131543,217273,TRUE)",
+   "kernel": "0.0877565351741023",
+   "terms": 4195,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A55",
+   "formula": "HYPGEOM.DIST(0,20,42,81707,TRUE)",
+   "kernel": "0.9897682281631457",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A56",
+   "formula": "HYPGEOM.DIST(0,1,1,25,TRUE)",
+   "kernel": "0.9600000000000003",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A57",
+   "formula": "HYPGEOM.DIST(103,1529,753,9617,TRUE)",
+   "kernel": "0.04424773518554351",
+   "terms": 103,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A58",
+   "formula": "HYPGEOM.DIST(686,1127098,1024,1789231,TRUE)",
+   "kernel": "0.9965594682338349",
+   "terms": 337,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A59",
+   "formula": "HYPGEOM.DIST(1,173785,1,2998059,TRUE)",
+   "kernel": "1.0",
+   "terms": 0,
+   "mirrored": true
+  },
+  {
+   "cell": "Cdf!A60",
+   "formula": "HYPGEOM.DIST(0,1,3,256,TRUE)",
+   "kernel": "0.9882812499999999",
+   "terms": 0,
+   "mirrored": false
+  },
+  {
+   "cell": "Cdf!A61",
+   "formula": "HYPGEOM.DIST(2,13,2,59,TRUE)",
+   "kernel": "1.0",
+   "terms": 0,
+   "mirrored": true
+  }
+ ],
+ "cdf_wide": [
+  {
+   "cell": "CdfWide!A2",
+   "formula": "HYPGEOM.DIST(67041776,126937252,209737869,397118785,TRUE)",
+   "sd": 4639.2,
+   "z": 0.0,
+   "tuple": [
+    67041776,
+    126937252,
+    209737869,
+    397118785
+   ],
+   "engine": "0.5000206543234548",
+   "products_held_exactly": "0.5000206543234548",
+   "r_order": "0.5000206543234588",
+   "mirrored": false,
+   "steps": 39951,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A3",
+   "formula": "HYPGEOM.DIST(193962932,1051450466,229907169,1246315968,TRUE)",
+   "sd": 4973.1,
+   "z": 0.5,
+   "tuple": [
+    193962932,
+    1051450466,
+    229907169,
+    1246315968
+   ],
+   "engine": "0.6915123136554406",
+   "products_held_exactly": "0.6915123136554397",
+   "r_order": "0.6915123136554397",
+   "mirrored": true,
+   "steps": 40572,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A4",
+   "formula": "HYPGEOM.DIST(416615185,439606926,1294774283,1366222684,TRUE)",
+   "sd": 3844.1,
+   "z": -0.5,
+   "tuple": [
+    416615185,
+    439606926,
+    1294774283,
+    1366222684
+   ],
+   "engine": "0.3085643591123796",
+   "products_held_exactly": "0.30856435911237967",
+   "r_order": "0.30856435911237995",
+   "mirrored": false,
+   "steps": 31484,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A5",
+   "formula": "HYPGEOM.DIST(578268508,620441425,695610158,746344083,TRUE)",
+   "sd": 2575.1,
+   "z": 1.0,
+   "tuple": [
+    578268508,
+    620441425,
+    695610158,
+    746344083
+   ],
+   "engine": "0.8413613074259756",
+   "products_held_exactly": "0.8413613074259756",
+   "r_order": "0.8413613074259754",
+   "mirrored": true,
+   "steps": 20121,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A6",
+   "formula": "HYPGEOM.DIST(29503011,38650797,44729520,58595419,TRUE)",
+   "sd": 1541.6,
+   "z": -1.0,
+   "tuple": [
+    29503011,
+    38650797,
+    44729520,
+    58595419
+   ],
+   "engine": "0.15879742739878389",
+   "products_held_exactly": "0.15879742739878389",
+   "r_order": "0.15879742739878405",
+   "mirrored": false,
+   "steps": 12129,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A7",
+   "formula": "HYPGEOM.DIST(145643526,1406910001,186103335,1797881509,TRUE)",
+   "sd": 5328.4,
+   "z": 2.0,
+   "tuple": [
+    145643526,
+    1406910001,
+    186103335,
+    1797881509
+   ],
+   "engine": "0.9772546027979612",
+   "products_held_exactly": "0.9772546027979607",
+   "r_order": "0.9772546027979612",
+   "mirrored": true,
+   "steps": 37015,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A8",
+   "formula": "HYPGEOM.DIST(20178117,291947165,116597757,1686336289,TRUE)",
+   "sd": 3941.7,
+   "z": -2.0,
+   "tuple": [
+    20178117,
+    291947165,
+    116597757,
+    1686336289
+   ],
+   "engine": "0.02275714996908241",
+   "products_held_exactly": "0.022757149969081725",
+   "r_order": "0.022757149969081774",
+   "mirrored": false,
+   "steps": 27512,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A9",
+   "formula": "HYPGEOM.DIST(182076917,289944930,610734043,972699190,TRUE)",
+   "sd": 6895.8,
+   "z": 4.0,
+   "tuple": [
+    182076917,
+    289944930,
+    610734043,
+    972699190
+   ],
+   "engine": "0.9999683508736559",
+   "products_held_exactly": "0.9999683508736559",
+   "r_order": "0.9999683508736559",
+   "mirrored": true,
+   "steps": 38809,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A10",
+   "formula": "HYPGEOM.DIST(678744,3136459,4679094,21536286,TRUE)",
+   "sd": 675.1,
+   "z": -4.0,
+   "tuple": [
+    678744,
+    3136459,
+    4679094,
+    21536286
+   ],
+   "engine": "3.1496040682715475e-05",
+   "products_held_exactly": "3.1496040682715475e-05",
+   "r_order": "3.149604068271551e-05",
+   "mirrored": false,
+   "steps": 3955,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A11",
+   "formula": "HYPGEOM.DIST(725139611,1237373135,851608539,1453178825,TRUE)",
+   "sd": 6676.8,
+   "z": 0.0,
+   "tuple": [
+    725139611,
+    1237373135,
+    851608539,
+    1453178825
+   ],
+   "engine": "0.5000384291510078",
+   "products_held_exactly": "0.5000384291511091",
+   "r_order": "0.5000384291510072",
+   "mirrored": true,
+   "steps": 57215,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A12",
+   "formula": "HYPGEOM.DIST(348633268,727710341,384825065,803259084,TRUE)",
+   "sd": 4132.9,
+   "z": 0.5,
+   "tuple": [
+    348633268,
+    727710341,
+    384825065,
+    803259084
+   ],
+   "engine": "0.691540271556953",
+   "products_held_exactly": "0.6915402715568919",
+   "r_order": "0.6915402715569231",
+   "mirrored": true,
+   "steps": 33809,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A13",
+   "formula": "HYPGEOM.DIST(224449983,304781236,558432296,758286670,TRUE)",
+   "sd": 5948.1,
+   "z": -0.5,
+   "tuple": [
+    224449983,
+    304781236,
+    558432296,
+    758286670
+   ],
+   "engine": "0.3085641853278892",
+   "products_held_exactly": "0.3085641853278448",
+   "r_order": "0.3085641853278657",
+   "mirrored": false,
+   "steps": 48412,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A14",
+   "formula": "HYPGEOM.DIST(57687950,137245561,62673744,149111494,TRUE)",
+   "sd": 1631.3,
+   "z": 1.0,
+   "tuple": [
+    57687950,
+    137245561,
+    62673744,
+    149111494
+   ],
+   "engine": "0.8414315883168036",
+   "products_held_exactly": "0.8414315883168036",
+   "r_order": "0.8414315883168038",
+   "mirrored": true,
+   "steps": 12824,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A15",
+   "formula": "HYPGEOM.DIST(28637228,162126028,288972292,1635716637,TRUE)",
+   "sd": 4609.2,
+   "z": -1.0,
+   "tuple": [
+    28637228,
+    162126028,
+    288972292,
+    1635716637
+   ],
+   "engine": "0.15867124486107434",
+   "products_held_exactly": "0.15867124486106843",
+   "r_order": "0.15867124486106896",
+   "mirrored": false,
+   "steps": 35690,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A16",
+   "formula": "HYPGEOM.DIST(37988210,328327449,120020746,1037586357,TRUE)",
+   "sd": 4791.4,
+   "z": 2.0,
+   "tuple": [
+    37988210,
+    328327449,
+    120020746,
+    1037586357
+   ],
+   "engine": "0.9772537975185911",
+   "products_held_exactly": "0.9772537975185902",
+   "r_order": "0.9772537975185903",
+   "mirrored": true,
+   "steps": 33350,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A17",
+   "formula": "HYPGEOM.DIST(244202785,792678430,499529118,1621340325,TRUE)",
+   "sd": 9293.2,
+   "z": -2.0,
+   "tuple": [
+    244202785,
+    792678430,
+    499529118,
+    1621340325
+   ],
+   "engine": "0.02275568945902124",
+   "products_held_exactly": "0.022755689459021487",
+   "r_order": "0.02275568945902165",
+   "mirrored": false,
+   "steps": 63988,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A18",
+   "formula": "HYPGEOM.DIST(5413185,7690018,19641820,27925589,TRUE)",
+   "sd": 1078.3,
+   "z": 4.0,
+   "tuple": [
+    5413185,
+    7690018,
+    19641820,
+    27925589
+   ],
+   "engine": "0.9999683860457559",
+   "products_held_exactly": "0.9999683860457559",
+   "r_order": "0.9999683860457559",
+   "mirrored": true,
+   "steps": 6272,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A19",
+   "formula": "HYPGEOM.DIST(305257240,582366857,621122634,1184838419,TRUE)",
+   "sd": 8594.0,
+   "z": -4.0,
+   "tuple": [
+    305257240,
+    582366857,
+    621122634,
+    1184838419
+   ],
+   "engine": "3.167362544638199e-05",
+   "products_held_exactly": "3.1673625446381616e-05",
+   "r_order": "3.1673625446381995e-05",
+   "mirrored": false,
+   "steps": 48172,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A20",
+   "formula": "HYPGEOM.DIST(153715936,553375337,407111471,1465595914,TRUE)",
+   "sd": 8312.6,
+   "z": 0.0,
+   "tuple": [
+    153715936,
+    553375337,
+    407111471,
+    1465595914
+   ],
+   "engine": "0.5000332854636591",
+   "products_held_exactly": "0.500033285463656",
+   "r_order": "0.500033285463674",
+   "mirrored": true,
+   "steps": 71020,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A21",
+   "formula": "HYPGEOM.DIST(29592183,126862973,170592131,731389383,TRUE)",
+   "sd": 4330.5,
+   "z": 0.5,
+   "tuple": [
+    29592183,
+    126862973,
+    170592131,
+    731389383
+   ],
+   "engine": "0.6914987406149808",
+   "products_held_exactly": "0.6914987406150118",
+   "r_order": "0.6914987406149808",
+   "mirrored": true,
+   "steps": 35407,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A22",
+   "formula": "HYPGEOM.DIST(26867204,133603916,38508067,191481952,TRUE)",
+   "sd": 2547.2,
+   "z": -0.5,
+   "tuple": [
+    26867204,
+    133603916,
+    38508067,
+    191481952
+   ],
+   "engine": "0.3085933109943523",
+   "products_held_exactly": "0.3085933109943523",
+   "r_order": "0.3085933109943528",
+   "mirrored": false,
+   "steps": 20983,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A23",
+   "formula": "HYPGEOM.DIST(79954209,595340307,147566986,1098863518,TRUE)",
+   "sd": 5631.6,
+   "z": 1.0,
+   "tuple": [
+    79954209,
+    595340307,
+    147566986,
+    1098863518
+   ],
+   "engine": "0.8413782671504932",
+   "products_held_exactly": "0.8413782671504932",
+   "r_order": "0.8413782671504924",
+   "mirrored": true,
+   "steps": 43484,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A24",
+   "formula": "HYPGEOM.DIST(562082795,1156855404,956738877,1969081871,TRUE)",
+   "sd": 10918.0,
+   "z": -1.0,
+   "tuple": [
+    562082795,
+    1156855404,
+    956738877,
+    1969081871
+   ],
+   "engine": "0.15866625172484639",
+   "products_held_exactly": "0.15866625172484045",
+   "r_order": "0.15866625172484528",
+   "mirrored": false,
+   "steps": 83473,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A25",
+   "formula": "HYPGEOM.DIST(475935506,692765118,1312137868,1910007877,TRUE)",
+   "sd": 9743.7,
+   "z": 2.0,
+   "tuple": [
+    475935506,
+    692765118,
+    1312137868,
+    1910007877
+   ],
+   "engine": "0.9772515406096329",
+   "products_held_exactly": "0.9772515406096336",
+   "r_order": "0.9772515406096328",
+   "mirrored": true,
+   "steps": 67036,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A26",
+   "formula": "HYPGEOM.DIST(1572043,10408007,6566472,43418907,TRUE)",
+   "sd": 1007.8,
+   "z": -2.0,
+   "tuple": [
+    1572043,
+    10408007,
+    6566472,
+    43418907
+   ],
+   "engine": "0.022793436233061452",
+   "products_held_exactly": "0.022793436233061452",
+   "r_order": "0.022793436233061442",
+   "mirrored": false,
+   "steps": 7184,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A27",
+   "formula": "HYPGEOM.DIST(125520609,247461595,364000301,717765578,TRUE)",
+   "sd": 6366.2,
+   "z": 4.0,
+   "tuple": [
+    125520609,
+    247461595,
+    364000301,
+    717765578
+   ],
+   "engine": "0.999968332261196",
+   "products_held_exactly": "0.999968332261196",
+   "r_order": "0.999968332261196",
+   "mirrored": true,
+   "steps": 35883,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A28",
+   "formula": "HYPGEOM.DIST(646357796,973428260,729932464,1099259527,TRUE)",
+   "sd": 4985.9,
+   "z": -4.0,
+   "tuple": [
+    646357796,
+    973428260,
+    729932464,
+    1099259527
+   ],
+   "engine": "3.1665459146397486e-05",
+   "products_held_exactly": "3.166545914639688e-05",
+   "r_order": "3.16654591463969e-05",
+   "mirrored": false,
+   "steps": 28226,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A29",
+   "formula": "HYPGEOM.DIST(78364947,98560536,782079089,983630267,TRUE)",
+   "sd": 3801.1,
+   "z": 0.0,
+   "tuple": [
+    78364947,
+    98560536,
+    782079089,
+    983630267
+   ],
+   "engine": "0.49999458700509414",
+   "products_held_exactly": "0.4999945870050417",
+   "r_order": "0.4999945870050949",
+   "mirrored": false,
+   "steps": 32827,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A30",
+   "formula": "HYPGEOM.DIST(10499060,18294331,13878679,24184428,TRUE)",
+   "sd": 1043.8,
+   "z": 0.5,
+   "tuple": [
+    10499060,
+    18294331,
+    13878679,
+    24184428
+   ],
+   "engine": "0.6915081932712969",
+   "products_held_exactly": "0.6915081932712969",
+   "r_order": "0.691508193271297",
+   "mirrored": true,
+   "steps": 8704,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A31",
+   "formula": "HYPGEOM.DIST(246665083,461318080,477841522,893655482,TRUE)",
+   "sd": 7451.6,
+   "z": -0.5,
+   "tuple": [
+    246665083,
+    461318080,
+    477841522,
+    893655482
+   ],
+   "engine": "0.30854726718110853",
+   "products_held_exactly": "0.30854726718113745",
+   "r_order": "0.30854726718109343",
+   "mirrored": false,
+   "steps": 60452,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A32",
+   "formula": "HYPGEOM.DIST(298015217,497759993,1057663047,1766616918,TRUE)",
+   "sd": 9268.0,
+   "z": 1.0,
+   "tuple": [
+    298015217,
+    497759993,
+    1057663047,
+    1766616918
+   ],
+   "engine": "0.8413625378255398",
+   "products_held_exactly": "0.8413625378255596",
+   "r_order": "0.8413625378255526",
+   "mirrored": true,
+   "steps": 71032,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A33",
+   "formula": "HYPGEOM.DIST(160993690,186632565,657907813,762662848,TRUE)",
+   "sd": 4086.8,
+   "z": -1.0,
+   "tuple": [
+    160993690,
+    186632565,
+    657907813,
+    762662848
+   ],
+   "engine": "0.15871059472117136",
+   "products_held_exactly": "0.15871059472114454",
+   "r_order": "0.1587105947211587",
+   "mirrored": false,
+   "steps": 31713,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A34",
+   "formula": "HYPGEOM.DIST(144292330,191400521,160034985,212288298,TRUE)",
+   "sd": 1869.4,
+   "z": 2.0,
+   "tuple": [
+    144292330,
+    191400521,
+    160034985,
+    212288298
+   ],
+   "engine": "0.9772524865560384",
+   "products_held_exactly": "0.9772524865560384",
+   "r_order": "0.9772524865560384",
+   "mirrored": true,
+   "steps": 13211,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A35",
+   "formula": "HYPGEOM.DIST(87974203,148297931,863303667,1455081663,TRUE)",
+   "sd": 5668.9,
+   "z": -2.0,
+   "tuple": [
+    87974203,
+    148297931,
+    863303667,
+    1455081663
+   ],
+   "engine": "0.022751773387029783",
+   "products_held_exactly": "0.02275177338702826",
+   "r_order": "0.022751773387028242",
+   "mirrored": false,
+   "steps": 39349,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A36",
+   "formula": "HYPGEOM.DIST(41858866,94354191,770986442,1738662487,TRUE)",
+   "sd": 4692.9,
+   "z": 4.0,
+   "tuple": [
+    41858866,
+    94354191,
+    770986442,
+    1738662487
+   ],
+   "engine": "0.9999683498075289",
+   "products_held_exactly": "0.9999683498075289",
+   "r_order": "0.9999683498075289",
+   "mirrored": true,
+   "steps": 26600,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A37",
+   "formula": "HYPGEOM.DIST(55839049,65372563,593493693,694686974,TRUE)",
+   "sd": 2714.8,
+   "z": -4.0,
+   "tuple": [
+    55839049,
+    65372563,
+    593493693,
+    694686974
+   ],
+   "engine": "3.175152996263307e-05",
+   "products_held_exactly": "3.175152996263307e-05",
+   "r_order": "3.1751529962633065e-05",
+   "mirrored": false,
+   "steps": 15549,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A38",
+   "formula": "HYPGEOM.DIST(26808909,81818187,57907179,176727088,TRUE)",
+   "sd": 3111.2,
+   "z": 0.0,
+   "tuple": [
+    26808909,
+    81818187,
+    57907179,
+    176727088
+   ],
+   "engine": "0.5000791425109266",
+   "products_held_exactly": "0.5000791425109266",
+   "r_order": "0.5000791425109239",
+   "mirrored": true,
+   "steps": 26937,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A39",
+   "formula": "HYPGEOM.DIST(162513214,513903669,384588938,1216187488,TRUE)",
+   "sd": 8010.4,
+   "z": 0.5,
+   "tuple": [
+    162513214,
+    513903669,
+    384588938,
+    1216187488
+   ],
+   "engine": "0.6914905662535411",
+   "products_held_exactly": "0.6914905662535413",
+   "r_order": "0.6914905662535418",
+   "mirrored": true,
+   "steps": 64918,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A40",
+   "formula": "HYPGEOM.DIST(43365606,60306718,539791742,750636621,TRUE)",
+   "sd": 3347.0,
+   "z": -0.5,
+   "tuple": [
+    43365606,
+    60306718,
+    539791742,
+    750636621
+   ],
+   "engine": "0.3085570226406594",
+   "products_held_exactly": "0.3085570226406594",
+   "r_order": "0.3085570226406591",
+   "mirrored": false,
+   "steps": 27467,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A41",
+   "formula": "HYPGEOM.DIST(109295636,484310246,286412715,1269234523,TRUE)",
+   "sd": 7234.3,
+   "z": 1.0,
+   "tuple": [
+    109295636,
+    484310246,
+    286412715,
+    1269234523
+   ],
+   "engine": "0.8413599845144268",
+   "products_held_exactly": "0.8413599845144322",
+   "r_order": "0.8413599845144317",
+   "mirrored": true,
+   "steps": 55654,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A42",
+   "formula": "HYPGEOM.DIST(4324133,6116252,14960721,21156486,TRUE)",
+   "sd": 948.9,
+   "z": -1.0,
+   "tuple": [
+    4324133,
+    6116252,
+    14960721,
+    21156486
+   ],
+   "engine": "0.15872606869356123",
+   "products_held_exactly": "0.15872606869356123",
+   "r_order": "0.15872606869356123",
+   "mirrored": false,
+   "steps": 7521,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A43",
+   "formula": "HYPGEOM.DIST(209423194,1066267592,255665381,1301775945,TRUE)",
+   "sd": 5517.7,
+   "z": 2.0,
+   "tuple": [
+    209423194,
+    1066267592,
+    255665381,
+    1301775945
+   ],
+   "engine": "0.9772607637006124",
+   "products_held_exactly": "0.9772607637006094",
+   "r_order": "0.9772607637006095",
+   "mirrored": true,
+   "steps": 38309,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A44",
+   "formula": "HYPGEOM.DIST(152862779,162163037,931102665,987716507,TRUE)",
+   "sd": 2706.2,
+   "z": -2.0,
+   "tuple": [
+    152862779,
+    162163037,
+    931102665,
+    987716507
+   ],
+   "engine": "0.022768652933611862",
+   "products_held_exactly": "0.022768652933611862",
+   "r_order": "0.022768652933611862",
+   "mirrored": false,
+   "steps": 19014,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A45",
+   "formula": "HYPGEOM.DIST(763654711,1323448392,807115691,1398798813,TRUE)",
+   "sd": 4171.3,
+   "z": 4.0,
+   "tuple": [
+    763654711,
+    1323448392,
+    807115691,
+    1398798813
+   ],
+   "engine": "0.9999683428564923",
+   "products_held_exactly": "0.9999683428564923",
+   "r_order": "0.9999683428564923",
+   "mirrored": true,
+   "steps": 23696,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A46",
+   "formula": "HYPGEOM.DIST(2434160,4083967,33267308,55727600,TRUE)",
+   "sd": 954.2,
+   "z": -4.0,
+   "tuple": [
+    2434160,
+    4083967,
+    33267308,
+    55727600
+   ],
+   "engine": "3.184548408724095e-05",
+   "products_held_exactly": "3.184548408724095e-05",
+   "r_order": "3.1845484087240946e-05",
+   "mirrored": false,
+   "steps": 5568,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A47",
+   "formula": "HYPGEOM.DIST(132689439,732533236,297989903,1645100846,TRUE)",
+   "sd": 7763.5,
+   "z": 0.0,
+   "tuple": [
+    132689439,
+    732533236,
+    297989903,
+    1645100846
+   ],
+   "engine": "0.5000392305933212",
+   "products_held_exactly": "0.5000392305933212",
+   "r_order": "0.5000392305933216",
+   "mirrored": true,
+   "steps": 66391,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A48",
+   "formula": "HYPGEOM.DIST(648966835,1153550277,948324088,1685675497,TRUE)",
+   "sd": 9466.3,
+   "z": 0.5,
+   "tuple": [
+    648966835,
+    1153550277,
+    948324088,
+    1685675497
+   ],
+   "engine": "0.6914631614655322",
+   "products_held_exactly": "0.69146316146555",
+   "r_order": "0.69146316146555",
+   "mirrored": true,
+   "steps": 76534,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A49",
+   "formula": "HYPGEOM.DIST(1048679904,1436817084,1369359069,1876178666,TRUE)",
+   "sd": 8144.9,
+   "z": -0.5,
+   "tuple": [
+    1048679904,
+    1436817084,
+    1369359069,
+    1876178666
+   ],
+   "engine": "0.3085495023098868",
+   "products_held_exactly": "0.3085495023098886",
+   "r_order": "0.30854950230988837",
+   "mirrored": false,
+   "steps": 65990,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A50",
+   "formula": "HYPGEOM.DIST(21829487,124310948,23676477,134836199,TRUE)",
+   "sd": 1185.2,
+   "z": 1.0,
+   "tuple": [
+    21829487,
+    124310948,
+    23676477,
+    134836199
+   ],
+   "engine": "0.8413612928663865",
+   "products_held_exactly": "0.8413612928663865",
+   "r_order": "0.8413612928663864",
+   "mirrored": true,
+   "steps": 9355,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A51",
+   "formula": "HYPGEOM.DIST(817779177,1016230512,879154875,1092495855,TRUE)",
+   "sd": 3338.9,
+   "z": -1.0,
+   "tuple": [
+    817779177,
+    1016230512,
+    879154875,
+    1092495855
+   ],
+   "engine": "0.1587003792047584",
+   "products_held_exactly": "0.15870037920476937",
+   "r_order": "0.1587003792047581",
+   "mirrored": false,
+   "steps": 25975,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A52",
+   "formula": "HYPGEOM.DIST(379857311,682754485,649651214,1167732741,TRUE)",
+   "sd": 8366.0,
+   "z": 2.0,
+   "tuple": [
+    379857311,
+    682754485,
+    649651214,
+    1167732741
+   ],
+   "engine": "0.9772554355906862",
+   "products_held_exactly": "0.9772554355906865",
+   "r_order": "0.9772554355906865",
+   "mirrored": true,
+   "steps": 57702,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A53",
+   "formula": "HYPGEOM.DIST(354687884,684384872,383771640,740488152,TRUE)",
+   "sd": 3598.0,
+   "z": -2.0,
+   "tuple": [
+    354687884,
+    684384872,
+    383771640,
+    740488152
+   ],
+   "engine": "0.022750180621854948",
+   "products_held_exactly": "0.02275018062185496",
+   "r_order": "0.022750180621853463",
+   "mirrored": false,
+   "steps": 25156,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A54",
+   "formula": "HYPGEOM.DIST(23337783,82049187,99398316,349671192,TRUE)",
+   "sd": 3574.4,
+   "z": 4.0,
+   "tuple": [
+    23337783,
+    82049187,
+    99398316,
+    349671192
+   ],
+   "engine": "0.9999683160818766",
+   "products_held_exactly": "0.9999683160818766",
+   "r_order": "0.9999683160818766",
+   "mirrored": true,
+   "steps": 20364,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A55",
+   "formula": "HYPGEOM.DIST(50087958,61568401,962244991,1182516106,TRUE)",
+   "sd": 2974.3,
+   "z": -4.0,
+   "tuple": [
+    50087958,
+    61568401,
+    962244991,
+    1182516106
+   ],
+   "engine": "3.17626315079671e-05",
+   "products_held_exactly": "3.17626315079671e-05",
+   "r_order": "3.176263150796818e-05",
+   "mirrored": false,
+   "steps": 17007,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A56",
+   "formula": "HYPGEOM.DIST(409232635,508893455,912631821,1134885933,TRUE)",
+   "sd": 6648.8,
+   "z": 0.0,
+   "tuple": [
+    409232635,
+    508893455,
+    912631821,
+    1134885933
+   ],
+   "engine": "0.5000428233263545",
+   "products_held_exactly": "0.5000428233263252",
+   "r_order": "0.5000428233263561",
+   "mirrored": true,
+   "steps": 56977,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A57",
+   "formula": "HYPGEOM.DIST(362490906,963764087,606558519,1612694276,TRUE)",
+   "sd": 9539.4,
+   "z": 0.5,
+   "tuple": [
+    362490906,
+    963764087,
+    606558519,
+    1612694276
+   ],
+   "engine": "0.6914776344205631",
+   "products_held_exactly": "0.6914776344205775",
+   "r_order": "0.6914776344205961",
+   "mirrored": true,
+   "steps": 77115,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A58",
+   "formula": "HYPGEOM.DIST(21599395,26436415,25022966,30626148,TRUE)",
+   "sd": 735.3,
+   "z": -0.5,
+   "tuple": [
+    21599395,
+    26436415,
+    25022966,
+    30626148
+   ],
+   "engine": "0.3090143724646146",
+   "products_held_exactly": "0.3090143724646146",
+   "r_order": "0.30901437246461533",
+   "mirrored": false,
+   "steps": 6155,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A59",
+   "formula": "HYPGEOM.DIST(152490134,634638927,182066916,757754199,TRUE)",
+   "sd": 4338.5,
+   "z": 1.0,
+   "tuple": [
+    152490134,
+    634638927,
+    182066916,
+    757754199
+   ],
+   "engine": "0.8413465502718038",
+   "products_held_exactly": "0.8413465502718157",
+   "r_order": "0.841346550271816",
+   "mirrored": true,
+   "steps": 33625,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A60",
+   "formula": "HYPGEOM.DIST(94561411,157231639,837425660,1392341298,TRUE)",
+   "sd": 5782.2,
+   "z": -1.0,
+   "tuple": [
+    94561411,
+    157231639,
+    837425660,
+    1392341298
+   ],
+   "engine": "0.15865882929948838",
+   "products_held_exactly": "0.15865882929948852",
+   "r_order": "0.15865882929948893",
+   "mirrored": false,
+   "steps": 44633,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A61",
+   "formula": "HYPGEOM.DIST(19189399,69776603,176487419,641980162,TRUE)",
+   "sd": 3521.0,
+   "z": 2.0,
+   "tuple": [
+    19189399,
+    69776603,
+    176487419,
+    641980162
+   ],
+   "engine": "0.9772580692553541",
+   "products_held_exactly": "0.9772580692553541",
+   "r_order": "0.977258069255354",
+   "mirrored": true,
+   "steps": 24630,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A62",
+   "formula": "HYPGEOM.DIST(6330883,42036535,23253441,154304460,TRUE)",
+   "sd": 1978.5,
+   "z": -2.0,
+   "tuple": [
+    6330883,
+    42036535,
+    23253441,
+    154304460
+   ],
+   "engine": "0.022756044249721653",
+   "products_held_exactly": "0.022756044249721653",
+   "r_order": "0.022756044249721667",
+   "mirrored": false,
+   "steps": 13960,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A63",
+   "formula": "HYPGEOM.DIST(209391517,315578600,639986395,964664581,TRUE)",
+   "sd": 6885.8,
+   "z": 4.0,
+   "tuple": [
+    209391517,
+    315578600,
+    639986395,
+    964664581
+   ],
+   "engine": "0.9999683366541816",
+   "products_held_exactly": "0.9999683366541816",
+   "r_order": "0.9999683366541816",
+   "mirrored": true,
+   "steps": 38754,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A64",
+   "formula": "HYPGEOM.DIST(24675237,365899871,47008503,696698124,TRUE)",
+   "sd": 3306.3,
+   "z": -4.0,
+   "tuple": [
+    24675237,
+    365899871,
+    47008503,
+    696698124
+   ],
+   "engine": "3.169605514144053e-05",
+   "products_held_exactly": "3.169605514144053e-05",
+   "r_order": "3.1696055141440557e-05",
+   "mirrored": false,
+   "steps": 18861,
+   "a_product_above_2_53": false
+  },
+  {
+   "cell": "CdfWide!A65",
+   "formula": "HYPGEOM.DIST(536870911,1073741823,1073741823,2147483646,TRUE)",
+   "sd": 11585.2,
+   "z": -0.0,
+   "tuple": [
+    536870911,
+    1073741823,
+    1073741823,
+    2147483646
+   ],
+   "engine": "0.4999999999998948",
+   "products_held_exactly": "0.4999999999999587",
+   "r_order": "0.4999999999999265",
+   "mirrored": false,
+   "steps": 98528,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A66",
+   "formula": "HYPGEOM.DIST(536882496,1073741823,1073741823,2147483646,TRUE)",
+   "sd": 11585.2,
+   "z": 1.0,
+   "tuple": [
+    536882496,
+    1073741823,
+    1073741823,
+    2147483646
+   ],
+   "engine": "0.8413397856139513",
+   "products_held_exactly": "0.8413397856139377",
+   "r_order": "0.8413397856139426",
+   "mirrored": true,
+   "steps": 88495,
+   "a_product_above_2_53": true
+  },
+  {
+   "cell": "CdfWide!A67",
+   "formula": "HYPGEOM.DIST(536859326,1073741823,1073741823,2147483646,TRUE)",
+   "sd": 11585.2,
+   "z": -1.0,
+   "tuple": [
+    536859326,
+    1073741823,
+    1073741823,
+    2147483646
+   ],
+   "engine": "0.15866021438604874",
+   "products_held_exactly": "0.1586602143860622",
+   "r_order": "0.1586602143860574",
+   "mirrored": false,
+   "steps": 88495,
+   "a_product_above_2_53": true
+  }
+ ],
+ "cdf_tie": [
+  {
+   "cell": "CdfTie!A2",
+   "formula": "HYPGEOM.DIST(1400600941,1495560392,1562507098,1668443637,TRUE)",
+   "x_N_minus_n_K": 1,
+   "kind": "above by 1",
+   "sd": 3035.6,
+   "tuple": [
+    1400600941,
+    1495560392,
+    1562507098,
+    1668443637
+   ],
+   "engine": "0.5000808697364764",
+   "products_held_exactly": "0.5000808697365166",
+   "r_order": "0.5000808697365153",
+   "mirrored": false,
+   "steps": 26283,
+   "a_product_above_2_53": true,
+   "mirror_test_on_exact_products": "0.5000808697364938",
+   "stored_products_equal": true
+  },
+  {
+   "cell": "CdfTie!A3",
+   "formula": "HYPGEOM.DIST(454513674,1320703993,570883547,1658845978,TRUE)",
+   "x_N_minus_n_K": 1,
+   "kind": "above by 1",
+   "sd": 7795.1,
+   "tuple": [
+    454513674,
+    1320703993,
+    570883547,
+    1658845978
+   ],
+   "engine": "0.5000240143163374",
+   "products_held_exactly": "0.5000240143163325",
+   "r_order": "0.5000240143163167",
+   "mirrored": false,
+   "steps": 66660,
+   "a_product_above_2_53": true,
+   "mirror_test_on_exact_products": "0.5000240143164031",
+   "stored_products_equal": true
+  },
+  {
+   "cell": "CdfTie!A4",
+   "formula": "HYPGEOM.DIST(401257157,1180385963,563415593,1657410580,TRUE)",
+   "x_N_minus_n_K": 1,
+   "kind": "above by 1",
+   "sd": 8730.9,
+   "tuple": [
+    401257157,
+    1180385963,
+    563415593,
+    1657410580
+   ],
+   "engine": "0.5000218119651911",
+   "products_held_exactly": "0.5000218119651614",
+   "r_order": "0.5000218119651805",
+   "mirrored": false,
+   "steps": 74545,
+   "a_product_above_2_53": true,
+   "mirror_test_on_exact_products": "0.5000218119652529",
+   "stored_products_equal": true
+  },
+  {
+   "cell": "CdfTie!A5",
+   "formula": "HYPGEOM.DIST(277107403,521273168,740554304,1393073891,TRUE)",
+   "x_N_minus_n_K": 1,
+   "kind": "above by 1",
+   "sd": 9012.7,
+   "tuple": [
+    277107403,
+    521273168,
+    740554304,
+    1393073891
+   ],
+   "engine": "0.5000220149003405",
+   "products_held_exactly": "0.5000220149003551",
+   "r_order": "0.5000220149003575",
+   "mirrored": false,
+   "steps": 76916,
+   "a_product_above_2_53": true,
+   "mirror_test_on_exact_products": "0.5000220149004053",
+   "stored_products_equal": true
+  },
+  {
+   "cell": "CdfTie!A6",
+   "formula": "HYPGEOM.DIST(303705016,658703047,882441337,1913918990,TRUE)",
+   "x_N_minus_n_K": 1,
+   "kind": "above by 1",
+   "sd": 10360.8,
+   "tuple": [
+    303705016,
+    658703047,
+    882441337,
+    1913918990
+   ],
+   "engine": "0.5000194083122488",
+   "products_held_exactly": "0.5000194083122511",
+   "r_order": "0.500019408312279",
+   "mirrored": false,
+   "steps": 88251,
+   "a_product_above_2_53": true,
+   "mirror_test_on_exact_products": "0.5000194083123151",
+   "stored_products_equal": true
+  },
+  {
+   "cell": "CdfTie!A7",
+   "formula": "HYPGEOM.DIST(1098691565,1469165501,1215891409,1625884614,TRUE)",
+   "x_N_minus_n_K": 1,
+   "kind": "above by 1",
+   "sd": 5167.7,
+   "tuple": [
+    1098691565,
+    1469165501,
+    1215891409,
+    1625884614
+   ],
+   "engine": "0.50004374764071",
+   "products_held_exactly": "0.5000437476408998",
+   "r_order": "0.5000437476408287",
+   "mirrored": false,
+   "steps": 44433,
+   "a_product_above_2_53": true,
+   "mirror_test_on_exact_products": "0.5000437476407411",
+   "stored_products_equal": true
+  },
+  {
+   "cell": "CdfTie!A8",
+   "formula": "HYPGEOM.DIST(726489929,924908609,846587506,1077807195,TRUE)",
+   "x_N_minus_n_K": 1,
+   "kind": "above by 1",
+   "sd": 4702.1,
+   "tuple": [
+    726489929,
+    924908609,
+    846587506,
+    1077807195
+   ],
+   "engine": "0.5000482050153413",
+   "products_held_exactly": "0.5000482050153766",
+   "r_order": "0.5000482050153416",
+   "mirrored": false,
+   "steps": 40480,
+   "a_product_above_2_53": true,
+   "mirror_test_on_exact_products": "0.5000482050153663",
+   "stored_products_equal": true
+  },
+  {
+   "cell": "CdfTie!A9",
+   "formula": "HYPGEOM.DIST(100724140,280858021,470385319,1311616955,TRUE)",
+   "x_N_minus_n_K": 1,
+   "kind": "above by 1",
+   "sd": 7125.2,
+   "tuple": [
+    100724140,
+    280858021,
+    470385319,
+    1311616955
+   ],
+   "engine": "0.5000295037287357",
+   "products_held_exactly": "0.5000295037287176",
+   "r_order": "0.5000295037287174",
+   "mirrored": false,
+   "steps": 61002,
+   "a_product_above_2_53": true,
+   "mirror_test_on_exact_products": "0.5000295037288081",
+   "stored_products_equal": true
+  },
+  {
+   "cell": "CdfTie!A10",
+   "formula": "HYPGEOM.DIST(673777625,764434688,1183466748,1342702697,TRUE)",
+   "x_N_minus_n_K": 1,
+   "kind": "above by 1",
+   "sd": 5866.3,
+   "tuple": [
+    673777625,
+    764434688,
+    1183466748,
+    1342702697
+   ],
+   "engine": "0.5000352017103417",
+   "products_held_exactly": "0.5000352017104677",
+   "r_order": "0.5000352017104672",
+   "mirrored": false,
+   "steps": 50357,
+   "a_product_above_2_53": true,
+   "mirror_test_on_exact_products": "0.5000352017103743",
+   "stored_products_equal": true
+  },
+  {
+   "cell": "CdfTie!A11",
+   "formula": "HYPGEOM.DIST(364480018,522128221,1447905159,2074166230,TRUE)",
+   "x_N_minus_n_K": 1,
+   "kind": "above by 1",
+   "sd": 9074.5,
+   "tuple": [
+    364480018,
+    522128221,
+    1447905159,
+    2074166230
+   ],
+   "engine": "0.5000205403011685",
+   "products_held_exactly": "0.5000205403010832",
+   "r_order": "0.5000205403011131",
+   "mirrored": false,
+   "steps": 77438,
+   "a_product_above_2_53": true,
+   "mirror_test_on_exact_products": "0.5000205403012237",
+   "stored_products_equal": true
+  },
+  {
+   "cell": "CdfTie!A12",
+   "formula": "HYPGEOM.DIST(167299248,199399499,951280451,1133805726,TRUE)",
+   "x_N_minus_n_K": -1,
+   "kind": "below by 1",
+   "sd": 4711.3,
+   "tuple": [
+    167299248,
+    199399499,
+    951280451,
+    1133805726
+   ],
+   "engine": "0.5000361358656519",
+   "products_held_exactly": "0.5000361358656519",
+   "r_order": "0.5000361358656152",
+   "mirrored": false,
+   "steps": 40569,
+   "a_product_above_2_53": true,
+   "mirror_test_on_exact_products": "0.5000361358656519",
+   "stored_products_equal": true
+  },
+  {
+   "cell": "CdfTie!A13",
+   "formula": "HYPGEOM.DIST(890707858,1001113085,1343878641,1510455398,TRUE)",
+   "x_N_minus_n_K": -1,
+   "kind": "below by 1",
+   "sd": 5755.4,
+   "tuple": [
+    890707858,
+    1001113085,
+    1343878641,
+    1510455398
+   ],
+   "engine": "0.5000375900942412",
+   "products_held_exactly": "0.5000375900944237",
+   "r_order": "0.5000375900943574",
+   "mirrored": false,
+   "steps": 49416,
+   "a_product_above_2_53": true,
+   "mirror_test_on_exact_products": "0.5000375900942412",
+   "stored_products_equal": true
+  },
+  {
+   "cell": "CdfTie!A14",
+   "formula": "HYPGEOM.DIST(95004439,278790113,400042243,1173922222,TRUE)",
+   "x_N_minus_n_K": -1,
+   "kind": "below by 1",
+   "sd": 6910.6,
+   "tuple": [
+    95004439,
+    278790113,
+    400042243,
+    1173922222
+   ],
+   "engine": "0.5000304733903392",
+   "products_held_exactly": "0.5000304733903392",
+   "r_order": "0.5000304733903176",
+   "mirrored": false,
+   "steps": 59189,
+   "a_product_above_2_53": true,
+   "mirror_test_on_exact_products": "0.5000304733903392",
+   "stored_products_equal": true
+  },
+  {
+   "cell": "CdfTie!A15",
+   "formula": "HYPGEOM.DIST(536870911,1073741822,1073741822,2147483644,TRUE)",
+   "x_N_minus_n_K": 0,
+   "kind": "equal",
+   "sd": 11585.2,
+   "tuple": [
+    536870911,
+    1073741822,
+    1073741822,
+    2147483644
+   ],
+   "engine": "0.5000172176996038",
+   "products_held_exactly": "0.5000172176996645",
+   "r_order": "0.5000172176996411",
+   "mirrored": false,
+   "steps": 98529,
+   "a_product_above_2_53": true,
+   "mirror_test_on_exact_products": "0.5000172176996038",
+   "stored_products_equal": true
+  },
+  {
+   "cell": "CdfTie!A16",
+   "formula": "HYPGEOM.DIST(400000000,800000000,800000000,1600000000,TRUE)",
+   "x_N_minus_n_K": 0,
+   "kind": "equal",
+   "sd": 10000.0,
+   "tuple": [
+    400000000,
+    800000000,
+    800000000,
+    1600000000
+   ],
+   "engine": "0.5000199471139852",
+   "products_held_exactly": "0.5000199471139848",
+   "r_order": "0.5000199471139476",
+   "mirrored": false,
+   "steps": 85220,
+   "a_product_above_2_53": true,
+   "mirror_test_on_exact_products": "0.5000199471139852",
+   "stored_products_equal": true
+  }
+ ]
+}
