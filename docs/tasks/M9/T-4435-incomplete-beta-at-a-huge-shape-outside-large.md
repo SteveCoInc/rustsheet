@@ -128,9 +128,11 @@ Per region, is Excel near correctly rounded (the `accuracy` stage's premise)?
 - [x] Every cell of T-4434's case that T-4434 lists for this task is within half a unit of Excel's 15th significant
       digit. (18 of the 29; the 11 on kernels outside both regions moved to T-4908, see the Outcome.)
 - [x] No cell of probes-numeric t4017-f-huge-df2-above-mean-*, t4030-f-dist-rt-df1-boundary, t4080-beta-num-band-edge,
-      t1530-f-df-cut, t3354-f-dist-sweep or probes/t4045-f-dist-rt-zero-cut-fresh moves away from Excel. The PR lists
-      every cell that moves, as T-4119's Outcome did. No known-failure line is added to eval/baseline/ (decision 0267
-      item 6 if a family cell regresses).
+      t1530-f-df-cut or t3354-f-dist-sweep moves away from Excel. In probes/t4045-f-dist-rt-zero-cut-fresh, 12 of
+      the 51 cells that move go slightly away from Excel with no class change. Ours goes onto the math on all 51, and
+      Excel is up to 1.2E-13 off it there (amended at review; the Outcome lists them). The PR lists every cell that
+      moves, as T-4119's Outcome did. No known-failure line is added to eval/baseline/ (decision 0267 item 6 if a
+      family cell regresses).
 - [x] Not a fit (decision 0188 R4): the dispatch bounds come from the regions' math and TOMS 708's own dispatch, with
       no constant scored against Excel's bits and no branch picked by the cells that already match. The PR says so,
       with the grid as the evidence. Gate A (`rustsheet-eval accuracy`) moves no BETA.DIST, F.DIST or F.DIST.RT point
@@ -148,29 +150,31 @@ Every cell of T-4434's sweep that T-4434 lists for this task is within half a un
 (decisions 0083, 0114 `accuracy`).
 
 ## Outcome
+**Scope.** The Goal named region 1 from a0 = 5E3. The expansion's bound is 2000 (`MIN_SHAPE`, from the boundary table
+below), so the change also covers a0 of 2000 to 5000. In bratio terms the change covers:
+- L140 bup+bgrat points past the port's 9 bup terms, at a0 of 2000 to 1E6 (b0 < 40);
+- bfrac at a0 above 5000 with b0 up to 200. The 5000 is the edge of T-3571's probe coverage, not a bound from the
+  math.
+
+The old a0 >= 1E6, b0 < 40 region keeps T-4119's arithmetic.
+
 **The orientation puzzle.** `BETA.DIST(1-q/a,a,40,TRUE)` (T-4214's cells) and the F route at the same shapes,
 `FDIST(1.5,80,1E10)` = 1 - I_x'(40, 5E9), both reach bratio's bfrac at (a0, b0) = (5E9, 40).
-- In T-4214's orientation λ = (a + b) y - b is positive, so bratio does not swap. bfrac gets the caller's own x0 and
-  y0 = 1 - x0, exact, and is 7.4E-15 off the math there.
-- On the F route (and on `BETA.DIST(y,40,5E9,TRUE)`) λ is negative, so bratio swaps. x0 is then the caller's rounded
-  complement near 1: F's fl(r/(1 + r)), or BETA.DIST's fl(1 - x). bfrac's prefactor is Excel's density at x0 times
-  x0·y0, and it reads x0 to the power a0 = 5E9. The 1 - x0 that x0 implies is 1.1999999882661427E-8, against the true
-  1.1999999856000003E-8 (2.2E-9 relative), and a0·y0 = 60 multiplies that. Both calls are 4.67E-8 off the math, the
-  same number.
-- The bad path is therefore swapped bfrac at a huge a0, not the fraction. The grid shows the density prefactor also
-  drifts with a0 on unswapped calls: `BETA.DIST(0.999999922324,1674490000,74.2297,TRUE)` is 5.0E-8 off.
+- In T-4214's orientation λ is positive, so bratio does not swap. bfrac gets the caller's own x0 and an exact
+  y0 = 1 - x0, and is 7.4E-15 off the math.
+- On the F route (and `BETA.DIST(y,40,5E9,TRUE)`) λ is negative, so bratio swaps. x0 becomes the caller's rounded
+  complement near 1, and bfrac's prefactor (Excel's density at x0 times x0·y0) raises it to the power a0. The 1 - x0
+  it implies is 2.2E-9 relative off the true small side, and a0·y0 = 60 multiplies that. Both calls are 4.67E-8 off.
+- The density prefactor also drifts with a0 on unswapped calls: `BETA.DIST(0.999999922324,1674490000,74.2297,TRUE)`
+  is 5.0E-8 off.
 
-**Candidates**, scored on the grid before choosing. The grid is docs/research/t4435/grid.py: seed 4435, 800 points
-(600 F tails and 200 BETA.DIST in 8 groups), 60-digit mpmath at the double arguments and the exact F ratio, cached in
-grid-references.json.
-- Candidate 1, TOMS 708's port: L140 bup+bgrat past 9 bup terms, and bfrac with an accurate y0-based prefactor.
-- Candidate 2, the large-shape expansion with lowered and raised bounds.
-- Both took region 2's F tails from 5.2E-8 to about 5E-14 and region 1 from 5.6E-12 to 1.7E-13.
-- Candidate 1 made L140 points at 9 or fewer bup terms worse (b1-a from 19.9 to 63 units of |ln tail| ulp). It left
-  b1-a at 2.9E-14, against candidate 2's 4.5E-15.
-- Candidate 2 was equal or better in every group, so it was chosen.
-- Neither candidate, as first written, touched unswapped bfrac at a huge a0: b2-a stayed at 5.0E-8 in both. The chosen
-  candidate 2 was then extended to that call.
+**Candidates** (docs/research/t4435/grid.py: seed 4435, 800 points, 60-digit mpmath at the double arguments and the
+exact F ratio). These were scored before choosing:
+- Candidate 1 is TOMS 708's port: L140 past 9 bup terms, and bfrac with a y0-based prefactor. It made L140 points
+  at 9 or fewer bup terms worse.
+- Candidate 2 is the large-shape expansion with wider bounds. It was equal or better in every group, and was chosen.
+- Neither, as first written, touched unswapped bfrac at a huge a0 (b2-a stayed at 5.0E-8); candidate 2 was then
+  extended to it.
 
 Main:
 
@@ -186,7 +190,7 @@ Main:
 | b2-b | 50 | 26 | 41 | 45 | 9.0e-16 | 2.5e-10 | `=BETA.DIST(8.70981875306E-08,100.762,1401060000,TRUE)` |
 | all | 800 | 222 | 385 | 539 | 1.2e-14 | 5.2e-08 | `=F.DIST.RT(2.707289277,388,3189003293)` |
 
-Candidate 1 (port):
+Candidate 1:
 
 | group | points | <=1E-15 | <=1E-14 | <=1E-13 | median rel | worst rel | worst point |
 |---|---:|---:|---:|---:|---:|---:|---|
@@ -200,7 +204,7 @@ Candidate 1 (port):
 | b2-b | 50 | 33 | 47 | 50 | 7.0e-17 | 2.7e-14 | `=BETA.DIST(5.35103677223E-06,120.968,9553620,TRUE)` |
 | all | 800 | 281 | 559 | 766 | 3.4e-15 | 5.0e-08 | `=BETA.DIST(0.999999922324,1674490000,74.2297,TRUE)` |
 
-Candidate 2 (expansion, before the double-double refinements below):
+Candidate 2, as first scored:
 
 | group | points | <=1E-15 | <=1E-14 | <=1E-13 | median rel | worst rel | worst point |
 |---|---:|---:|---:|---:|---:|---:|---|
@@ -214,23 +218,36 @@ Candidate 2 (expansion, before the double-double refinements below):
 | b2-b | 50 | 32 | 47 | 50 | 1.0e-16 | 2.7e-14 | `=BETA.DIST(5.35103677223E-06,120.968,9553620,TRUE)` |
 | all | 800 | 301 | 580 | 767 | 2.3e-15 | 5.0e-08 | `=BETA.DIST(0.999999922324,1674490000,74.2297,TRUE)` |
 
-**The change** (`large_shape_beta.rs`, `bratio/mod.rs`, `bratio/bfrac.rs`, `fisher.rs`):
-- The expansion's bounds go from a >= 1E6 and b < 40 to a >= 2000 and b <= 200.
-  - MIN_SHAPE = 2000 comes from docs/research/t4435/boundary.py. That is BETA.DIST at a = 100 to 2E4 and b = 1.5 to 200
-    against the math, with no Excel value read. 2000 is the smallest a at which the expansion is at least as accurate
-    as the old kernels at every b.
-  - MAX_SECOND_SHAPE = 200 is region 2's top.
-- bfrac at a huge a0 takes the expansion (`ported_tails_with`, BETA.DIST's, F's and BETA.INV's callers), but only past
-  a0 = 5000. T-3571's probes show Excel's own bfrac arithmetic up to there.
-- F's tails in both regions form the ratio df1 x/(df1 x + df2) in double-double (`fisher.rs` `f_large_shape_tails`):
-  - region 2 goes before the port, where bratio would run bfrac;
-  - region 1 comes after the port, on L140 points it declines, at df2/2 below 1E6;
-  - basym, the closed forms and a shape of 1 keep their kernels.
-- In the new range (a below 1E6, or b of 40 and up) the expansion forms r = z^b e^-z/Gamma(b) in double-double
-  (`gamma_power_ratio`). The double density rounds the deviance, several hundred at a deep tail.
-- The old a >= 1E6, b < 40 region keeps T-4119's arithmetic: its double ratio and double density are what t4017's
-  bit-exact cells track. The quantile searches (`search_tails`, `beta_search_tails`) reach the expansion through the
-  same `large_shape_lower`, so they take the same bounds.
+**The change**, after the fidelity review:
+- In the new range (a below 1E6, or b of 40 and up) the expansion runs in `Arithmetic::Accurate`.
+  - nu = a + (b - 1)/2, z = -nu ln x and nu - a are exact in double-double.
+  - r = z^b e^-z / Gamma(b) is formed in double-double (`gamma_power_ratio`; below `dd_exp`'s range as the square of
+    e^(E/2)).
+- F's tails form the ratio df1 x/(df1 x + df2) in double-double (`f_large_shape_tails`). `fisher.rs`
+  `f_expansion_route` places it before the port for bfrac past T-3571's coverage, and after it for L140 points the
+  port declines. basym, the closed forms, a shape of 1 and the L140 port at 9 or fewer bup terms keep their kernels.
+- The quantile searches reach the expansion through the same `large_shape_lower`, so they take the same bounds.
+
+**The review's regression, fixed.** The first version formed nu in doubles. At a non-dyadic a (2049.9, 2537.31), a
+double nu put up to 6E-14 into z on deep BETA.DIST tails, and 46 t3568-r5-bup cells moved away from both Excel and
+the math (fresh B117 went from 3.5E-16 to 3.4E-14). With nu exact:
+- the t3568-r5-bup cells that move get closer to the math in 321 of 322, and the worst error goes from 2.3E-13 to
+  5.5E-15;
+- B117, hold A717, B114, B757 and tune A473 are all within 1.2E-15 of the math;
+- t3382-l140-sweep A6 is exact.
+
+**MIN_SHAPE, re-derived** (docs/research/t4435/boundary.py). The table has 653 points:
+- a non-dyadic a of 523.71 to 987654.3, b of 1.5 to 200, from the mean down to deep lower tails (z up to 600);
+- the expansion forced by the ignored test `boundary_table` (reproducible from the commit), against main's kernels
+  through dispatch.
+
+What it shows:
+- The expansion's worst error per (a, b) is 2.2E-14 from a = 1517.93, and 4.9E-15 from a = 2049.9.
+- Main's kernels are up to 3.3E-13 off at 2049.9, 1.2E-12 at 12345.67 and 7.5E-11 at 987654.3.
+- The expansion is at least as accurate at every b from 1517.93, and loses at some b at 523.71 and 1033.37.
+- So 2000 stands, scored against the math only.
+- Below the bound the table also shows main 3.7E-8 off at `BETA.DIST(0.618697831916,1517.93,19.293,TRUE)`. That is a
+  tail of 7.8E-283 near Excel's zero cut, outside this change.
 
 After:
 
@@ -240,68 +257,85 @@ After:
 | r1-cdf | 100 | 27 | 79 | 100 | 3.4e-15 | 4.3e-14 | `=F.DIST(1E-09,27,1053265,TRUE)` |
 | r2-rt | 200 | 198 | 200 | 200 | 1.0e-16 | 1.3e-15 | `=F.DIST.RT(0.945826150907,223,6938702)` |
 | r2-cdf | 100 | 51 | 91 | 100 | 9.6e-16 | 2.4e-14 | `=F.DIST(0.638309905639,330,601892,TRUE)` |
-| b1-a | 50 | 38 | 50 | 50 | 3.3e-16 | 4.5e-15 | `=BETA.DIST(0.999732060439,35006.6,6.42417,TRUE)` |
-| b1-b | 50 | 43 | 50 | 50 | 1.6e-16 | 2.6e-15 | `=BETA.DIST(0.000701609575528,9.98123,15505.4,TRUE)` |
-| b2-a | 50 | 24 | 47 | 50 | 1.3e-15 | 1.6e-14 | `=BETA.DIST(0.999979043559,11377300,100.668,TRUE)` |
-| b2-b | 50 | 32 | 47 | 50 | 1.0e-16 | 2.7e-14 | `=BETA.DIST(5.35103677223E-06,120.968,9553620,TRUE)` |
-| all | 800 | 512 | 696 | 798 | 2.1e-16 | 1.7e-13 | `=F.DIST.RT(92.6317463768,10,333868)` |
+| b1-a | 50 | 45 | 50 | 50 | 1.1e-16 | 4.5e-15 | `=BETA.DIST(0.999732060439,35006.6,6.42417,TRUE)` |
+| b1-b | 50 | 43 | 50 | 50 | 1.3e-16 | 2.6e-15 | `=BETA.DIST(0.000701609575528,9.98123,15505.4,TRUE)` |
+| b2-a | 50 | 49 | 50 | 50 | 6.6e-17 | 1.8e-15 | `=BETA.DIST(0.999998181558,76235300,143.29,TRUE)` |
+| b2-b | 50 | 33 | 47 | 50 | 5.0e-17 | 2.7e-14 | `=BETA.DIST(5.35103677223E-06,120.968,9553620,TRUE)` |
+| all | 800 | 545 | 699 | 798 | 1.7e-16 | 1.7e-13 | `=F.DIST.RT(92.6317463768,10,333868)` |
 
-- No point gets worse than on main by more than 1.5 times (`grid.py compare`).
-- Every point past 1E-14 is on a kernel this task does not change:
-  - r1-rt's 68 are on L140's port at 9 or fewer bup terms, in Excel's arithmetic, worst 3.7 units of |ln tail| ulp
-    (1.7E-13 at a tail of 2.6E-192). T-4434 has ours matching Excel on 158 of the 170 such cells, so the port stays.
-  - r1-cdf, r2-cdf and b2-b are lower tails with a moderate bratio a0, up to 1.5 units (4.3E-14).
-- On the points it now takes:
-  - region 1 past the port (94 points) goes from 5.6E-12 to 3.7E-16 (median 0.003 units);
-  - region 2 F.DIST.RT goes from 5.2E-8 to 1.3E-15;
-  - b2-a goes from 5.0E-8 to 1.6E-14 (2.6 units at a tail of 2E-24, the expansion's own floor at b of about 100);
-  - b1 is within 4.5E-15.
-- So the 1E-14 goal holds on every sub-band the change takes except b2-a's deep tails at b0 of about 100. A sub-band
-  that keeps an untouched kernel keeps its bound, for the reason given.
+- No grid point gets worse than on main by more than 1.5 times (`grid.py compare`).
+- Every point past 1E-14 is on a kernel this change does not touch:
+  - r1-rt's 68 are on L140's port at 9 or fewer bup terms, in Excel's arithmetic: worst 3.7 units of |ln tail| ulp,
+    1.7E-13 at a tail of 2.6E-192. T-4434 has ours matching Excel on 158 of the 170 such cells.
+  - r1-cdf, r2-cdf and b2-b's lower tails have a moderate bratio a0, up to 4.3E-14.
+- The points the expansion takes are within 1.8E-15: region 1 past the port 3.7E-16, region 2 F.DIST.RT 1.3E-15,
+  b1 past the port 1.7E-15 and b2-a 1.8E-15.
+- So the 1E-14 goal holds on every sub-band the change takes.
 
 **Not a fit** (decision 0188 R4):
-- MIN_SHAPE comes from the boundary grid's math.
+- MIN_SHAPE is scored against the math only.
 - MAX_SECOND_SHAPE is region 2's top.
-- The 5000 is T-3571's evidenced shape range.
+- 5000 is T-3571's probe coverage.
 - 1E6 and 40 are T-4119's existing bounds.
-- No constant was scored against Excel's bits. The scoping to bfrac (not basym) and to L140 points the port declines
-  follows TOMS 708's own dispatch.
+- The routing follows TOMS 708's own dispatch (bfrac, not basym; L140 points the port declines). No constant was
+  scored against Excel's bits.
 
-**T-4434's cells:** 18 of the 29 T-4434 listed here are within 15 digits of Excel. The other 11 are on kernels outside
-both regions and moved to T-4908.
+**T-4434's cells.** 18 of the 29 that T-4434 listed here are within 15 digits of Excel. The other 11 are on kernels
+outside both regions and moved to T-4908.
 
-On the whole case (`score.py` after the change), ours is:
-- region 2 F.DIST.RT: within 1.9E-15 of the math (was 1.4E-7);
-- F.DIST: within 7.3E-15 (was 2.6E-9);
-- BETA.DIST: within 1.1E-14 (was 5.9E-9);
-- region 1: 1.3E-13, on the untouched port.
+**Eval** (`make eval` steps, origin/main bbbc45e77 against the branch; docs/research/t4435/moved_cells.py,
+lost_excel.py, gate_a_moves.py):
+- `rustsheet-eval check`: no regression in any gated suite, and the baselines are unchanged.
+- Visible parity: 8,750 in-scope cells outside the envelope, against the lock's 9,702 in 211 cases.
+- Gate A: 0 failing and the same 35 known failures.
+  - 6 of 45,082 points move, all toward the math: BETA.INV A156, F.DIST.RT A174, F.DIST A161 and A172, FDIST A176 and
+    FINV A151.
+  - F.DIST A172 and FDIST A176 go from math-only into both envelopes.
+  - FINV A151 stays math-only: Excel is 98% off there.
+  - The F.INV A151 and F.INV.RT A143 moves the review flagged no longer happen.
+- 889 cells move:
+  - 177 to a better closeness class and 19 to a worse one;
+  - 479 within their class toward Excel and 210 away.
+- The incomplete-beta family has 368,209 → 368,246 cells within 15 digits, and 3,798 → 3,677 visibly-off numbers.
+- By case, moved cells toward / away from Excel:
+  - t4434: 387 / 78;
+  - t3568-r5-bup: 195 / 122;
+  - probes/t4045-f-dist-rt-zero-cut-fresh: 39 / 12, all 51 closer to the math;
+  - t4857-f-classes: 5 / 1;
+  - t4456-beta-t-zero-reach: 7 / 1;
+  - t4030: 4 / 0, and t4045-f-dist-rt-zero-cut, t4456-beta-t-zero-cut and t3351: toward only;
+  - t4080: 25 move with no change in distance;
+  - t3382-l140-sweep A6 and t4974 D88: away, both onto the math.
+- t4017, t1530 and t3354: no cell moves.
 
-**Eval** (`make eval`'s steps on main merged at 4ff42dbc8, against the branch; docs/research/t4435/moved_cells.py):
-- 889 cells move: 188 to a better class, 18 to a worse one, and 683 within their class (476 toward Excel, 207 away).
-- The incomplete-beta family's cells within 15 digits go from 361,502 to 361,553. Its visibly-off numbers go from
-  2,494 to 2,372.
-- No gated suite regresses, and the baselines are unchanged (`rustsheet-eval check`). The visible-parity lock holds.
-- Gate A (`rustsheet-eval accuracy`): 0 failing, the same 188 known failures. One point moves from inside both
-  envelopes to the math-only one (1,517 to 1,518), still inside.
-- The named families:
-  - t4017, t1530 and t3354: no cell moves.
-  - t4030: 4 cells move toward Excel and the math.
-  - t4080: 25 cells move toward Excel (23 closer to the math).
-  - probes/t4045-f-dist-rt-zero-cut-fresh: 39 cells move toward Excel and 12 slightly away with no class change.
-    They are region 1 tails near 1E-285 where Excel is the side off the math (T-3209's bgrat digits). Ours goes onto
-    the math on all 51.
-- Seven ungated cells cross the 13-digit bar: t4434 A295, B45, C45 and D40, and t3568-r5-bup-fresh A223, -hold B502
-  and -tune A359. Excel is 3.8E-14 to 1.2E-12 off the math on all seven. Decision 0341 records and accepts them, and
-  their owners (T-4214, T-3209, T-3871) are named.
-- Over the 321 t3568-r5-bup cells that move, 216 get closer to the math and 104 farther, and the worst error goes from
-  2.3E-13 to 6.2E-14.
+**Cells that lose an Excel near the math** (`lost_excel.py`: Excel within 4 units of |ln value|·2^-53 of the math).
+231 cells move away from Excel, and on 155 of them Excel is that near the math:
+- 121 in t3568-r5-bup, 20 in t4434, 12 in t4045-fresh, and one each in t3382-l140-sweep and t4456-beta-t-zero-reach.
+- In every one, ours moves onto the math, to within 0.09 units. Excel is at its double floor but on its own rounding.
+- The kernel ours leaves (Cephes' fraction or bfrac's density prefactor) was not Excel's arithmetic either; it
+  happened to sit nearer.
+- Keeping it on those shapes would be the keep-matched branch decision 0188 R4 forbids. Matching Excel's rounding
+  there needs a model of its many-term bup (T-3871) or bgrat (T-3209) arithmetic.
+
+The cells among them that change class:
+- t3568-r5-bup-fresh: A223 (residue13 → visibly off, Excel 1.7 units), A422 and A471 (ulp4 → digits15).
+- t3568-r5-bup-hold: A795, A832 (digits15 → residue13), A9, B507 and B757 (ulp4 → residue13).
+- t3568-r5-bup-tune: A215, B754 (digits15 → residue13), A359 (residue13 → visibly off, Excel 0.93 units), A458
+  (ulp1 → residue13), A931 (ulp4 → digits15) and B789 (ulp1 → digits15).
+- t4434: A295 (residue13 → visibly off, Excel 1.2 units).
+
+Decision 0341 accepts as Excel noise only B45, C45 and D40 of t4434. On those, Excel is 1.5E-13 to 1.2E-12 off the
+math, and ours went onto it. The other class change, t4974 D88 (ulp1 → residue13), has Excel 7.2 units off the math
+and ours on it.
 
 **Follow-up:** T-4908 (the 11 cells above).
 
-**After merging origin/main and T-1871's queued `large_prefactor` change (#3953):**
-- T-4435's regions no longer reach `large_prefactor` (the Cephes fallback), so the grid's values are byte-identical,
-  with no point worse.
-- Gate A (`rustsheet-eval accuracy`): 0 failing, 185 known failures (T-1871 removes its own 3).
-- `rustsheet-eval check`: no regression.
-- The family counts are unchanged: 361,553 within 15 digits and 2,372 visibly off.
-- `f_large_shape_tails` moved to large_shape_beta.rs to keep fisher.rs under the 1,000-line limit after the merge.
+**Review fixes** (design, security, fidelity minors):
+- `Arithmetic` enum, and `f_expansion_route` with one call to `f_large_shape_tails`.
+- Tests pin MIN_SHAPE and check `gamma_power_ratio` against mpmath.
+- `MIN_RATIO_EXPONENT` is -650; below it r is (e^(E/2))^2.
+- `correction_series` returns `None` past its cap.
+- The comment on the 5000 bound now says it is T-3571's coverage.
+- The t4045 criterion is amended.
+- Decision 0341 is recounted.
+- statistics.md's claims and its Evidence/Tasks line are corrected.

@@ -22,14 +22,17 @@
 //! mpmath) puts the expansion's worst error over the whole region at 2.1E-14, so the cut is gone
 //! (decision 0267, accuracy).
 //!
-//! T-4435 widened the bounds from a >= 1E6 and b < 40 to a >= 2000 and b <= 200. The calls past the
-//! old bounds took Cephes' fraction (b0 < 40 past the L140 port's 9 bup terms) or bfrac (b0 >= 40),
-//! 1E-13 to 5E-8 off the math, where T-4434's sweep (probes-numeric/
-//! t4434-huge-shape-outside-large-shape-beta) found Excel within a few units of |ln tail| ulp at
-//! b0 < 40. On T-4435's grid (docs/research/t4435: 600 F tails, 200 BETA.DIST, 60-digit mpmath) the
-//! worst error goes from 5.2E-8 to 1.7E-13. That point and every other past 1E-14 is on a kernel this
-//! change does not touch: L140's port in Excel's arithmetic (to 3.7 units of |ln tail| ulp), or a
-//! lower tail with a moderate a0. The expansion's own worst is 1.6E-14, at b of 100 to 200.
+//! T-4435 widened the bounds from a >= 1E6 and b < 40 to a >= 2000 and b <= 200 ([`MIN_SHAPE`]). The
+//! calls past the old bounds took Cephes' fraction (b0 < 40 past the L140 port's 9 bup terms) or bfrac
+//! (b0 >= 40), 1E-13 to 5E-8 off the math. T-4434's sweep (probes-numeric/
+//! t4434-huge-shape-outside-large-shape-beta) found Excel within a few units of |ln tail| ulp there at
+//! b0 < 40. In that new range the expansion runs in [`Arithmetic::Accurate`].
+//!
+//! On T-4435's grid (docs/research/t4435: 600 F tails, 200 BETA.DIST, 60-digit mpmath):
+//! - the worst error goes from 5.2E-8 to 1.7E-13, and no point gets worse;
+//! - every point past 1E-14 is on a kernel this change does not touch: L140's port in Excel's
+//!   arithmetic (up to 3.7 units of |ln tail| ulp), or a lower tail with a moderate a0 (up to 4.3E-14);
+//! - the points the expansion takes are within 1.8E-15.
 // LINT-DEBT-BEGIN (inherited from the IronCalc fork, decision 0335: entries may only be removed, never added)
 #![expect(clippy::cast_precision_loss, clippy::many_single_char_names)]
 #![cfg_attr(test, expect(clippy::float_cmp, clippy::unreadable_literal))]
@@ -42,16 +45,22 @@ use super::loader::stirlerr_exact;
 use crate::x87_exp::{dd_add, dd_div, dd_exp, dd_mul, dd_neg, two_sum};
 use crate::x87_log10::{ln_double_double, ln_double_double_pair};
 
-/// The smallest first shape the expansion is used at, from the math alone (T-4435's boundary grid,
-/// docs/research/t4435/boundary.py: `BETA.DIST` at a = 100 to 2E4 and b = 1.5 to 200 against 60-digit
-/// mpmath, no Excel value read). The expansion is within 3.2E-15 at every a from 100 while b < 40,
-/// and within 3E-14 at b of 60 to 200 from a = 2000 (8.5E-14 at a tail of 4E-69, 5 units of
-/// |ln tail| ulp). The kernels it replaces grow with a: Cephes' fraction past L140's 9 bup terms and
-/// bfrac's density prefactor are 5E-15 to 1.3E-13 off at a = 2000 and up to 8.6E-13 at 2E4 (1E-7 at
-/// a = 5E9, T-2528). 2000 is the smallest a of the grid at which the expansion is at least as
-/// accurate at every b; at a = 500 to 1000 bfrac is sometimes the closer one. A tiny first shape is
-/// out: there the terms in 1/nu are not small (`BETA.DIST(0.997,3.366,3.43E-18,TRUE)` is 1.43E-17 in
-/// Excel, probes-numeric/t2464-r2-bpser-small-tiny A10, and 4E-13 by it).
+/// The smallest first shape the expansion is used at, from the math alone (T-4435's boundary table,
+/// docs/research/t4435/boundary.py, reproducible through the ignored test `boundary_table`). The table
+/// has `BETA.DIST` at a non-dyadic a of 523.71 to 987654.3 and b of 1.5 to 200, from the mean down to
+/// deep lower tails (z = nu |ln x| up to 600), against 60-digit mpmath. No Excel value is read.
+/// - With the accurate arithmetic ([`Arithmetic::Accurate`]), the forced expansion's worst relative
+///   error per (a, b) is 2.2E-14 from a = 1517.93, and 4.9E-15 from a = 2049.9.
+/// - Main's kernels (Cephes' fraction past L140's 9 bup terms, and bfrac's density prefactor) are up to
+///   3.3E-13 off at a = 2049.9, 1.2E-12 at 12345.67 and 7.5E-11 at 987654.3.
+/// - The expansion is at least as accurate as those kernels at every b of the table from a = 1517.93.
+///   At 523.71 and 1033.37 it loses at some b (39.5, 150.7 and 200).
+///
+/// 2000 sits between 1517.93 and 2049.9, where the expansion's worst falls to 4.9E-15.
+///
+/// A tiny first shape is out: there the terms in 1/nu are not small (`BETA.DIST(0.997,3.366,
+/// 3.43E-18,TRUE)` is 1.43E-17 in Excel, probes-numeric/t2464-r2-bpser-small-tiny A10, and 4E-13 by
+/// it).
 const MIN_SHAPE: f64 = 2000.0;
 
 /// The expansion's lower bound on a before T-4435 (T-2528, T-4119). The F tails from it up keep the
@@ -206,8 +215,9 @@ fn expand(a: f64, b: f64, x: f64, y: (f64, f64), arithmetic: Arithmetic) -> Opti
     (value.is_finite() && value >= 0.0).then_some(value.min(1.0))
 }
 
-/// Below this exponent of r, [`gamma_power_ratio`] keeps the double density: `dd_exp` is documented
-/// for |a| <= 650.
+/// The lowest exponent [`gamma_power_ratio`] hands `dd_exp`, which is documented for |a| <= 650. Below
+/// it r is the square of e^(E/2); below twice it r is far below the double range and the double density
+/// answers.
 const MIN_RATIO_EXPONENT: f64 = -650.0;
 
 /// r = z^b e^-z / Gamma(b), z times the gamma density at z, with its exponent in double-double:
@@ -221,11 +231,20 @@ fn gamma_power_ratio(b: f64, z: f64) -> f64 {
     let ln_ratio = dd_add(ln_double_double(z), dd_neg(ln_double_double(b)));
     let exponent = dd_add(dd_mul((b, 0.0), ln_ratio), dd_neg(two_sum(z, -b)));
     let exponent = dd_add(exponent, dd_neg(stirlerr_exact(b)));
-    if exponent.0.is_nan() || exponent.0 <= MIN_RATIO_EXPONENT {
+    if exponent.0.is_nan() || exponent.0 <= 2.0 * MIN_RATIO_EXPONENT {
         return accurate_gamma_density(b, z, 1.0).map_or(0.0, |density| density * z);
     }
-    let power = dd_exp(exponent);
-    (power.0 + power.1) * (b / (2.0 * std::f64::consts::PI)).sqrt()
+    let root = (b / (2.0 * std::f64::consts::PI)).sqrt();
+    if exponent.0 > MIN_RATIO_EXPONENT {
+        let power = dd_exp(exponent);
+        return (power.0 + power.1) * root;
+    }
+    // Past dd_exp's range, e^E = (e^(E/2))^2, multiplied in an order that stays normal as long as r
+    // does: the deepest F tails before Excel's zero cut (probes/t4045-f-dist-rt-zero-cut-fresh C3,
+    // z about 717, E about -656).
+    let half = dd_exp((0.5 * exponent.0, 0.5 * exponent.1));
+    let half = half.0 + half.1;
+    (half * root) * half
 }
 
 /// Q(b, z) / r with r = z^b e^-z / Gamma(b): for z of b + 1 or more Legendre's continued fraction
@@ -320,10 +339,16 @@ mod tests {
     #[test]
     #[ignore = "research table (T-4435); reads docs/research/t4435/boundary-points.tsv"]
     fn boundary_table() {
-        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../docs/research/t4435/boundary-points.tsv");
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../docs/research/t4435/boundary-points.tsv"
+        );
         let text = std::fs::read_to_string(path).expect("boundary-points.tsv");
         for (row, line) in text.lines().enumerate() {
-            let v: Vec<f64> = line.split('\t').map(|t| t.parse().expect("number")).collect();
+            let v: Vec<f64> = line
+                .split('\t')
+                .map(|t| t.parse().expect("number"))
+                .collect();
             let (x, a, b) = (v[0], v[1], v[2]);
             let got = expand(a, b, x, (1.0 - x, 0.0), Arithmetic::Accurate).unwrap_or(f64::NAN);
             println!("{}\t{got:e}", row + 1);
@@ -348,7 +373,10 @@ mod tests {
             (150.7, 151.0, 4.8932457439315895),
         ] {
             let got = gamma_power_ratio(b, z);
-            assert!((got / reference - 1.0).abs() < 4e-16, "r({b}, {z}) = {got} against {reference}");
+            assert!(
+                (got / reference - 1.0).abs() < 4e-16,
+                "r({b}, {z}) = {got} against {reference}"
+            );
         }
     }
     use crate::functions::statistical::incomplete_beta::beta_reg_tails;

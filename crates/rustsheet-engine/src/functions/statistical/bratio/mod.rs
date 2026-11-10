@@ -485,8 +485,9 @@ fn ported_tails_with(
         // (probes-numeric/t4045-f-dist-rt-zero-cut E3); the expansion reads ln x0 from y0. Excel is
         // itself up to 8.5E-9 off the math on those calls (T-4434's sweep, T-4214), so this is the
         // `accuracy` stage, not Excel's arithmetic. BETA.DIST's, F's and BETA.INV's callers only, as
-        // for L140 bup+bgrat, and only past a0 = 5000: up to there T-3571's probes show Excel's own
-        // bfrac arithmetic, which the port keeps.
+        // for L140 bup+bgrat, and only past a0 = 5000. That 5000 is not a bound from the math: it is the
+        // edge of T-3571's probe coverage (a, b of 40 to 5000, unswapped calls only), where Excel's own
+        // bfrac arithmetic is evidenced and the port keeps it.
         Branch::Bfrac if half_bgrat && past_evidenced_shapes(d.a0) => {
             let w = large_shape_lower(d.a0, d.b0, d.x0, d.y0)
                 .map_or_else(|| bfrac(&d, BFRAC_EPS_FACTOR * EPS), Some)?;
