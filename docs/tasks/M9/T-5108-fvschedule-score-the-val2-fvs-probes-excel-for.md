@@ -60,6 +60,12 @@ Owns: probes/val2-fvs-01, probes/val2-fvs-02 and probes/val2-fvs-03 (every visib
   One hypothesis, not yet tested: an overflow leaves state carried across the workbook (the val2-fvs-02 caveat), or it
   is a Graph session effect; decide which before treating any one-sheet FVSCHEDULE result as per-call. No log of the
   refused attempts was kept (2026-11-09, between the fvs-04 and fvs-07 fills, then one retry); rerun to capture one.
+- val4 batch, docs/research/probe-request-val4-fvs.md (excel-graph fill, 2026-11-10, one session per case). Owns:
+  probes/val4-fvs-01, probes/val4-fvs-02, probes/val4-fvs-03, probes/val4-fvs-04, probes/val4-fvs-05 and
+  probes/val4-fvs-06 (every visibly-off cell). No fill was refused. As predicted, the overflowing
+  call leaves a state the next literal `^` takes: in probes/val4-fvs-03, probes/val4-fvs-04 and probes/val4-fvs-05,
+  Probe!A1 `=2^1023` is `#NUM!` and B1:B5 are 0, 1, TRUE, 0, 0; the val4-fvs-06 control (no overflow) has every detector
+  2^1023. Score the val4-fvs-01 candidate table against the request's two hypotheses.
 
 ## Acceptance criteria
 - [ ] Every hypothesis of the family in probe-requests-2026-11-08.md has a verdict (confirmed, refuted, undecided) citing

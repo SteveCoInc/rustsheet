@@ -35,6 +35,10 @@ Owns: probes/val2-nsi-01, probes/val2-nsi-02 and probes/val2-nsi-03.
 - Related: T-0925 (inverse normal, AS241).
 
 - val3 batch, docs/research/probe-handoff-2026-11-09-val3.md (excel-graph fill, 2026-11-09). Owns: probes/val3-nsi-01 (no visibly-off cell at the fill) and probes/val3-nsi-02 (every visibly-off cell).
+- val4 batch, docs/research/probe-handoff-2026-11-10-val4-nsi.md (excel-graph fill, 2026-11-10; predictions frozen in
+  docs/research/val4-nsi-predictions.json). Owns: probes/val4-nsi-01, probes/val4-nsi-02, probes/val4-nsi-03, probes/val4-nsi-04,
+  probes/val4-nsi-05, probes/val4-nsi-06 and probes/val4-nsi-07 (no visibly-off cell at the
+  fill).
 
 ## Acceptance criteria
 - [ ] Every NSI hypothesis in probe-requests-2026-11-08.md has a verdict (confirmed, refuted, undecided) citing the probe
