@@ -1,0 +1,243 @@
+{
+ "source": {
+  "api": "graph-v1.0",
+  "application": "Excel for the web",
+  "recordedAt": "2026-11-10T22:12:56Z"
+ },
+ "cases": {
+  "P1": [
+   {
+    "series": [
+     {
+      "tx": {
+       "kind": "strRef",
+       "f": "'P1'!$B$1"
+      },
+      "cat": {
+       "kind": "numRef",
+       "f": "'P1'!$A$2:$A$13"
+      },
+      "val": {
+       "kind": "numRef",
+       "f": "'P1'!$B$2:$B$13"
+      }
+     },
+     {
+      "tx": {
+       "kind": "strRef",
+       "f": "'P1'!$C$1"
+      },
+      "cat": {
+       "kind": "numRef",
+       "f": "'P1'!$A$2:$A$13"
+      },
+      "val": {
+       "kind": "numRef",
+       "f": "'P1'!$C$2:$C$13"
+      }
+     },
+     {
+      "tx": {
+       "kind": "strRef",
+       "f": "'P1'!$D$1"
+      },
+      "cat": {
+       "kind": "numRef",
+       "f": "'P1'!$A$2:$A$13"
+      },
+      "val": {
+       "kind": "numRef",
+       "f": "'P1'!$D$2:$D$13"
+      }
+     }
+    ],
+    "axes": [
+     "dateAx",
+     "valAx"
+    ]
+   }
+  ],
+  "P2": [
+   {
+    "series": [
+     {
+      "tx": {
+       "kind": "strRef",
+       "f": "'P2'!$A$1"
+      },
+      "cat": null,
+      "val": {
+       "kind": "numRef",
+       "f": "'P2'!$A$2:$A$5"
+      }
+     }
+    ],
+    "axes": [
+     "catAx",
+     "valAx"
+    ]
+   }
+  ],
+  "P3": [
+   {
+    "series": [
+     {
+      "tx": {
+       "kind": "strRef",
+       "f": "'P3'!$A$1"
+      },
+      "cat": null,
+      "val": {
+       "kind": "numRef",
+       "f": "'P3'!$B$1:$D$1"
+      }
+     }
+    ],
+    "axes": [
+     "catAx",
+     "valAx"
+    ]
+   }
+  ],
+  "P4": [
+   {
+    "series": [
+     {
+      "tx": {
+       "kind": "strRef",
+       "f": "'P4'!$A$1"
+      },
+      "cat": null,
+      "val": {
+       "kind": "numRef",
+       "f": "'P4'!$A$2:$A$6"
+      }
+     },
+     {
+      "tx": {
+       "kind": "strRef",
+       "f": "'P4'!$B$1"
+      },
+      "cat": null,
+      "val": {
+       "kind": "numRef",
+       "f": "'P4'!$B$2:$B$6"
+      }
+     }
+    ],
+    "axes": [
+     "catAx",
+     "valAx"
+    ]
+   }
+  ],
+  "P5": [
+   {
+    "series": [
+     {
+      "tx": {
+       "kind": "strRef",
+       "f": "'P5'!$B$1"
+      },
+      "cat": {
+       "kind": "strRef",
+       "f": "'P5'!$A$2:$A$4"
+      },
+      "val": {
+       "kind": "numRef",
+       "f": "'P5'!$B$2:$B$4"
+      }
+     },
+     {
+      "tx": {
+       "kind": "strRef",
+       "f": "'P5'!$C$1"
+      },
+      "cat": {
+       "kind": "strRef",
+       "f": "'P5'!$A$2:$A$4"
+      },
+      "val": {
+       "kind": "numRef",
+       "f": "'P5'!$C$2:$C$4"
+      }
+     }
+    ],
+    "axes": [
+     "catAx",
+     "valAx"
+    ]
+   }
+  ],
+  "P6": [
+   {
+    "series": [
+     {
+      "tx": {
+       "kind": "strRef",
+       "f": "'P6'!$B$1"
+      },
+      "cat": {
+       "kind": "strRef",
+       "f": "'P6'!$A$2:$A$4"
+      },
+      "val": {
+       "kind": "numRef",
+       "f": "'P6'!$B$2:$B$4"
+      }
+     },
+     {
+      "tx": {
+       "kind": "strRef",
+       "f": "'P6'!$C$1"
+      },
+      "cat": {
+       "kind": "strRef",
+       "f": "'P6'!$A$2:$A$4"
+      },
+      "val": {
+       "kind": "numRef",
+       "f": "'P6'!$C$2:$C$4"
+      }
+     }
+    ],
+    "axes": [
+     "catAx",
+     "valAx"
+    ]
+   }
+  ],
+  "P7": [
+   {
+    "series": [
+     {
+      "tx": null,
+      "cat": {
+       "kind": "strRef",
+       "f": "'P7'!$A$1:$A$4"
+      },
+      "val": {
+       "kind": "numRef",
+       "f": "'P7'!$B$1:$B$4"
+      }
+     },
+     {
+      "tx": null,
+      "cat": {
+       "kind": "strRef",
+       "f": "'P7'!$A$1:$A$4"
+      },
+      "val": {
+       "kind": "numRef",
+       "f": "'P7'!$C$1:$C$4"
+      }
+     }
+    ],
+    "axes": [
+     "catAx",
+     "valAx"
+    ]
+   }
+  ]
+ }
+}

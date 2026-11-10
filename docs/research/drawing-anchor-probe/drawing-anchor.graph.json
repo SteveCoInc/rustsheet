@@ -1,0 +1,510 @@
+{
+ "source": {
+  "api": "graph-v1.0",
+  "application": "Excel for the web",
+  "recordedAt": "2026-11-10T22:12:56Z",
+  "placed": {
+   "left": 120,
+   "top": 37.5,
+   "width": 240,
+   "height": 135.0
+  }
+ },
+ "cases": {
+  "R1": {
+   "anchors": [
+    {
+     "anchor": "twoCellAnchor",
+     "editAs": null,
+     "from": {
+      "col": 2,
+      "colOff": 304800,
+      "row": 2,
+      "rowOff": 95250
+     },
+     "to": {
+      "col": 7,
+      "colOff": 304800,
+      "row": 11,
+      "rowOff": 95250
+     }
+    }
+   ],
+   "operation": "PATCH range(address='3:3')/format {\"rowHeight\": 30}",
+   "status": 200,
+   "before": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 37.5,
+     "width": 240.0,
+     "height": 135.0
+    }
+   ],
+   "after": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 37.5,
+     "width": 240.0,
+     "height": 150.0
+    }
+   ]
+  },
+  "R2": {
+   "anchors": [
+    {
+     "anchor": "twoCellAnchor",
+     "editAs": null,
+     "from": {
+      "col": 2,
+      "colOff": 304800,
+      "row": 2,
+      "rowOff": 95250
+     },
+     "to": {
+      "col": 7,
+      "colOff": 304800,
+      "row": 11,
+      "rowOff": 95250
+     }
+    }
+   ],
+   "operation": "PATCH range(address='12:12')/format {\"rowHeight\": 30}",
+   "status": 200,
+   "before": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 37.5,
+     "width": 240.0,
+     "height": 135.0
+    }
+   ],
+   "after": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 37.5,
+     "width": 240.0,
+     "height": 135.0
+    }
+   ]
+  },
+  "R3": {
+   "anchors": [
+    {
+     "anchor": "twoCellAnchor",
+     "editAs": null,
+     "from": {
+      "col": 2,
+      "colOff": 304800,
+      "row": 2,
+      "rowOff": 95250
+     },
+     "to": {
+      "col": 7,
+      "colOff": 304800,
+      "row": 11,
+      "rowOff": 95250
+     }
+    }
+   ],
+   "operation": "PATCH range(address='6:6')/format {\"rowHeight\": 30}",
+   "status": 200,
+   "before": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 37.5,
+     "width": 240.0,
+     "height": 135.0
+    }
+   ],
+   "after": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 37.5,
+     "width": 240.0,
+     "height": 150.0
+    }
+   ]
+  },
+  "R4": {
+   "anchors": [
+    {
+     "anchor": "twoCellAnchor",
+     "editAs": null,
+     "from": {
+      "col": 2,
+      "colOff": 304800,
+      "row": 2,
+      "rowOff": 95250
+     },
+     "to": {
+      "col": 7,
+      "colOff": 304800,
+      "row": 11,
+      "rowOff": 95250
+     }
+    }
+   ],
+   "operation": "PATCH range(address='3:3')/format {\"rowHeight\": 5}",
+   "status": 200,
+   "before": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 37.5,
+     "width": 240.0,
+     "height": 135.0
+    }
+   ],
+   "after": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 35.25,
+     "width": 240.0,
+     "height": 127.5
+    }
+   ]
+  },
+  "C1": {
+   "anchors": [
+    {
+     "anchor": "twoCellAnchor",
+     "editAs": null,
+     "from": {
+      "col": 2,
+      "colOff": 304800,
+      "row": 2,
+      "rowOff": 95250
+     },
+     "to": {
+      "col": 7,
+      "colOff": 304800,
+      "row": 11,
+      "rowOff": 95250
+     }
+    }
+   ],
+   "operation": "PATCH range(address='C:C')/format {\"columnWidth\": 150}",
+   "status": 200,
+   "before": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 37.5,
+     "width": 240.0,
+     "height": 135.0
+    }
+   ],
+   "after": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 37.5,
+     "width": 342.0,
+     "height": 135.0
+    }
+   ]
+  },
+  "H1": {
+   "anchors": [
+    {
+     "anchor": "twoCellAnchor",
+     "editAs": null,
+     "from": {
+      "col": 2,
+      "colOff": 304800,
+      "row": 2,
+      "rowOff": 95250
+     },
+     "to": {
+      "col": 7,
+      "colOff": 304800,
+      "row": 11,
+      "rowOff": 95250
+     }
+    }
+   ],
+   "operation": "PATCH range(address='3:3') {\"rowHidden\": true}",
+   "status": 200,
+   "before": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 37.5,
+     "width": 240.0,
+     "height": 135.0
+    }
+   ],
+   "after": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 30.0,
+     "width": 240.0,
+     "height": 127.5
+    }
+   ]
+  },
+  "H2": {
+   "anchors": [
+    {
+     "anchor": "twoCellAnchor",
+     "editAs": null,
+     "from": {
+      "col": 2,
+      "colOff": 304800,
+      "row": 2,
+      "rowOff": 95250
+     },
+     "to": {
+      "col": 7,
+      "colOff": 304800,
+      "row": 11,
+      "rowOff": 95250
+     }
+    }
+   ],
+   "operation": "PATCH range(address='12:12') {\"rowHidden\": true}",
+   "status": 200,
+   "before": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 37.5,
+     "width": 240.0,
+     "height": 135.0
+    }
+   ],
+   "after": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 37.5,
+     "width": 240.0,
+     "height": 127.5
+    }
+   ]
+  },
+  "H3": {
+   "anchors": [
+    {
+     "anchor": "twoCellAnchor",
+     "editAs": null,
+     "from": {
+      "col": 2,
+      "colOff": 304800,
+      "row": 2,
+      "rowOff": 95250
+     },
+     "to": {
+      "col": 7,
+      "colOff": 304800,
+      "row": 11,
+      "rowOff": 95250
+     }
+    }
+   ],
+   "operation": "PATCH range(address='6:6') {\"rowHidden\": true}",
+   "status": 200,
+   "before": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 37.5,
+     "width": 240.0,
+     "height": 135.0
+    }
+   ],
+   "after": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 37.5,
+     "width": 240.0,
+     "height": 120.0
+    }
+   ]
+  },
+  "H4": {
+   "anchors": [
+    {
+     "anchor": "twoCellAnchor",
+     "editAs": null,
+     "from": {
+      "col": 2,
+      "colOff": 304800,
+      "row": 2,
+      "rowOff": 95250
+     },
+     "to": {
+      "col": 7,
+      "colOff": 304800,
+      "row": 11,
+      "rowOff": 95250
+     }
+    }
+   ],
+   "operation": "PATCH range(address='C:C') {\"columnHidden\": true}",
+   "status": 200,
+   "before": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 37.5,
+     "width": 240.0,
+     "height": 135.0
+    }
+   ],
+   "after": [
+    {
+     "name": "Chart 1",
+     "left": 96.0,
+     "top": 37.5,
+     "width": 216.0,
+     "height": 135.0
+    }
+   ]
+  },
+  "D1": {
+   "anchors": [
+    {
+     "anchor": "twoCellAnchor",
+     "editAs": null,
+     "from": {
+      "col": 2,
+      "colOff": 304800,
+      "row": 2,
+      "rowOff": 0
+     },
+     "to": {
+      "col": 7,
+      "colOff": 304800,
+      "row": 10,
+      "rowOff": 95250
+     }
+    }
+   ],
+   "operation": "POST range(address='3:3')/delete {\"shift\": \"Up\"}",
+   "status": 204,
+   "before": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 37.5,
+     "width": 240.0,
+     "height": 135.0
+    }
+   ],
+   "after": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 30.0,
+     "width": 240.0,
+     "height": 127.5
+    }
+   ]
+  },
+  "D2": {
+   "anchors": [
+    {
+     "anchor": "twoCellAnchor",
+     "editAs": null,
+     "from": {
+      "col": 2,
+      "colOff": 304800,
+      "row": 2,
+      "rowOff": 95250
+     },
+     "to": {
+      "col": 7,
+      "colOff": 304800,
+      "row": 11,
+      "rowOff": 0
+     }
+    }
+   ],
+   "operation": "POST range(address='12:12')/delete {\"shift\": \"Up\"}",
+   "status": 204,
+   "before": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 37.5,
+     "width": 240.0,
+     "height": 135.0
+    }
+   ],
+   "after": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 37.5,
+     "width": 240.0,
+     "height": 127.5
+    }
+   ]
+  },
+  "D3": {
+   "anchors": [],
+   "operation": "POST range(address='3:12')/delete {\"shift\": \"Up\"}",
+   "status": 204,
+   "before": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 37.5,
+     "width": 240.0,
+     "height": 135.0
+    }
+   ],
+   "after": []
+  },
+  "D4": {
+   "anchors": [
+    {
+     "anchor": "twoCellAnchor",
+     "editAs": null,
+     "from": {
+      "col": 2,
+      "colOff": 0,
+      "row": 2,
+      "rowOff": 95250
+     },
+     "to": {
+      "col": 6,
+      "colOff": 304800,
+      "row": 11,
+      "rowOff": 95250
+     }
+    }
+   ],
+   "operation": "POST range(address='C:C')/delete {\"shift\": \"Left\"}",
+   "status": 204,
+   "before": [
+    {
+     "name": "Chart 1",
+     "left": 120.0,
+     "top": 37.5,
+     "width": 240.0,
+     "height": 135.0
+    }
+   ],
+   "after": [
+    {
+     "name": "Chart 1",
+     "left": 96.0,
+     "top": 37.5,
+     "width": 216.0,
+     "height": 135.0
+    }
+   ]
+  }
+ }
+}

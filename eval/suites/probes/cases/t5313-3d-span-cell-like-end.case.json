@@ -1,0 +1,44 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-5313 addendum: a 3-D span ending at a sheet named like a cell, typed as one entry after load (the stress suite's formula-edges; information.md already answers the span between two cell-like names, #VALUE!). Sheet order Calc, Sales, T2, T3.",
+  "tags": [
+    "M8",
+    "probe",
+    "stress",
+    "T-5313"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "G1": {
+          "entered": "=SUM(Sales:T3!C2)"
+        },
+        "G2": {
+          "entered": "=SUM('Sales:T3'!C2)"
+        }
+      }
+    },
+    {
+      "name": "Sales",
+      "cells": {
+        "C2": 1
+      }
+    },
+    {
+      "name": "T2",
+      "cells": {
+        "C2": 2,
+        "A1": 10
+      }
+    },
+    {
+      "name": "T3",
+      "cells": {
+        "C2": 4,
+        "A1": 20
+      }
+    }
+  ]
+}

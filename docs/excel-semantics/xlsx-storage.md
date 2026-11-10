@@ -941,6 +941,22 @@ Ours: no RustSheet code writes this element. The export writes chart parts only 
 (`export/pivot_charts.rs`), and those carry no `mc:AlternateContent`. The refused file is T1's.
 Status: VERIFIED (excel-graph; desktop not observed). Tasks: T-90000 (re-pin and record the corrected probe).
 
+## Chart series from a selection, and where a chart's two-cell anchor goes (Excel for the web)
+Rule: the evidence is two Graph runs (2026-11-10).
+- `charts/add` with `seriesBy: Auto` takes a text corner over a header row as series names and the first column as
+  categories. A date column gives a `c:dateAx` with `numRef` categories. A numeric first column under a text header
+  becomes a series, not categories. A numeric header row is data: the series are unnamed and the categories start at
+  row 1.
+- A `twoCellAnchor` without `editAs` keeps its EMU offsets when a row or column is resized or hidden. On screen the
+  corner is clamped to the line's end or start.
+- Deleting the line that holds a corner rewrites that corner to offset 0 in the line that takes its place.
+- Deleting every row the chart spans deletes the chart.
+Evidence: docs/research/chart-selection-probe/RESULTS.md and docs/research/drawing-anchor-probe/RESULTS.md (saved
+workbooks, extracted JSON and the recorder beside them).
+Ours: RustSheet writes no chart of its own apart from pivot charts. These are the charts lane's rules (T1), which
+read the results from here.
+Status: VERIFIED (excel-graph; desktop not observed, M14).
+
 ## A [n] reference without its externalLink part makes Excel refuse the package
 Rule: Excel for the web refuses to open a package whose formulas use `[1]Sheet!A1` while the package has no
 `xl/externalLinks/externalLink1.xml` and no `<externalReferences>`. Graph reports `FileCorruptTryRepair`.
