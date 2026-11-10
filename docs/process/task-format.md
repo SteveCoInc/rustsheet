@@ -86,9 +86,9 @@ Rules:
 - `blocked` tasks get a `## Blocked because` section naming the precise need and, for a missing
   capability, the command that proves it is available (decision 0013).
 - Create tasks with `make new-task MILESTONE=.. LANE=.. TITLE=..`, never by picking an id by hand.
-  It takes the next id after the highest one used in the milestone's block, counting the tasks on
-  every pushed `origin/*` branch and the claims in the id registry, and reserves it in the registry
-  atomically, so parallel sessions cannot collide (decisions 0016, 0215). Fill in the `TODO(fill)`
+  It takes the next id at or above T-90000 (decision 0360: another repository's agents file four-digit ids),
+  counting the tasks on every pushed `origin/*` branch and the claims in the id registry, and reserves it in
+  the registry atomically, so parallel sessions cannot collide (decisions 0016, 0215). Fill in the `TODO(fill)`
   lines (`tasks.py validate` rejects them). Renumbering a collided task also takes its new id from
   `make new-task`, never from a hand-picked number.
 - Cells a task owns go in cell-list lines, one per case: `- gen-m9/<case>.case.json (3): Calc!A185, A246, A10-A21`

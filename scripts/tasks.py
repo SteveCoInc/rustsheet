@@ -48,6 +48,7 @@ from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 
+import ids as task_ids
 import milestone_order
 import pivot_owners
 import task_usage
@@ -97,8 +98,8 @@ ISSUE_LIMITS = {"per_author": 2, "per_day": 6}
 OPEN = ("todo", "in-progress", "blocked")  # not done or dropped
 ACTIVE = ("todo", "in-progress")
 MILESTONE = re.compile(r"^M\d+$")
-TASK_FILE = re.compile(r"(?:^|/)(T-\d{4})-[^/]*\.md$")
-TODO_OWNER = re.compile(r"TODO\((T-\d{4})\)")
+TASK_FILE = re.compile(rf"(?:^|/)({task_ids.TASK_ID})-[^/]*\.md$")
+TODO_OWNER = re.compile(rf"TODO\(({task_ids.TASK_ID})\)")
 # Code whose TODOs must name an open task; docs/ quotes old TODOs as history.
 TODO_DIRS = ("crates", "bindings", "tools", "scripts")
 
@@ -152,7 +153,7 @@ def validate(tasks: list[dict[str, object]]) -> list[str]:
     for t in tasks:
         tid = str(t.get("id", ""))
         where = t["path"].relative_to(ROOT)  # type: ignore[union-attr]
-        if not re.match(r"^T-\d{4}$", tid):
+        if not re.fullmatch(task_ids.TASK_ID, tid):
             errors.append(f"{where}: bad id {tid!r}")
         if tid in ids:
             first = path_of(ids[tid]).relative_to(ROOT)
@@ -575,20 +576,21 @@ def issue_stats(copies: list[dict[str, object]], today_ids: set[str]) -> dict[st
             "limits": ISSUE_LIMITS}
 
 
-def next_id(milestone: str, tasks: list[dict[str, object]], taken: set[str]) -> str:
-    """Next id after the highest taken one in the hundred-block the milestone uses most
-    (M0 -> T-00xx, M1 -> T-01xx). Ids only grow, so gaps are never reused.
+# Ids allocated here (decision 0360): the other repository's agents file four-digit ids below them.
+ID_FLOOR = 90000
+ID_CEILING = 99999
 
-    A milestone with no tasks, or whose block is full, gets the next id above every taken one.
-    """
-    used = {int(i[2:]) for i in taken}
-    blocks = Counter(int(str(t["id"])[2:]) // 100 for t in tasks if t.get("milestone") == milestone)
-    if blocks:
-        block = blocks.most_common(1)[0][0]
-        n = max((u for u in used if u // 100 == block), default=block * 100) + 1
-        if n < block * 100 + 100:
-            return f"T-{n:04d}"
-    return f"T-{max(used, default=0) + 1:04d}"
+
+def next_id(taken: set[str]) -> str:
+    """Next id above every taken id at or above `ID_FLOOR` (T-90000 when none is). Ids only grow, so
+    gaps are never reused. Past `ID_CEILING` there is no id `task_ids.TASK_ID` names: refuse rather than write a
+    six-digit id the validators reject (decision 0360)."""
+    used = [n for n in (int(i[2:]) for i in taken) if n >= ID_FLOOR]
+    n = max(used, default=ID_FLOOR - 1) + 1
+    if n > ID_CEILING:
+        msg = f"no task id left: T-{ID_FLOOR}..T-{ID_CEILING} are taken (decision 0360)"
+        raise ValueError(msg)
+    return f"T-{n}"
 
 
 def slug(title: str, default: str = "task") -> str:
@@ -654,7 +656,7 @@ def new_task(tasks: list[dict[str, object]], fetch: bool = True) -> int:
               f"usage one of {list(task_usage.USAGES)}")
         return 2
     taken = {str(t["id"]) for t in tasks} | git_task_ids(fetch)
-    tid, note = reserve_id(lambda claimed: next_id(milestone, tasks, taken | claimed), fetch)
+    tid, note = reserve_id(lambda claimed: next_id(taken | claimed), fetch)
     path = TASKS / milestone / f"{tid}-{slug(title)}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(TEMPLATE.format(id=tid, title=quote(title), milestone=milestone,
@@ -664,7 +666,7 @@ def new_task(tasks: list[dict[str, object]], fetch: bool = True) -> int:
     return 0
 
 
-AGENT_BRANCH = re.compile(r"^refs/remotes/origin/agent/([^/]+)/(T-\d{4})(?:-|$)")
+AGENT_BRANCH = re.compile(rf"^refs/remotes/origin/agent/([^/]+)/({task_ids.TASK_ID})(?:-|$)")
 # An unresumed handoff; the opus run that picks it up renames it "## Handoff (resumed)".
 HANDOFF = re.compile(r"^## Handoff\s*$", re.M)
 # A branch whose task was ever handed off or re-reviewed after the review-round limit is the opus
@@ -674,7 +676,7 @@ OPUS_BRANCH = re.compile(r"^## Handoff\b|^Resumed after the review-round limit",
 # block writes "review-round limit, twice", which this does not match (decision 0095).
 REVIEW_LIMIT = re.compile(r"^Blocked because: review-round limit\s*$", re.M)
 # `next` prints a re-review's branch for an agent to check out, so only plain names qualify.
-SAFE_BRANCH = re.compile(r"^agent/[a-z0-9-]+/T-\d{4}[A-Za-z0-9._-]*$")
+SAFE_BRANCH = re.compile(rf"^agent/[a-z0-9-]+/{task_ids.TASK_ID}(?!\d)[A-Za-z0-9._-]*$")
 CLAIM_TTL_SECONDS = 24 * 3600  # a pushed agent/* branch younger than this claims its task
 
 

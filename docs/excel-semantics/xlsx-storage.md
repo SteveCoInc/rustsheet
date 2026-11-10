@@ -939,7 +939,7 @@ Evidence: oracle excel-graph, 2026-11-10, recording the render probes (eval/rend
 
 Ours: no RustSheet code writes this element. The export writes chart parts only for pivot charts
 (`export/pivot_charts.rs`), and those carry no `mc:AlternateContent`. The refused file is T1's.
-Status: VERIFIED (excel-graph; desktop not observed). Tasks: T-5113 (re-pin and record the corrected probe).
+Status: VERIFIED (excel-graph; desktop not observed). Tasks: T-90000 (re-pin and record the corrected probe).
 
 ## A [n] reference without its externalLink part makes Excel refuse the package
 Rule: Excel for the web refuses to open a package whose formulas use `[1]Sheet!A1` while the package has no
