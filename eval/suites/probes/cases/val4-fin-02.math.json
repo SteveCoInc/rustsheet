@@ -1,0 +1,132 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "14ceee7ce08325b8ee27b8d3a1f88243b6702107981f934a9e0fee7ca25a18b5",
+  "definitions": {
+   "BETA.INV": "a9652f0571fdcdd2",
+   "F.INV": "09d581f2e8ead57b",
+   "F.INV.RT": "09d581f2e8ead57b",
+   "FINV": "09d581f2e8ead57b"
+  },
+  "arguments_sha256": "09136a352fa54bdb7d0bf84f964c6bdcb70619a47b47ab5c4161522dd3307f0e"
+ },
+ "sheets": {
+  "Inverse": {
+   "B10": {
+    "t": "n",
+    "v": "2.0000000000000001002363673408350399987007544416675e-600",
+    "f": "=F.INV(1E-300,1,2)"
+   },
+   "B15": {
+    "t": "n",
+    "v": "1.850550825204254833777713211506324693691790595042e-600",
+    "f": "=F.INV(1E-300,1,3)"
+   },
+   "B19": {
+    "t": "n",
+    "v": "1.6603452838441493969302956959160204102615880604588e-400",
+    "f": "=F.INV(1E-200,1,9)"
+   },
+   "B25": {
+    "t": "n",
+    "v": "1.0000000000000000250590918352087596856961468077037e-300",
+    "f": "=F.INV(1E-300,2,2)"
+   },
+   "B26": {
+    "t": "n",
+    "v": "1.0000000000000000250590918352087596856961468077037e-300",
+    "f": "=BETA.INV(1E-300,1,1)"
+   },
+   "B3": {
+    "t": "n",
+    "v": "2.4674011002723395663769582477903018958481504564678e-400",
+    "f": "=F.INV(1E-200,1,1)"
+   },
+   "B6": {
+    "t": "n",
+    "v": "1.6603452838441495395832754033900740354778638761669e-600",
+    "f": "=F.INV(1E-300,1,9)"
+   },
+   "B8": {
+    "t": "n",
+    "v": "1.6511967750062988985776085922016273791238680157359e-600",
+    "f": "=F.INV(1E-300,1,10)"
+   }
+  }
+ },
+ "skipped": {
+  "Inverse": {
+   "B11": {
+    "f": "=F.INV.RT(1E-300,2,1)",
+    "why": "no single value"
+   },
+   "B12": {
+    "f": "=FINV(1E-300,2,1)",
+    "why": "no single value"
+   },
+   "B13": {
+    "f": "=F.INV.RT(1E-200,2,1)",
+    "why": "no single value"
+   },
+   "B14": {
+    "f": "=BETA.INV(1E-300,0.5,1.5)",
+    "why": "no single value"
+   },
+   "B16": {
+    "f": "=F.INV.RT(1E-300,3,1)",
+    "why": "no single value"
+   },
+   "B17": {
+    "f": "=FINV(1E-300,3,1)",
+    "why": "no single value"
+   },
+   "B18": {
+    "f": "=BETA.INV(1E-200,0.5,4.5)",
+    "why": "no single value"
+   },
+   "B2": {
+    "f": "=BETA.INV(1E-200,0.5,0.5)",
+    "why": "no single value"
+   },
+   "B20": {
+    "f": "=F.INV.RT(1E-200,9,1)",
+    "why": "no single value"
+   },
+   "B21": {
+    "f": "=FINV(1E-200,9,1)",
+    "why": "no single value"
+   },
+   "B22": {
+    "f": "=F.INV.RT(1E-300,9,1)",
+    "why": "no single value"
+   },
+   "B23": {
+    "f": "=F.INV.RT(1E-300,10,1)",
+    "why": "no single value"
+   },
+   "B24": {
+    "f": "=F.INV.RT(1E-300,1,1)",
+    "why": "no single value"
+   },
+   "B4": {
+    "f": "=BETA.INV(1E-300,0.5,0.5)",
+    "why": "no single value"
+   },
+   "B5": {
+    "f": "=BETA.INV(1E-300,0.5,4.5)",
+    "why": "no single value"
+   },
+   "B7": {
+    "f": "=BETA.INV(1E-300,0.5,5)",
+    "why": "no single value"
+   },
+   "B9": {
+    "f": "=BETA.INV(1E-300,0.5,1)",
+    "why": "no single value"
+   }
+  }
+ }
+}

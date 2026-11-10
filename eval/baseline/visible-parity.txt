@@ -205,3 +205,11 @@ probes/val3-fin-01.case.json	2424
 probes/val3-fin-02.case.json	52
 probes/val3-irr-01.case.json	4
 probes/val3-nsi-02.case.json	5
+probes/val4-fin-01.case.json	1
+probes/val4-fin-02.case.json	6
+probes/val4-fin-03.case.json	951
+probes/val4-fvs-01.case.json	69
+probes/val4-fvs-02.case.json	21
+probes/val4-fvs-03.case.json	6
+probes/val4-fvs-04.case.json	6
+probes/val4-fvs-05.case.json	6

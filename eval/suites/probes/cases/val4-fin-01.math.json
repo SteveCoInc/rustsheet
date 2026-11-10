@@ -1,0 +1,43 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "f9e1ec50d8d1a94f61b73d515da39360b3a3897677938f80079d8443a306b0a2",
+  "definitions": {
+   "BETA.INV": "a9652f0571fdcdd2",
+   "F.INV": "09d581f2e8ead57b",
+   "GAMMALN": "4acfca79d79a43ec",
+   "NORM.S.INV": "8e4045d7b4e4bcab"
+  },
+  "arguments_sha256": "e4521c04e8e6bf06b98ac2ca1293f5244823bf8b52d168400b7099680c8c5059"
+ },
+ "sheets": {
+  "Seed": {
+   "B12": {
+    "t": "n",
+    "v": "2.4674011002723395663769582477903018958481504564678e-400",
+    "f": "=F.INV(B1,B2,B3)"
+   },
+   "B4": {
+    "t": "n",
+    "v": "30.205594179579643063124013662327269635590260709891",
+    "f": "=-NORM.S.INV(B1)"
+   },
+   "B8": {
+    "t": "n",
+    "v": "1.1447298858494001638774761886452324688434600830078",
+    "f": "=GAMMALN(B2/2)+GAMMALN(B3/2)-GAMMALN(B2/2+B3/2)"
+   }
+  }
+ },
+ "skipped": {
+  "Seed": {
+   "B11": {
+    "f": "=BETA.INV(B1,B2/2,B3/2)",
+    "why": "no single value"
+   }
+  }
+ }
+}
