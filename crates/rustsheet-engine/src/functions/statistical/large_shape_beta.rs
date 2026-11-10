@@ -78,13 +78,7 @@ const SERIES_TOLERANCE: f64 = 1e-17;
 /// and 0 < x, y < 1; `None` elsewhere or where a step is not finite, and the caller keeps its
 /// kernel.
 pub(super) fn large_shape_lower(a: f64, b: f64, x: f64, y: f64) -> Option<f64> {
-    expansion(
-        a,
-        b,
-        x,
-        (y, 0.0),
-        a < T4119_MIN_SHAPE || b >= T4119_MAX_SECOND_SHAPE,
-    )
+    expansion(a, b, x, (y, 0.0), Arithmetic::for_shapes(a, b))
 }
 
 /// [`large_shape_lower`] with y = 1 - x given as a double-double (head, tail), for a caller that
@@ -92,7 +86,35 @@ pub(super) fn large_shape_lower(a: f64, b: f64, x: f64, y: f64) -> Option<f64> {
 /// `f_large_shape_tails`, T-4435). Near x = 1 the expansion reads only y, and nu times y's rounding
 /// is a relative error of about |ln tail| ulp in the result.
 pub(super) fn large_shape_lower_pair(a: f64, b: f64, x: f64, y: (f64, f64)) -> Option<f64> {
-    expansion(a, b, x, y, true)
+    expansion(a, b, x, y, Arithmetic::Accurate)
+}
+
+/// How the expansion forms nu, z and r.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Arithmetic {
+    /// T-2528's and T-4119's: nu and r in doubles, the arithmetic their cells were measured on
+    /// (t4017's bit-exact F cells track it). The range a >= [`T4119_MIN_SHAPE`], b <
+    /// [`T4119_MAX_SECOND_SHAPE`] keeps it.
+    T4119,
+    /// T-4435's: nu = a + (b - 1)/2 and z = -nu ln x in double-double, and r = z^b e^-z / Gamma(b)
+    /// with its exponent in double-double ([`gamma_power_ratio`]). nu rounded to a double is up to
+    /// ulp(a)/2 off at a shape a that is not a multiple of 1/2 (2049.9, 2537.31), and z = nu |ln x|
+    /// of 600 multiplies that into 6E-14 on a deep BETA.DIST tail (probes-numeric
+    /// t3568-r5-bup-fresh B117 `BETA.DIST(0.751433992054,2049.9,..)`, 3.4E-14 off the math with nu
+    /// in doubles). The double density rounds the deviance z - b - b ln(z/b), several hundred at a
+    /// deep tail, to an |ln tail| ulp error of its own.
+    Accurate,
+}
+
+impl Arithmetic {
+    /// T-4435's range takes [`Arithmetic::Accurate`]; the old range keeps T-4119's.
+    fn for_shapes(a: f64, b: f64) -> Self {
+        if a < T4119_MIN_SHAPE || b >= T4119_MAX_SECOND_SHAPE {
+            Self::Accurate
+        } else {
+            Self::T4119
+        }
+    }
 }
 
 /// (lower, upper) F tails above the mean in T-4435's regions: the upper tail `I_v(df2/2, df1/2)` by the
@@ -120,24 +142,30 @@ pub(super) fn f_large_shape_tails(df1: f64, df2: f64, x: f64) -> Option<(f64, f6
     Some((half_complement(upper), upper))
 }
 
-/// The expansion, with r formed in double-double ([`gamma_power_ratio`]) when `precise`: below
-/// [`T4119_MIN_SHAPE`] or from [`T4119_MAX_SECOND_SHAPE`] (T-4435's new range, where the deep tails of BETA.DIST at a of 2000 to 3000 are
-/// up to 1E-13 off the math with the double density; probes-numeric t3568-r5-bup-hold A285) and on
-/// F's double-double calls ([`large_shape_lower_pair`]). From that bound up every other caller keeps
-/// the double density, the arithmetic T-2528's and T-4119's cells were measured on (t4017's bit-exact
-/// cells track it).
-fn expansion(a: f64, b: f64, x: f64, y: (f64, f64), precise: bool) -> Option<f64> {
-    if !(a >= MIN_SHAPE
-        && a.is_finite()
-        && b > 0.0
-        && b <= MAX_SECOND_SHAPE
-        && x > 0.0
-        && y.0 > 0.0)
-    {
+/// The expansion in the given [`Arithmetic`].
+fn expansion(a: f64, b: f64, x: f64, y: (f64, f64), arithmetic: Arithmetic) -> Option<f64> {
+    if !(a >= MIN_SHAPE && b <= MAX_SECOND_SHAPE) {
+        return None;
+    }
+    expand(a, b, x, y, arithmetic)
+}
+
+/// [`expansion`] without its bounds on a and b (T-4435's boundary table scores it below them).
+fn expand(a: f64, b: f64, x: f64, y: (f64, f64), arithmetic: Arithmetic) -> Option<f64> {
+    if !(a.is_finite() && a > 0.0 && b > 0.0 && x > 0.0 && y.0 > 0.0) {
         return None;
     }
     let bm1 = b - 1.0;
     let nu = a + 0.5 * bm1;
+    // nu - a = (b - 1)/2 and nu itself, exactly, for the accurate arithmetic.
+    let (half_bm1, nu_pair) = match arithmetic {
+        Arithmetic::T4119 => ((nu - a, 0.0), (nu, 0.0)),
+        Arithmetic::Accurate => {
+            let bm1_pair = two_sum(b, -1.0);
+            let half = (0.5 * bm1_pair.0, 0.5 * bm1_pair.1);
+            (half, dd_add((a, 0.0), half))
+        }
+    };
     // ln x in double-double, from 1 - y exactly when x is near 1: the rounding of a given x near 1
     // is what nu multiplies into z (each unit of z is a factor e on the result).
     let x_pair = if x > 0.5 {
@@ -146,19 +174,18 @@ fn expansion(a: f64, b: f64, x: f64, y: (f64, f64), precise: bool) -> Option<f64
         (x, 0.0)
     };
     let ln_x = ln_double_double_pair(x_pair);
-    let (z, z_lo) = dd_mul((-nu, 0.0), ln_x);
+    let (z, z_lo) = dd_mul(dd_neg(nu_pair), ln_x);
     if z.is_nan() || z <= 0.0 {
         return None;
     }
-    let scale = shape_ratio_factor(a, b, nu);
+    let scale = shape_ratio_factor(a, b, half_bm1.0 + half_bm1.1);
     if !z.is_finite() {
         return Some(0.0);
     }
     // r = z^b e^-z / Gamma(b) = z times the gamma density at z.
-    let r = if precise {
-        gamma_power_ratio(b, z)
-    } else {
-        accurate_gamma_density(b, z, 1.0).map_or(0.0, |density| density * z)
+    let r = match arithmetic {
+        Arithmetic::Accurate => gamma_power_ratio(b, z),
+        Arithmetic::T4119 => accurate_gamma_density(b, z, 1.0).map_or(0.0, |density| density * z),
     };
     if !(r.is_finite() && scale.is_finite()) {
         return None;
@@ -170,14 +197,14 @@ fn expansion(a: f64, b: f64, x: f64, y: (f64, f64), precise: bool) -> Option<f64
     }
     let j0 = upper_over_prefactor(b, z, r)?;
     // Q(b, z + z_lo) = Q(b, z) - z_lo r / z to first order: the low part of z.
-    let series = correction_series(b, z, ln_x.0, nu, j0);
+    let series = correction_series(b, z, ln_x.0, nu, j0)?;
     let value = scale * r * ((j0 - z_lo / z) + series);
     (value.is_finite() && value >= 0.0).then_some(value.min(1.0))
 }
 
-/// Below this exponent of r, [`gamma_power_ratio`] keeps the double density (`dd_exp` is not used
-/// near the double range's floor).
-const MIN_RATIO_EXPONENT: f64 = -700.0;
+/// Below this exponent of r, [`gamma_power_ratio`] keeps the double density: `dd_exp` is documented
+/// for |a| <= 650.
+const MIN_RATIO_EXPONENT: f64 = -650.0;
 
 /// r = z^b e^-z / Gamma(b), z times the gamma density at z, with its exponent in double-double:
 /// exp(b ln(z/b) - (z - b) - stirlerr(b)) sqrt(b / 2 pi), from ln Gamma(b) = (b - 1/2) ln b - b +
@@ -234,9 +261,9 @@ fn legendre_fraction(b: f64, z: f64, depth: u32) -> f64 {
 /// -a rlog1(b/a) + (b - 1/2) ln(1 + b/a) - b ln(1 + (b - 1)/(2a)) and the Stirling corrections:
 /// the logs of Gamma(a + b) / Gamma(a) and of nu^b each near b ln a, cancelled before they are
 /// formed (their difference is about b(b - 1)/(2a)).
-fn shape_ratio_factor(a: f64, b: f64, nu: f64) -> f64 {
+fn shape_ratio_factor(a: f64, b: f64, nu_minus_a: f64) -> f64 {
     let t = b / a;
-    let exponent = -a * rlog1(t) + (b - 0.5) * t.ln_1p() - b * ((nu - a) / a).ln_1p()
+    let exponent = -a * rlog1(t) + (b - 0.5) * t.ln_1p() - b * (nu_minus_a / a).ln_1p()
         + stirling_correction(a + b)
         - stirling_correction(a);
     exponent.exp()
@@ -244,8 +271,9 @@ fn shape_ratio_factor(a: f64, b: f64, nu: f64) -> f64 {
 
 /// bgrat's sum of `d_n J_n` for n = 1, 2, ... ([`MAX_SERIES_TERMS`] at most), from
 /// `J_0` = Q(b, z) / r: `J_n` = ((b + 2n - 2)(b + 2n - 1) `J_{n-1}` + (z + b + 2n - 1) t^(n-1)) v
-/// with v = 1/(4 nu^2), t = (ln x)^2 / 4, and `d_n` from the coefficients `c_n` = 1/(2n+1)!.
-fn correction_series(b: f64, z: f64, ln_x: f64, nu: f64, j0: f64) -> f64 {
+/// with v = 1/(4 nu^2), t = (ln x)^2 / 4, and `d_n` from the coefficients `c_n` = 1/(2n+1)!. `None`
+/// if the terms have not fallen below [`SERIES_TOLERANCE`] by then.
+fn correction_series(b: f64, z: f64, ln_x: f64, nu: f64, j0: f64) -> Option<f64> {
     let bm1 = b - 1.0;
     let v = 0.25 / (nu * nu);
     let t2 = 0.25 * ln_x * ln_x;
@@ -270,15 +298,55 @@ fn correction_series(b: f64, z: f64, ln_x: f64, nu: f64, j0: f64) -> f64 {
         let dj = d[nm1] * j;
         sum += dj;
         if dj.abs() <= SERIES_TOLERANCE * (j0 + sum).abs() {
-            break;
+            return Some(sum);
         }
     }
-    sum
+    // Not settled within bgrat's cap: the caller keeps its kernel.
+    None
 }
 
 #[cfg(test)]
 mod tests {
-    use super::large_shape_lower;
+    use super::{expand, gamma_power_ratio, large_shape_lower, Arithmetic, MIN_SHAPE};
+
+    /// T-4435's boundary table: the expansion forced at every point of
+    /// docs/research/t4435/boundary-points.tsv (`x a b` per line), below its bounds too, printed as
+    /// `row<TAB>value` for `boundary.py score-forced`. Run:
+    /// `cargo test -p rustsheet_engine --lib boundary_table -- --ignored --nocapture`.
+    #[test]
+    #[ignore = "research table (T-4435); reads docs/research/t4435/boundary-points.tsv"]
+    fn boundary_table() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../docs/research/t4435/boundary-points.tsv");
+        let text = std::fs::read_to_string(path).expect("boundary-points.tsv");
+        for (row, line) in text.lines().enumerate() {
+            let v: Vec<f64> = line.split('\t').map(|t| t.parse().expect("number")).collect();
+            let (x, a, b) = (v[0], v[1], v[2]);
+            let got = expand(a, b, x, (1.0 - x, 0.0), Arithmetic::Accurate).unwrap_or(f64::NAN);
+            println!("{}\t{got:e}", row + 1);
+        }
+    }
+
+    /// The expansion's lower bound on a holds where it is set.
+    #[test]
+    fn the_expansion_starts_at_min_shape() {
+        let below = MIN_SHAPE * (1.0 - f64::EPSILON);
+        assert_eq!(large_shape_lower(below, 10.5, 0.99, 0.01), None);
+        assert!(large_shape_lower(MIN_SHAPE, 10.5, 0.99, 0.01).is_some());
+    }
+
+    /// r = z^b e^-z / Gamma(b) in double-double against 50-digit mpmath
+    /// (`b*log(z) - z - loggamma(b)`, exponentiated).
+    #[test]
+    fn gamma_power_ratio_matches_mpmath() {
+        for (b, z, reference) in [
+            (27.675, 600.0, 5.477943728990614e-212),
+            (10.5, 40.0, 2.4860738518595877e-07),
+            (150.7, 151.0, 4.8932457439315895),
+        ] {
+            let got = gamma_power_ratio(b, z);
+            assert!((got / reference - 1.0).abs() < 4e-16, "r({b}, {z}) = {got} against {reference}");
+        }
+    }
     use crate::functions::statistical::incomplete_beta::beta_reg_tails;
 
     /// Above the mean of Beta(2.5, 5E9) (5E-10) the reflected side takes the expansion: both tails
