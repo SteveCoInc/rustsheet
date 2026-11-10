@@ -1,0 +1,26 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "val5-order-01: two WEEKNUM stale-state readers, B2 and C2, of the same precedent A2 (a Sunday marker); A1 above is a Monday marker. No FVSCHEDULE. WEEKNUM(2,99) is 1 after the Sunday marker and 2 after the Monday marker, so (B2, C2) = (1, 1) if both readers run right after A2, (1, 2) if only the reader next to A2 does, (2, 1) if only the farther one does, (2, 2) if neither does. A reader joins WEEKNUM(2..7,99): 111111 after a Sunday marker (return_type 1), 222222 after a Monday marker (2), 122222 after a Tuesday marker (12) (dates.md \"WEEKNUM's stale `return_type` state\"; the decoding of probes/weeknum-stale-dependency). Raw values only; do not add cells or sheets: where each formula sits is the experiment. No expected values: the case is written to tell four candidate rules apart.",
+ "tags": [
+  "M6",
+  "dates",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "A1": "=WEEKNUM(100,2)",
+    "A2": "=WEEKNUM(100,1)",
+    "B2": "=WEEKNUM(2+0*A2,99)",
+    "C2": "=WEEKNUM(2+0*A2,99)"
+   }
+  }
+ ],
+ "check": [
+  "Sheet1!A1",
+  "Sheet1!A2",
+  "Sheet1!B2",
+  "Sheet1!C2"
+ ]
+}

@@ -1,0 +1,351 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-5313: a collaborator's stress-session inputs (2026-11-10) the repo's oracle records do not answer yet: formulas at the edges (column A) and typed values (column C), each typed as one entry after load in row-major order, as the nightly stress suite types them (hardening/app/src/drivers/formula-cases.json). The stress suite reads each cell's value from this case's oracle file once filled; the cells are blank-referencing (Z999 and other cells outside A1:C80 are empty).",
+  "tags": [
+    "M2",
+    "probe",
+    "stress",
+    "T-5313"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "A1": {
+          "entered": "=2^-1"
+        },
+        "A2": {
+          "entered": "=50%*2"
+        },
+        "A3": {
+          "entered": "=1E+5"
+        },
+        "A4": {
+          "entered": "=1.5e-3"
+        },
+        "A5": {
+          "entered": "=2^1024"
+        },
+        "A6": {
+          "entered": "=MOD(-7,3)"
+        },
+        "A7": {
+          "entered": "=MOD(7,-3)"
+        },
+        "A8": {
+          "entered": "=MOD(5,0)"
+        },
+        "A9": {
+          "entered": "=INT(-2.5)"
+        },
+        "A10": {
+          "entered": "=TRUNC(-2.5)"
+        },
+        "A11": {
+          "entered": "=ROUND(1234.5,-2)"
+        },
+        "A12": {
+          "entered": "=ROUNDUP(-1.1,0)"
+        },
+        "A13": {
+          "entered": "=ROUNDDOWN(-1.9,0)"
+        },
+        "A14": {
+          "entered": "=CEILING(-2.5,1)"
+        },
+        "A15": {
+          "entered": "=FLOOR(2.5,1)"
+        },
+        "A16": {
+          "entered": "=0^0"
+        },
+        "A17": {
+          "entered": "=GCD(12,18)"
+        },
+        "A18": {
+          "entered": "=123456789012"
+        },
+        "A19": {
+          "entered": "=SUM(SEQUENCE(1000000))"
+        },
+        "A20": {
+          "entered": "=\"a\"&1&TRUE"
+        },
+        "A21": {
+          "entered": "=\"10\"+5"
+        },
+        "A22": {
+          "entered": "=\"abc\"+1"
+        },
+        "A23": {
+          "entered": "=TRUE+TRUE"
+        },
+        "A24": {
+          "entered": "=\"\"=0"
+        },
+        "A25": {
+          "entered": "=Z999=0"
+        },
+        "A26": {
+          "entered": "=Z999=\"\""
+        },
+        "A27": {
+          "entered": "=LEN(Z999)"
+        },
+        "A28": {
+          "entered": "=\"A\"=\"a\""
+        },
+        "A29": {
+          "entered": "=\"b\">\"A\""
+        },
+        "A30": {
+          "entered": "=FALSE>1"
+        },
+        "A31": {
+          "entered": "=SUM(1,\"2\",TRUE)"
+        },
+        "A32": {
+          "entered": "=SUM(\"x\")"
+        },
+        "A33": {
+          "entered": "=COUNTA(1,\"\",FALSE)"
+        },
+        "A34": {
+          "entered": "=COUNT(1,\"2\",TRUE)"
+        },
+        "A35": {
+          "entered": "=ISBLANK(Z999)"
+        },
+        "A36": {
+          "entered": "=ISNUMBER(\"1\")"
+        },
+        "A37": {
+          "entered": "=Nope!A1"
+        },
+        "A38": {
+          "entered": "=LEFT(\"hello\",2)"
+        },
+        "A39": {
+          "entered": "=RIGHT(\"hello\",10)"
+        },
+        "A40": {
+          "entered": "=MID(\"hello\",2,3)"
+        },
+        "A41": {
+          "entered": "=MID(\"hello\",0,1)"
+        },
+        "A42": {
+          "entered": "=LEFT(\"abc\",-1)"
+        },
+        "A43": {
+          "entered": "=LEN(\"héllo\")"
+        },
+        "A44": {
+          "entered": "=FIND(\"l\",\"hello\")"
+        },
+        "A45": {
+          "entered": "=FIND(\"z\",\"hello\")"
+        },
+        "A46": {
+          "entered": "=SEARCH(\"L*O\",\"hello\")"
+        },
+        "A47": {
+          "entered": "=SUBSTITUTE(\"aaa\",\"a\",\"b\",2)"
+        },
+        "A48": {
+          "entered": "=REPT(\"ab\",3)"
+        },
+        "A49": {
+          "entered": "=TRIM(\"  a   b  \")"
+        },
+        "A50": {
+          "entered": "=REPT(\"a\",32768)"
+        },
+        "A51": {
+          "entered": "=LEN(REPT(\"a\",32767))"
+        },
+        "A52": {
+          "entered": "=TEXTJOIN(\",\",TRUE,\"a\",\"\",\"b\")"
+        },
+        "A53": {
+          "entered": "=TEXT(1234.567,\"#,##0.00\")"
+        },
+        "A54": {
+          "entered": "=TEXT(0.25,\"0%\")"
+        },
+        "A55": {
+          "entered": "=TEXT(45000,\"yyyy-mm-dd\")"
+        },
+        "A56": {
+          "entered": "=TEXT(-1,\"0;(0)\")"
+        },
+        "A57": {
+          "entered": "=DATE(2024,2,30)"
+        },
+        "A58": {
+          "entered": "=DATE(2024,13,1)"
+        },
+        "A59": {
+          "entered": "=WEEKDAY(DATE(2024,1,1))"
+        },
+        "A60": {
+          "entered": "=EOMONTH(DATE(2024,1,31),1)"
+        },
+        "A61": {
+          "entered": "=EDATE(DATE(2024,1,31),1)"
+        },
+        "A62": {
+          "entered": "=DATEDIF(DATE(2020,1,1),DATE(2024,6,1),\"Y\")"
+        },
+        "A63": {
+          "entered": "=NETWORKDAYS(DATE(2024,1,1),DATE(2024,1,31))"
+        },
+        "A64": {
+          "entered": "=IF(1,\"y\",\"n\")"
+        },
+        "A65": {
+          "entered": "=IFERROR(1/0,\"err\")"
+        },
+        "A66": {
+          "entered": "=SWITCH(2,1,\"a\",2,\"b\")"
+        },
+        "A67": {
+          "entered": "=CHOOSE(3,\"a\",\"b\")"
+        },
+        "A68": {
+          "entered": "=XOR(TRUE,TRUE)"
+        },
+        "A69": {
+          "entered": "=VLOOKUP(2,{1,\"a\";2,\"b\"},2,FALSE)"
+        },
+        "A70": {
+          "entered": "=VLOOKUP(5,{1,\"a\";2,\"b\"},2,FALSE)"
+        },
+        "A71": {
+          "entered": "=VLOOKUP(5,{1,\"a\";2,\"b\"},2)"
+        },
+        "A72": {
+          "entered": "=VLOOKUP(2,{1,\"a\";2,\"b\"},3,FALSE)"
+        },
+        "A73": {
+          "entered": "=MATCH(\"b*\",{\"a\",\"bc\"},0)"
+        },
+        "A74": {
+          "entered": "=INDEX({1,2;3,4},2,2)"
+        },
+        "A75": {
+          "entered": "=INDEX({1,2;3,4},3,1)"
+        },
+        "A76": {
+          "entered": "=XLOOKUP(3,{1,2,3},{\"a\",\"b\",\"c\"})"
+        },
+        "A77": {
+          "entered": "=SUMPRODUCT({1,2},{3,4})"
+        },
+        "A78": {
+          "entered": "=LET(x,2,x*3)"
+        },
+        "A79": {
+          "entered": "=LAMBDA(x,x+1)(2)"
+        },
+        "A80": {
+          "entered": "=ROWS(A:A)&\"x\"&COLUMNS(1:1)"
+        },
+        "A81": {
+          "entered": "=XFE1"
+        },
+        "A82": {
+          "entered": "=A1048577"
+        },
+        "C1": {
+          "entered": "1/2/2024"
+        },
+        "C2": {
+          "entered": "15-Jan-2024"
+        },
+        "C3": {
+          "entered": "Jan 15, 2024"
+        },
+        "C4": {
+          "entered": "13/13/2024"
+        },
+        "C5": {
+          "entered": "2/29/2023"
+        },
+        "C6": {
+          "entered": "2/29/2024"
+        },
+        "C7": {
+          "entered": "12:30"
+        },
+        "C8": {
+          "entered": "12:30 PM"
+        },
+        "C9": {
+          "entered": "25:00"
+        },
+        "C10": {
+          "entered": "(100)"
+        },
+        "C11": {
+          "entered": "-$5"
+        },
+        "C12": {
+          "entered": "50%"
+        },
+        "C13": {
+          "entered": "1,2,3"
+        },
+        "C14": {
+          "entered": "1,234"
+        },
+        "C15": {
+          "entered": "1.234,5"
+        },
+        "C16": {
+          "entered": "  42  "
+        },
+        "C17": {
+          "entered": "0042"
+        },
+        "C18": {
+          "entered": "+5"
+        },
+        "C19": {
+          "entered": "5-"
+        },
+        "C20": {
+          "entered": "TRUE"
+        },
+        "C21": {
+          "entered": "true"
+        },
+        "C22": {
+          "entered": "'123"
+        },
+        "C23": {
+          "entered": "1e3"
+        },
+        "C24": {
+          "entered": ".5"
+        },
+        "C25": {
+          "entered": "1 1/2"
+        },
+        "C26": {
+          "entered": "€10"
+        },
+        "C27": {
+          "entered": "1E+308"
+        },
+        "C28": {
+          "entered": "12345678901234567890"
+        },
+        "C29": {
+          "entered": "0x1F"
+        }
+      }
+    }
+  ]
+}

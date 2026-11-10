@@ -1,0 +1,21 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-5313: a collaborator's stress-session inputs (2026-11-10) the repo's oracle records do not answer yet: formulas at the edges (column A) and typed values (column C), each typed as one entry after load in row-major order, as the nightly stress suite types them (hardening/app/src/drivers/formula-cases.json). The stress suite reads each cell's value from this case's oracle file once filled; the cells are blank-referencing (Z999 and other cells outside A1:C80 are empty). Addendum E1: a typed value whose only match was a stored literal.",
+  "tags": [
+    "M2",
+    "probe",
+    "stress",
+    "T-5313"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "E1": {
+          "entered": "#N/A"
+        }
+      }
+    }
+  ]
+}
