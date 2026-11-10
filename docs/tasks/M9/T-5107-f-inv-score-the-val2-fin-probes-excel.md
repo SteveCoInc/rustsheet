@@ -32,6 +32,9 @@ Owns: probes/val2-fin-01, probes/val2-fin-02 and probes/val2-fin-03 (every visib
 
 - val3 batch, docs/research/probe-handoff-2026-11-09-val3.md (excel-graph fill, 2026-11-09). Owns: probes/val3-fin-01 and probes/val3-fin-02 (every visibly-off cell).
   Also the F.INV anchor of probes/val3-cal-01, P!B2 (the same point as val2-cal-01 P!H2).
+- val4 batch, docs/research/probe-request-val4-fin.md (excel-graph fill, 2026-11-10; predictions frozen in
+  docs/research/val4-fin-predictions.json). Owns: probes/val4-fin-01, probes/val4-fin-02 and probes/val4-fin-03 (every
+  visibly-off cell).
 
 ## Acceptance criteria
 - [ ] Every hypothesis of the family in probe-requests-2026-11-08.md has a verdict (confirmed, refuted, undecided) citing

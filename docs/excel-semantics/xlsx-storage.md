@@ -904,6 +904,43 @@ the Normal style. Since T-4909 the poi link-external-workbook-a R1/all save open
 Implemented in: `get_cell_styles_xml` (crates/rustsheet-xlsx/src/export/styles.rs).
 Status: VERIFIED (excel-graph; desktop not observed). Tasks: T-4890, T-4909.
 
+## A chart's `mc:Choice` must have its `Requires` prefix in scope
+Rule: Excel for the web refuses to open a package with a chart part that writes
+`<mc:Choice Requires="c14"><c14:style xmlns:c14="…/drawing/2007/8/2/chart" val="102"/></mc:Choice>`, where the
+`c14` prefix that `Requires` names is declared only on the child element. Graph reports createSession 501
+`FileCorruptTryRepair` (inner `unsupportedWorkbook`), and the drive's PDF conversion refuses the file too (406). The
+same package opens when the declaration moves up to `<mc:Choice Requires="c14" xmlns:c14="…">`, or when the
+`mc:AlternateContent` is dropped. Excel's own save declares it on `mc:Choice`: the Excel Online-saved
+eval/roundtrip/excel-saved/cases/t4187-pivot-chart-caches.xlsx writes `<mc:Choice Requires="c14"
+xmlns:c14="…/drawing/2007/8/2/chart"><c14:style val="102"/>` in xl/charts/chart1.xml. That fits Markup Compatibility
+(ECMA-376 Part 3), which resolves a `Requires` prefix in the scope of the `mc:Choice` element, where a child's
+declaration is not in scope.
+Evidence: oracle excel-graph, 2026-11-10, recording the render probes (eval/render/README.md, "First recording").
+- eval/render/probes/charts.xlsx (sha256 f254966247195b1a8ec1631f5024cd7ccca8e4e4625576d0d32df86e088c7114, 14 charts
+  on 3 sheets, written by T1's chart writer, outside this repository) is refused.
+- Refusal record: eval/render/refs/graph/charts.refused.json (Graph codes `FileCorruptTryRepair`, inner
+  `unsupportedWorkbook`; the PDF conversion answered 406).
+- Bisection. Each package is the original with the one change named, and each was opened through createSession.
+  The packages' bytes are not kept. Each is that one edit to the pinned file, rebuilt in the same zip order, and the
+  last step's hash reproduces:
+  - every `<drawing>` element removed (c14cc39f425a36cc9f00431fdb7a5da8d80e961b5c9b07452995b6107271d08e): opens.
+  - only sheet 1's drawing kept (14ad96e6970b44f492a69fd9233d3b8ec9636411221dbe63002cbf21d7a3f6c6), only sheet 2's
+    (8bfbae525c933b334591961a16182bf488600322374e788842ab7f738e551b91) or only sheet 3's
+    (77fa8c84095734ca4307586f523c510b6b34c737a178e6b7e452031d698cf8ac): each refused.
+  - only chart1 (sheet 1's first anchor) kept (01292591bfa3968bc3380bd2a76d620769e1525d3b19714f0d36db12f344ef9e):
+    refused.
+  - that, with chart1's `mc:AlternateContent` dropped
+    (c04b2ac15d5278244110faad38fd37f0f8dbde298d4f6c956a6282258a3f40db): opens. Dropping its `c:title`, `c:extLst` or
+    `c:printSettings` instead leaves it refused.
+  - that, with the declaration moved to `mc:Choice` (c65b7b5761b5d4ee08b9c78c9324aef708b5d64c2962429cd13e19fd99a51493):
+    opens.
+  - all three drawings, with the declaration moved in all 14 charts
+    (3209e9497e4f75e1d9cf28764bd723c739f835b1da0419938dbb049931fe95dd): opens.
+
+Ours: no RustSheet code writes this element. The export writes chart parts only for pivot charts
+(`export/pivot_charts.rs`), and those carry no `mc:AlternateContent`. The refused file is T1's.
+Status: VERIFIED (excel-graph; desktop not observed). Tasks: T-5113 (re-pin and record the corrected probe).
+
 ## A [n] reference without its externalLink part makes Excel refuse the package
 Rule: Excel for the web refuses to open a package whose formulas use `[1]Sheet!A1` while the package has no
 `xl/externalLinks/externalLink1.xml` and no `<externalReferences>`. Graph reports `FileCorruptTryRepair`.

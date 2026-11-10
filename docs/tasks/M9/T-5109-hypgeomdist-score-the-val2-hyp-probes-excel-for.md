@@ -37,6 +37,9 @@ Owns: probes/val2-hyp-01, probes/val2-hyp-02 and probes/val2-hyp-03 (every visib
 - Related: T-2481 (HYPGEOM.DIST's pmf formulation).
 
 - val3 batch, docs/research/probe-handoff-2026-11-09-val3.md (excel-graph fill, 2026-11-09). Owns: probes/val3-hyp-01 (no visibly-off cell at the fill).
+- val4 batch, docs/research/probe-request-val4-hyp.md (excel-graph fill, 2026-11-10; predictions frozen in
+  docs/research/val4-hyp-predictions.json). Owns: probes/val4-hyp-01 and probes/val4-hyp-02 (no visibly-off cell at the
+  fill).
 
 ## Acceptance criteria
 - [ ] Every hypothesis of the family in probe-requests-2026-11-08.md has a verdict (confirmed, refuted, undecided) citing

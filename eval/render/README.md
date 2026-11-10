@@ -54,19 +54,19 @@ autofit would change them.
 
 | Field | Graph source | Verified | Note |
 |---|---|---|---|
-| `columns[].columnWidth` | `range(address='C:C')/format` → `columnWidth`, one column at a time | yes: the property exists | **Units unverified.** The page doesn't state them; we expect points. |
+| `columns[].columnWidth` | `range(address='C:C')/format` → `columnWidth`, one column at a time | yes: the property exists | Points (settled 2026-11-10: a column with no `<col>` element, at the default width, reads 48.0, which is 64 px at 96 dpi; Widths!B). A `<col width="8.43" customWidth="1">` reads 44.25 (Widths!H), so the file's width attribute does not map to 48. A hidden column reads 0.0. |
 | `columns[].hidden` | the column's range → `columnHidden` | yes | |
-| `rows[].rowHeight` | `range(address='5:5')/format` → `rowHeight` | yes: the property exists | **Units unverified**, as for columns. What a row with no custom height reports (the web's fitted height?) is **unverified**. |
+| `rows[].rowHeight` | `range(address='5:5')/format` → `rowHeight` | yes: the property exists | Points, as for columns; a hidden row reads 0.0. A row with no custom height reads 15.0 even when it holds larger text that the print PDF shows fitted taller (`fonts-fills-borders` Fonts rows 7:13, 14 to 36 pt): Graph reports the default height, not the web's fitted one (settled 2026-11-10). Fitted heights are tier 2. |
 | `rows[].hidden` | the row's range → `rowHidden` | yes | |
 | `cells[].text` | `range(address='B2')` → `text[0][0]` | yes | Graph documents that `text` **does not depend on cell width** and is not affected by `#` substitution. So the gate compares it with our engine's display text, not with what we paint. `####` fitting is tier 2. |
 | `value`, `valueType`, `numberFormat` | `values`, `valueTypes`, `numberFormat` | yes | Recorded for diagnosis, not compared. |
 | `hAlign`, `vAlign`, `wrap` | `…/format` → `horizontalAlignment`, `verticalAlignment`, `wrapText` | yes | Values as Graph names them (`General`, `CenterAcrossSelection`, …). |
-| `font.*` | `…/format/font` → `name`, `size`, `bold`, `italic`, `underline`, `color` | yes | `color` is "#RRGGBB". What an automatic colour returns is **unverified**. |
-| `fill.color` | `…/format/fill` → `color` | yes | Graph has no fill pattern. Keep the raw value, including null; what an unfilled cell returns is **unverified**. |
+| `font.*` | `…/format/font` → `name`, `size`, `bold`, `italic`, `underline`, `color` | yes | `color` is "#RRGGBB". An automatic colour reads "#000000" (settled 2026-11-10). No probe sets an explicit black font, so whether that reads the same is not probed. |
+| `fill.color` | `…/format/fill` → `color` | yes | Graph has no fill pattern. Keep the raw value. An unfilled cell reads `""` (empty string), not null (settled 2026-11-10). A solid fill reads its fgColor, but every patterned fill (mediumGray to gray0625, `fonts-fills-borders` Fills rows 3:19, fg FF0000, bg FFFF00) reads its bgColor `#FFFF00`. A `gray125` with automatic colours reads `#FFFFFF` (Fills row 21). |
 | `borders.*` | `…/format/borders` → each item's `sideIndex`, `style`, `weight`, `color` | yes, all six sides including both diagonals | Record each side Graph returns, keyed by `sideIndex`. |
 | `charts[]` | `worksheet/charts` → `name`, `left`, `top`, `width`, `height` | yes, in points | |
 | *(optional)* `refs/graph/<probe>/<chart name>.png` | `chart/image` | yes: the method exists | Not compared in this tier. |
-| *(optional)* `refs/graph/<probe>.pdf` | drive item `content?format=pdf` | yes: xlsx is a listed source, under the 2 MB limit | Not compared. Print layout is not the screen. |
+| *(optional)* `refs/graph/<probe>.pdf` | drive item `content?format=pdf` | yes: xlsx is a listed source, under the 2 MB limit | Not compared. Print layout is not the screen. It is the one visual reference Graph gives for tier-2 fields (merges, strikethrough, accounting underlines, `####` fitting), for a person to look at. The download redirects to `*-mediap.svc.ms`, which the network must allow. |
 
 Graph returns `null` for a property that is not uniform across a range. Read one cell, one column or one row at a
 time, so null only ever means what the property itself returns. `$batch` (up to 20 requests per call) keeps the
@@ -74,6 +74,34 @@ roughly 3,500 cell reads manageable.
 
 The gate refuses a tier-1 dump that lacks a field above or lists more or fewer columns, rows or cells than the probe
 range: a dump that skips cells would let the gate compare less than the probe.
+
+## Recording: `rustsheet-oracle render`
+
+```bash
+cd tools
+uv run rustsheet-oracle render                    # every probe → eval/render/refs/graph/
+uv run rustsheet-oracle render --probe charts     # one probe (repeatable)
+uv run rustsheet-oracle render --check            # offline: every recorded dump still covers its probe
+```
+
+The command refuses a workbook whose sha256 is not its pin, opens it in a session that persists nothing, reads every
+column, row and cell of each probe range one at a time through `$batch`, and refuses to write a dump that fails the
+completeness rule above. It writes `<probe>.render.json`, `<probe>.pdf` (`--no-pdf` skips it) and
+`<probe>/<sheet>_<chart>.png` per chart (`--no-images`). If Excel for the web will not open a probe, the command writes
+`<probe>.refused.json` (`rustsheet.excel-render-refused/1`: the Graph error code and message) in place of a dump. That
+refusal is the probe's result, and the gate treats the probe as INCOMPLETE. `tools/tests/test_oracle_render.py`
+re-checks every committed dump against `probes.json`.
+
+### First recording (2026-11-10)
+Five of the six probes recorded: 1,275 cells over 19 sheets, with their print PDFs. **`charts` is refused**:
+`createSession` fails with `FileCorruptTryRepair` / `unsupportedWorkbook`, and the PDF conversion refuses it too (406).
+Bisected through Graph: the workbook opens with every `<drawing>` removed, and each sheet's drawing alone is enough
+to make Excel refuse the file. One chart (`chart1.xml`) alone still makes Excel refuse it. Dropping its
+`mc:AlternateContent` makes it open, and so does moving the `xmlns:c14` declaration from `<c14:style>` up to
+`<mc:Choice Requires="c14">`. That second change makes all 14 charts open. The chart writer declares the prefix that
+`Requires` names on the child element, where it is not in scope for `Requires`. Excel for the web treats that as a
+corrupt file. The fix belongs in T1's chart writer, which is not in this repository. T-5113 re-pins and re-records `charts.xlsx`
+once T1 supplies a corrected file.
 
 ## Tier 2: not available through Graph, so INCOMPLETE until the UI gym (or Excel desktop) records it
 
