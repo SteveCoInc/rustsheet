@@ -914,15 +914,16 @@ own charts declare it, or when the `mc:AlternateContent` is dropped. Markup Comp
 `Requires` prefix in the scope of the `mc:Choice` element, and a child's declaration is not in that scope.
 Evidence: oracle excel-graph, 2026-11-10, recording the render probes (eval/render/README.md, "First recording").
 - eval/render/probes/charts.xlsx (sha256 f254966247195b1a8ec1631f5024cd7ccca8e4e4625576d0d32df86e088c7114, 14 charts
-  on 3 sheets, written by the charts lane's chart writer) is refused.
+  on 3 sheets, written by T1's chart writer, outside this repository) is refused.
 - It opens with every `<drawing>` removed. Any one sheet's drawing is enough to make it refused, and so is one chart
   (chart1.xml) alone.
 - That one chart opens without its `mc:AlternateContent`.
 - With the declaration moved in all 14 charts (3209e9497e4f75e1d9cf28764bd723c739f835b1da0419938dbb049931fe95dd), the
   whole workbook opens.
 
-Ours: RustSheet's export writes no chart parts of its own (pivot charts aside; they do not write this element).
-Status: VERIFIED (excel-graph; desktop not observed).
+Ours: no RustSheet code writes this element. The export writes chart parts only for pivot charts
+(`export/pivot_charts.rs`), and those carry no `mc:AlternateContent`. The refused file is T1's.
+Status: VERIFIED (excel-graph; desktop not observed). Tasks: T-5113 (re-pin and record the corrected probe).
 
 ## A [n] reference without its externalLink part makes Excel refuse the package
 Rule: Excel for the web refuses to open a package whose formulas use `[1]Sheet!A1` while the package has no

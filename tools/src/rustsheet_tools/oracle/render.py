@@ -59,6 +59,12 @@ def load_probes(probe_dir: Path) -> list[dict[str, Any]]:
     if manifest.get("schema") != PROBES_SCHEMA:
         raise RenderError(f"{probe_dir / 'probes.json'}: schema is not {PROBES_SCHEMA}")
     probes: list[dict[str, Any]] = manifest["probes"]
+    for probe in probes:
+        # Both name files: the id the outputs, the file the input. Neither may leave its directory.
+        for key in ("id", "file"):
+            value = str(probe.get(key, ""))
+            if not value or "/" in value or "\\" in value or value.startswith("."):
+                raise RenderError(f"probes.json: probe {key} {value!r} is not a plain file name")
     return probes
 
 
@@ -326,6 +332,18 @@ def cmd_render(args: argparse.Namespace) -> int:
     if args.check:
         for probe in probes:
             path = args.out / f"{probe['id']}.render.json"
+            refused = args.out / f"{probe['id']}.refused.json"
+            if not path.exists() and refused.exists():
+                # A recorded refusal is the probe's result; it is reported, and the gate sees INCOMPLETE.
+                refusal = json.loads(refused.read_text())
+                ok = refusal.get("schema") == REFUSED_SCHEMA and refusal.get("sha256") == probe["sha256"]
+                print(
+                    f"{probe['id']}: refused by Excel ({refusal.get('code')})"
+                    if ok
+                    else f"{probe['id']}: stale refusal"
+                )
+                failed += not ok
+                continue
             problems = check_dump(json.loads(path.read_text()), probe) if path.exists() else ["not recorded"]
             for problem in problems:
                 print(f"{probe['id']}: {problem}")

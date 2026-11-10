@@ -175,6 +175,7 @@ _RANGE_EDITS = {
 }
 SCOPES = ["Files.ReadWrite"]
 BATCH_SIZE = 20  # Graph's limit of requests in one `$batch` call
+THROTTLED = (429, 503, 504)  # statuses retried after a pause, whole calls and `$batch` parts alike
 
 
 def _error_field(resp: requests.Response, key: str) -> str | None:
@@ -350,7 +351,7 @@ class GraphBackend:
                 # call can at worst fail this one workbook with an OracleError.
                 time.sleep(2**attempt)
                 continue
-            if resp.status_code in (429, 503, 504):
+            if resp.status_code in THROTTLED:
                 time.sleep(float(resp.headers.get("Retry-After", 2**attempt)))
                 continue
             if refusable and resp.status_code == 400 and _error_code(resp) == "InvalidArgument":
@@ -380,7 +381,7 @@ class GraphBackend:
                 reply = self._call("POST", f"{GRAPH}/$batch", json={"requests": parts}).json()
                 for part in reply["responses"]:
                     i, status = int(part["id"]), int(part["status"])
-                    if status in (429, 503, 504):
+                    if status in THROTTLED:
                         throttled.append(i)
                     elif status >= 400:
                         body = part.get("body")

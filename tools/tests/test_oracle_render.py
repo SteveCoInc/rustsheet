@@ -264,3 +264,16 @@ def test_a_probe_excel_will_not_open_is_recorded_as_refused(
         "FileCorruptTryRepair",
     )
     assert not (tmp_path / "refs" / "p.render.json").exists()
+
+
+@pytest.mark.parametrize(
+    ("key", "value"), [("id", "../x"), ("file", "sub/p.xlsx"), ("id", ".."), ("file", "")]
+)
+def test_load_probes_refuses_a_name_that_leaves_its_directory(tmp_path: Path, key: str, value: str) -> None:
+    probe = _probe(tmp_path)
+    probe[key] = value
+    (tmp_path / "probes.json").write_text(
+        json.dumps({"schema": "rustsheet.render-probes/1", "probes": [probe]})
+    )
+    with pytest.raises(RenderError, match="plain file name"):
+        load_probes(tmp_path)
