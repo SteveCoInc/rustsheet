@@ -1,0 +1,1049 @@
+{
+ "notice": "Frozen model values for the T-2586 NEGBINOM.DIST pmf fresh sweep, written 2026-11-10 before any value returned. Research metadata, NOT oracle values. one: sheet One (density_times_quotient is what the engine returns, with the density of beta_density_small_shape as it is, a product rounded once; with_the_density_s_finish_stored is the same with that product and its 1 + lo as stored x87 operations, which BETA.DIST's own cells show at a shape of one; p_times_q_to_the_f is the closed form the engine had before). more: sheet More (the identified form for whole r >= 2, which the engine does not compute yet). tiny: sheet Tiny (the engine returns p_times_q_to_the_f there; density_times_quotient is the form with the quotient stored as a subnormal double: if Excel shows it, the engine's guard goes).",
+ "one": [
+  {
+   "cell": "One!A2",
+   "formula": "NEGBINOM.DIST(58,1,0.960885997388416,FALSE)",
+   "density_times_quotient": "2.1774238172857342e-82",
+   "with_the_density_s_finish_stored": "2.1774238172857342e-82",
+   "p_times_q_to_the_f": "2.1774238172857336e-82"
+  },
+  {
+   "cell": "One!A3",
+   "formula": "NEGBINOM.DIST(1001,1,3.6882029472316e-12,FALSE)",
+   "density_times_quotient": "3.688202933615155e-12",
+   "with_the_density_s_finish_stored": "3.688202933615155e-12",
+   "p_times_q_to_the_f": "3.688202933615156e-12"
+  },
+  {
+   "cell": "One!A4",
+   "formula": "NEGBINOM.DIST(56,1,0.324411707628871,FALSE)",
+   "density_times_quotient": "9.40361738603221e-11",
+   "with_the_density_s_finish_stored": "9.40361738603221e-11",
+   "p_times_q_to_the_f": "9.403617386032211e-11"
+  },
+  {
+   "cell": "One!A5",
+   "formula": "NEGBINOM.DIST(580,1,5.99702042608936e-12,FALSE)",
+   "density_times_quotient": "5.997020405230089e-12",
+   "with_the_density_s_finish_stored": "5.997020405230089e-12",
+   "p_times_q_to_the_f": "5.997020405230092e-12"
+  },
+  {
+   "cell": "One!A6",
+   "formula": "NEGBINOM.DIST(75,1,0.0617542660502266,FALSE)",
+   "density_times_quotient": "0.0005180979170385017",
+   "with_the_density_s_finish_stored": "0.0005180979170385017",
+   "p_times_q_to_the_f": "0.0005180979170385017"
+  },
+  {
+   "cell": "One!A7",
+   "formula": "NEGBINOM.DIST(78,1,3.09201094889072e-09,FALSE)",
+   "density_times_quotient": "3.0920102031693355e-09",
+   "with_the_density_s_finish_stored": "3.0920102031693355e-09",
+   "p_times_q_to_the_f": "3.0920102031693355e-09"
+  },
+  {
+   "cell": "One!A8",
+   "formula": "NEGBINOM.DIST(4,1,0.282031680275093,FALSE)",
+   "density_times_quotient": "0.07494092006284579",
+   "with_the_density_s_finish_stored": "0.07494092006284579",
+   "p_times_q_to_the_f": "0.07494092006284579"
+  },
+  {
+   "cell": "One!A9",
+   "formula": "NEGBINOM.DIST(3,1,0.000283567312679106,FALSE)",
+   "density_times_quotient": "0.0002833261498154808",
+   "with_the_density_s_finish_stored": "0.0002833261498154808",
+   "p_times_q_to_the_f": "0.00028332614981548085"
+  },
+  {
+   "cell": "One!A10",
+   "formula": "NEGBINOM.DIST(30,1,0.462135967786017,FALSE)",
+   "density_times_quotient": "3.845429647799277e-09",
+   "with_the_density_s_finish_stored": "3.845429647799277e-09",
+   "p_times_q_to_the_f": "3.845429647799277e-09"
+  },
+  {
+   "cell": "One!A11",
+   "formula": "NEGBINOM.DIST(39127,1,9.25624154385723e-12,FALSE)",
+   "density_times_quotient": "9.256238191534442e-12",
+   "with_the_density_s_finish_stored": "9.256238191534442e-12",
+   "p_times_q_to_the_f": "9.256238191534437e-12"
+  },
+  {
+   "cell": "One!A12",
+   "formula": "NEGBINOM.DIST(1514,1,0.320915118781827,FALSE)",
+   "density_times_quotient": "1.0950137017442604e-255",
+   "with_the_density_s_finish_stored": "1.0950137017442604e-255",
+   "p_times_q_to_the_f": "1.0950137017442607e-255"
+  },
+  {
+   "cell": "One!A13",
+   "formula": "NEGBINOM.DIST(114,1,0.00381349866373714,FALSE)",
+   "density_times_quotient": "0.0024669366371923994",
+   "with_the_density_s_finish_stored": "0.0024669366371923994",
+   "p_times_q_to_the_f": "0.0024669366371923985"
+  },
+  {
+   "cell": "One!A14",
+   "formula": "NEGBINOM.DIST(3,1,0.84639711872141,FALSE)",
+   "density_times_quotient": "0.0030674130651443163",
+   "with_the_density_s_finish_stored": "0.0030674130651443163",
+   "p_times_q_to_the_f": "0.0030674130651443163"
+  },
+  {
+   "cell": "One!A15",
+   "formula": "NEGBINOM.DIST(3,1,1.63052245223628e-09,FALSE)",
+   "density_times_quotient": "1.6305224442604694e-09",
+   "with_the_density_s_finish_stored": "1.6305224442604694e-09",
+   "p_times_q_to_the_f": "1.6305224442604694e-09"
+  },
+  {
+   "cell": "One!A16",
+   "formula": "NEGBINOM.DIST(92,1,0.926850719181132,FALSE)",
+   "density_times_quotient": "2.980817378227483e-105",
+   "with_the_density_s_finish_stored": "2.980817378227483e-105",
+   "p_times_q_to_the_f": "2.9808173782274817e-105"
+  },
+  {
+   "cell": "One!A17",
+   "formula": "NEGBINOM.DIST(167,1,1.69876217372801e-12,FALSE)",
+   "density_times_quotient": "1.6987621732460824e-12",
+   "with_the_density_s_finish_stored": "1.6987621732460824e-12",
+   "p_times_q_to_the_f": "1.6987621732460826e-12"
+  },
+  {
+   "cell": "One!A18",
+   "formula": "NEGBINOM.DIST(28,1,0.26505413717553,FALSE)",
+   "density_times_quotient": "4.769626520517605e-05",
+   "with_the_density_s_finish_stored": "4.769626520517605e-05",
+   "p_times_q_to_the_f": "4.7696265205176056e-05"
+  },
+  {
+   "cell": "One!A19",
+   "formula": "NEGBINOM.DIST(26515,1,6.39714804272783e-09,FALSE)",
+   "density_times_quotient": "6.39606304806138e-09",
+   "with_the_density_s_finish_stored": "6.39606304806138e-09",
+   "p_times_q_to_the_f": "6.396063048061384e-09"
+  },
+  {
+   "cell": "One!A20",
+   "formula": "NEGBINOM.DIST(5,1,0.688023907002092,FALSE)",
+   "density_times_quotient": "0.002033340465856232",
+   "with_the_density_s_finish_stored": "0.002033340465856232",
+   "p_times_q_to_the_f": "0.002033340465856232"
+  },
+  {
+   "cell": "One!A21",
+   "formula": "NEGBINOM.DIST(26,1,1.06288293187413e-11,FALSE)",
+   "density_times_quotient": "1.0628829315804028e-11",
+   "with_the_density_s_finish_stored": "1.0628829315804028e-11",
+   "p_times_q_to_the_f": "1.0628829315804026e-11"
+  },
+  {
+   "cell": "One!A22",
+   "formula": "NEGBINOM.DIST(1092,1,0.21903654916777,FALSE)",
+   "density_times_quotient": "1.2395132524687785e-118",
+   "with_the_density_s_finish_stored": "1.2395132524687785e-118",
+   "p_times_q_to_the_f": "1.2395132524687782e-118"
+  },
+  {
+   "cell": "One!A23",
+   "formula": "NEGBINOM.DIST(9800,1,3.43817865737464e-08,FALSE)",
+   "density_times_quotient": "3.437020387397259e-08",
+   "with_the_density_s_finish_stored": "3.437020387397259e-08",
+   "p_times_q_to_the_f": "3.43702038739726e-08"
+  },
+  {
+   "cell": "One!A24",
+   "formula": "NEGBINOM.DIST(2,1,0.639383982813802,FALSE)",
+   "density_times_quotient": "0.08314799430013042",
+   "with_the_density_s_finish_stored": "0.08314799430013042",
+   "p_times_q_to_the_f": "0.08314799430013041"
+  },
+  {
+   "cell": "One!A25",
+   "formula": "NEGBINOM.DIST(1637,1,2.71894277901185e-08,FALSE)",
+   "density_times_quotient": "2.718821764025552e-08",
+   "with_the_density_s_finish_stored": "2.718821764025552e-08",
+   "p_times_q_to_the_f": "2.7188217640255507e-08"
+  },
+  {
+   "cell": "One!A26",
+   "formula": "NEGBINOM.DIST(1,1,0.0759970921503355,FALSE)",
+   "density_times_quotient": "0.07022153413502892",
+   "with_the_density_s_finish_stored": "0.07022153413502892",
+   "p_times_q_to_the_f": "0.07022153413502892"
+  },
+  {
+   "cell": "One!A27",
+   "formula": "NEGBINOM.DIST(1692,1,0.0643287284028251,FALSE)",
+   "density_times_quotient": "8.892433661493446e-51",
+   "with_the_density_s_finish_stored": "8.892433661493446e-51",
+   "p_times_q_to_the_f": "8.892433661493445e-51"
+  },
+  {
+   "cell": "One!A28",
+   "formula": "NEGBINOM.DIST(9311,1,0.0262105705128753,FALSE)",
+   "density_times_quotient": "1.038992664487605e-109",
+   "with_the_density_s_finish_stored": "1.038992664487605e-109",
+   "p_times_q_to_the_f": "1.0389926644876053e-109"
+  },
+  {
+   "cell": "One!A29",
+   "formula": "NEGBINOM.DIST(9692,1,3.26649031136589e-09,FALSE)",
+   "density_times_quotient": "3.266386899760492e-09",
+   "with_the_density_s_finish_stored": "3.266386899760492e-09",
+   "p_times_q_to_the_f": "3.26638689976049e-09"
+  },
+  {
+   "cell": "One!A30",
+   "formula": "NEGBINOM.DIST(360,1,0.560583073402354,FALSE)",
+   "density_times_quotient": "1.5285567485130598e-129",
+   "with_the_density_s_finish_stored": "1.5285567485130598e-129",
+   "p_times_q_to_the_f": "1.5285567485130604e-129"
+  },
+  {
+   "cell": "One!A31",
+   "formula": "NEGBINOM.DIST(385584,1,0.000144184440450264,FALSE)",
+   "density_times_quotient": "1.0291607950949469e-28",
+   "with_the_density_s_finish_stored": "1.0291607950949469e-28",
+   "p_times_q_to_the_f": "1.029160795094946e-28"
+  },
+  {
+   "cell": "One!A32",
+   "formula": "NEGBINOM.DIST(1,1,0.881999690553026,FALSE)",
+   "density_times_quotient": "0.1040762364173924",
+   "with_the_density_s_finish_stored": "0.1040762364173924",
+   "p_times_q_to_the_f": "0.1040762364173924"
+  },
+  {
+   "cell": "One!A33",
+   "formula": "NEGBINOM.DIST(951,1,3.6206280607764e-12,FALSE)",
+   "density_times_quotient": "3.62062804830979e-12",
+   "with_the_density_s_finish_stored": "3.62062804830979e-12",
+   "p_times_q_to_the_f": "3.620628048309791e-12"
+  },
+  {
+   "cell": "One!A34",
+   "formula": "NEGBINOM.DIST(83,1,0.774865216998415,FALSE)",
+   "density_times_quotient": "1.386633873566001e-54",
+   "with_the_density_s_finish_stored": "1.386633873566001e-54",
+   "p_times_q_to_the_f": "1.3866338735660013e-54"
+  },
+  {
+   "cell": "One!A35",
+   "formula": "NEGBINOM.DIST(22173,1,9.850140062206e-10,FALSE)",
+   "density_times_quotient": "9.849924930447899e-10",
+   "with_the_density_s_finish_stored": "9.849924930447899e-10",
+   "p_times_q_to_the_f": "9.849924930447894e-10"
+  },
+  {
+   "cell": "One!A36",
+   "formula": "NEGBINOM.DIST(70,1,0.775488959380168,FALSE)",
+   "density_times_quotient": "2.9937450938352853e-46",
+   "with_the_density_s_finish_stored": "2.9937450938352853e-46",
+   "p_times_q_to_the_f": "2.993745093835285e-46"
+  },
+  {
+   "cell": "One!A37",
+   "formula": "NEGBINOM.DIST(73,1,0.00155609583007733,FALSE)",
+   "density_times_quotient": "0.0013888784369853852",
+   "with_the_density_s_finish_stored": "0.0013888784369853852",
+   "p_times_q_to_the_f": "0.0013888784369853846"
+  },
+  {
+   "cell": "One!A38",
+   "formula": "NEGBINOM.DIST(4,1,0.224905865728628,FALSE)",
+   "density_times_quotient": "0.08117430582824388",
+   "with_the_density_s_finish_stored": "0.08117430582824388",
+   "p_times_q_to_the_f": "0.08117430582824388"
+  },
+  {
+   "cell": "One!A39",
+   "formula": "NEGBINOM.DIST(24,1,0.00288489210968276,FALSE)",
+   "density_times_quotient": "0.00269163826293015",
+   "with_the_density_s_finish_stored": "0.00269163826293015",
+   "p_times_q_to_the_f": "0.0026916382629301504"
+  },
+  {
+   "cell": "One!A40",
+   "formula": "NEGBINOM.DIST(318,1,0.617348130863435,FALSE)",
+   "density_times_quotient": "1.3248019552195444e-133",
+   "with_the_density_s_finish_stored": "1.3248019552195444e-133",
+   "p_times_q_to_the_f": "1.3248019552195448e-133"
+  },
+  {
+   "cell": "One!A41",
+   "formula": "NEGBINOM.DIST(2,1,2.33135112348001e-06,FALSE)",
+   "density_times_quotient": "2.3313402530965595e-06",
+   "with_the_density_s_finish_stored": "2.3313402530965595e-06",
+   "p_times_q_to_the_f": "2.3313402530965595e-06"
+  },
+  {
+   "cell": "One!A42",
+   "formula": "NEGBINOM.DIST(1,1,0.392161132055847,FALSE)",
+   "density_times_quotient": "0.23837077856052352",
+   "with_the_density_s_finish_stored": "0.23837077856052352",
+   "p_times_q_to_the_f": "0.23837077856052352"
+  },
+  {
+   "cell": "One!A43",
+   "formula": "NEGBINOM.DIST(473,1,1.77178524356865e-05,FALSE)",
+   "density_times_quotient": "1.756998634483617e-05",
+   "with_the_density_s_finish_stored": "1.756998634483617e-05",
+   "p_times_q_to_the_f": "1.7569986344836167e-05"
+  },
+  {
+   "cell": "One!A44",
+   "formula": "NEGBINOM.DIST(674,1,0.250002945718831,FALSE)",
+   "density_times_quotient": "1.5420092428018278e-85",
+   "with_the_density_s_finish_stored": "1.5420092428018278e-85",
+   "p_times_q_to_the_f": "1.5420092428018272e-85"
+  },
+  {
+   "cell": "One!A45",
+   "formula": "NEGBINOM.DIST(2158,1,3.4787886330363e-08,FALSE)",
+   "density_times_quotient": "3.4785274823142434e-08",
+   "with_the_density_s_finish_stored": "3.4785274823142434e-08",
+   "p_times_q_to_the_f": "3.478527482314243e-08"
+  },
+  {
+   "cell": "One!A46",
+   "formula": "NEGBINOM.DIST(2,1,0.688504598425601,FALSE)",
+   "density_times_quotient": "0.06680517789398328",
+   "with_the_density_s_finish_stored": "0.06680517789398328",
+   "p_times_q_to_the_f": "0.06680517789398328"
+  },
+  {
+   "cell": "One!A47",
+   "formula": "NEGBINOM.DIST(1877,1,1.12675159152271e-09,FALSE)",
+   "density_times_quotient": "1.126749208543936e-09",
+   "with_the_density_s_finish_stored": "1.126749208543936e-09",
+   "p_times_q_to_the_f": "1.1267492085439357e-09"
+  },
+  {
+   "cell": "One!A48",
+   "formula": "NEGBINOM.DIST(1,1,0.526011305729686,FALSE)",
+   "density_times_quotient": "0.2493234119742368",
+   "with_the_density_s_finish_stored": "0.2493234119742368",
+   "p_times_q_to_the_f": "0.2493234119742368"
+  },
+  {
+   "cell": "One!A49",
+   "formula": "NEGBINOM.DIST(1522,1,1.13901912536967e-12,FALSE)",
+   "density_times_quotient": "1.1390191233950814e-12",
+   "with_the_density_s_finish_stored": "1.1390191233950814e-12",
+   "p_times_q_to_the_f": "1.139019123395081e-12"
+  },
+  {
+   "cell": "One!A50",
+   "formula": "NEGBINOM.DIST(648,1,0.407004460948731,FALSE)",
+   "density_times_quotient": "3.523087323583648e-148",
+   "with_the_density_s_finish_stored": "3.523087323583648e-148",
+   "p_times_q_to_the_f": "3.5230873235836466e-148"
+  },
+  {
+   "cell": "One!A51",
+   "formula": "NEGBINOM.DIST(52157,1,8.44336811687229e-05,FALSE)",
+   "density_times_quotient": "1.0324895801669171e-06",
+   "with_the_density_s_finish_stored": "1.0324895801669171e-06",
+   "p_times_q_to_the_f": "1.0324895801669163e-06"
+  },
+  {
+   "cell": "One!A52",
+   "formula": "NEGBINOM.DIST(1192,1,0.315408778215297,FALSE)",
+   "density_times_quotient": "2.1528533624393857e-197",
+   "with_the_density_s_finish_stored": "2.1528533624393857e-197",
+   "p_times_q_to_the_f": "2.152853362439386e-197"
+  },
+  {
+   "cell": "One!A53",
+   "formula": "NEGBINOM.DIST(11,1,1.89399909861203e-11,FALSE)",
+   "density_times_quotient": "1.8939990982174344e-11",
+   "with_the_density_s_finish_stored": "1.893999098217434e-11",
+   "p_times_q_to_the_f": "1.8939990982174344e-11"
+  },
+  {
+   "cell": "One!A54",
+   "formula": "NEGBINOM.DIST(26903,1,0.0127095889453846,FALSE)",
+   "density_times_quotient": "4.52675858221848e-152",
+   "with_the_density_s_finish_stored": "4.52675858221848e-152",
+   "p_times_q_to_the_f": "4.526758582218476e-152"
+  },
+  {
+   "cell": "One!A55",
+   "formula": "NEGBINOM.DIST(14705,1,6.99882895740725e-11,FALSE)",
+   "density_times_quotient": "6.99882175437158e-11",
+   "with_the_density_s_finish_stored": "6.99882175437158e-11",
+   "p_times_q_to_the_f": "6.99882175437158e-11"
+  },
+  {
+   "cell": "One!A56",
+   "formula": "NEGBINOM.DIST(3,1,0.0567796098338815,FALSE)",
+   "density_times_quotient": "0.04764660332504602",
+   "with_the_density_s_finish_stored": "0.04764660332504602",
+   "p_times_q_to_the_f": "0.04764660332504602"
+  },
+  {
+   "cell": "One!A57",
+   "formula": "NEGBINOM.DIST(1,1,2.92184031692732e-09,FALSE)",
+   "density_times_quotient": "2.921840308390169e-09",
+   "with_the_density_s_finish_stored": "2.921840308390169e-09",
+   "p_times_q_to_the_f": "2.921840308390169e-09"
+  },
+  {
+   "cell": "One!A58",
+   "formula": "NEGBINOM.DIST(85,1,0.285834740909771,FALSE)",
+   "density_times_quotient": "1.0690701531645919e-13",
+   "with_the_density_s_finish_stored": "1.0690701531645919e-13",
+   "p_times_q_to_the_f": "1.0690701531645921e-13"
+  },
+  {
+   "cell": "One!A59",
+   "formula": "NEGBINOM.DIST(18033,1,0.00080939869101814,FALSE)",
+   "density_times_quotient": "3.68708162274526e-10",
+   "with_the_density_s_finish_stored": "3.68708162274526e-10",
+   "p_times_q_to_the_f": "3.687081622745264e-10"
+  },
+  {
+   "cell": "One!A60",
+   "formula": "NEGBINOM.DIST(7,1,0.987504143724661,FALSE)",
+   "density_times_quotient": "4.6978708838713076e-14",
+   "with_the_density_s_finish_stored": "4.6978708838713076e-14",
+   "p_times_q_to_the_f": "4.697870883871309e-14"
+  },
+  {
+   "cell": "One!A61",
+   "formula": "NEGBINOM.DIST(424961,1,2.87784363404157e-07,FALSE)",
+   "density_times_quotient": "2.546561778143391e-07",
+   "with_the_density_s_finish_stored": "2.546561778143391e-07",
+   "p_times_q_to_the_f": "2.5465617781433926e-07"
+  },
+  {
+   "cell": "One!A62",
+   "formula": "NEGBINOM.DIST(29,1,0.217855334558164,FALSE)",
+   "density_times_quotient": "0.00017518371769809624",
+   "with_the_density_s_finish_stored": "0.00017518371769809624",
+   "p_times_q_to_the_f": "0.00017518371769809622"
+  },
+  {
+   "cell": "One!A63",
+   "formula": "NEGBINOM.DIST(960,1,0.0104109367460802,FALSE)",
+   "density_times_quotient": "4.5100487970040426e-07",
+   "with_the_density_s_finish_stored": "4.5100487970040426e-07",
+   "p_times_q_to_the_f": "4.5100487970040426e-07"
+  },
+  {
+   "cell": "One!A64",
+   "formula": "NEGBINOM.DIST(3669,1,0.0834863754188108,FALSE)",
+   "density_times_quotient": "1.0217225434936891e-140",
+   "with_the_density_s_finish_stored": "1.0217225434936891e-140",
+   "p_times_q_to_the_f": "1.0217225434936885e-140"
+  },
+  {
+   "cell": "One!A65",
+   "formula": "NEGBINOM.DIST(15125,1,2.98045392486602e-08,FALSE)",
+   "density_times_quotient": "2.9791106579151256e-08",
+   "with_the_density_s_finish_stored": "2.9791106579151256e-08",
+   "p_times_q_to_the_f": "2.979110657915125e-08"
+  },
+  {
+   "cell": "One!A66",
+   "formula": "NEGBINOM.DIST(65,1,0.90151114825019,FALSE)",
+   "density_times_quotient": "3.350664336528947e-66",
+   "with_the_density_s_finish_stored": "3.350664336528947e-66",
+   "p_times_q_to_the_f": "3.3506643365289487e-66"
+  },
+  {
+   "cell": "One!A67",
+   "formula": "NEGBINOM.DIST(979,1,0.000973415375644459,FALSE)",
+   "density_times_quotient": "0.00037516769756505366",
+   "with_the_density_s_finish_stored": "0.00037516769756505366",
+   "p_times_q_to_the_f": "0.0003751676975650537"
+  },
+  {
+   "cell": "One!A68",
+   "formula": "NEGBINOM.DIST(1,1,0.0888060739144834,FALSE)",
+   "density_times_quotient": "0.08091955515037871",
+   "with_the_density_s_finish_stored": "0.08091955515037871",
+   "p_times_q_to_the_f": "0.08091955515037871"
+  },
+  {
+   "cell": "One!A69",
+   "formula": "NEGBINOM.DIST(1517,1,1.49586493606424e-08,FALSE)",
+   "density_times_quotient": "1.495830991876494e-08",
+   "with_the_density_s_finish_stored": "1.495830991876494e-08",
+   "p_times_q_to_the_f": "1.4958309918764948e-08"
+  },
+  {
+   "cell": "One!A70",
+   "formula": "NEGBINOM.DIST(463,1,0.114792368877339,FALSE)",
+   "density_times_quotient": "3.4819064447881237e-26",
+   "with_the_density_s_finish_stored": "3.4819064447881237e-26",
+   "p_times_q_to_the_f": "3.481906444788123e-26"
+  },
+  {
+   "cell": "One!A71",
+   "formula": "NEGBINOM.DIST(4966,1,1.16518253586668e-11,FALSE)",
+   "density_times_quotient": "1.165182468445766e-11",
+   "with_the_density_s_finish_stored": "1.165182468445766e-11",
+   "p_times_q_to_the_f": "1.1651824684457659e-11"
+  },
+  {
+   "cell": "One!A72",
+   "formula": "NEGBINOM.DIST(49,1,0.43800395402665,FALSE)",
+   "density_times_quotient": "2.3900543232820473e-13",
+   "with_the_density_s_finish_stored": "2.3900543232820473e-13",
+   "p_times_q_to_the_f": "2.390054323282048e-13"
+  },
+  {
+   "cell": "One!A73",
+   "formula": "NEGBINOM.DIST(140,1,1.98559401712848e-12,FALSE)",
+   "density_times_quotient": "1.9855940165765182e-12",
+   "with_the_density_s_finish_stored": "1.9855940165765182e-12",
+   "p_times_q_to_the_f": "1.9855940165765182e-12"
+  },
+  {
+   "cell": "One!A74",
+   "formula": "NEGBINOM.DIST(222,1,0.544013873117246,FALSE)",
+   "density_times_quotient": "1.0540756217749461e-76",
+   "with_the_density_s_finish_stored": "1.0540756217749461e-76",
+   "p_times_q_to_the_f": "1.054075621774946e-76"
+  },
+  {
+   "cell": "One!A75",
+   "formula": "NEGBINOM.DIST(13,1,0.000185202372253057,FALSE)",
+   "density_times_quotient": "0.00018475696846304417",
+   "with_the_density_s_finish_stored": "0.00018475696846304417",
+   "p_times_q_to_the_f": "0.00018475696846304422"
+  },
+  {
+   "cell": "One!A76",
+   "formula": "NEGBINOM.DIST(10296,1,0.0227899227556848,FALSE)",
+   "density_times_quotient": "1.8773316024133404e-105",
+   "with_the_density_s_finish_stored": "1.8773316024133404e-105",
+   "p_times_q_to_the_f": "1.8773316024133392e-105"
+  },
+  {
+   "cell": "One!A77",
+   "formula": "NEGBINOM.DIST(1798,1,4.36129144341536e-10,FALSE)",
+   "density_times_quotient": "4.3612880234655253e-10",
+   "with_the_density_s_finish_stored": "4.3612880234655253e-10",
+   "p_times_q_to_the_f": "4.3612880234655227e-10"
+  },
+  {
+   "cell": "One!A78",
+   "formula": "NEGBINOM.DIST(13,1,0.590293862540672,FALSE)",
+   "density_times_quotient": "5.410163313891917e-06",
+   "with_the_density_s_finish_stored": "5.410163313891917e-06",
+   "p_times_q_to_the_f": "5.410163313891918e-06"
+  },
+  {
+   "cell": "One!A79",
+   "formula": "NEGBINOM.DIST(8,1,0.00225307047828284,FALSE)",
+   "density_times_quotient": "0.002212778671633251",
+   "with_the_density_s_finish_stored": "0.002212778671633251",
+   "p_times_q_to_the_f": "0.0022127786716332506"
+  },
+  {
+   "cell": "One!A80",
+   "formula": "NEGBINOM.DIST(16,1,0.665243340496241,FALSE)",
+   "density_times_quotient": "1.654429032607556e-08",
+   "with_the_density_s_finish_stored": "1.654429032607556e-08",
+   "p_times_q_to_the_f": "1.6544290326075556e-08"
+  },
+  {
+   "cell": "One!A81",
+   "formula": "NEGBINOM.DIST(8143,1,4.88728607183765e-10,FALSE)",
+   "density_times_quotient": "4.887266621860649e-10",
+   "with_the_density_s_finish_stored": "4.887266621860649e-10",
+   "p_times_q_to_the_f": "4.887266621860648e-10"
+  }
+ ],
+ "more": [
+  {
+   "cell": "More!A2",
+   "formula": "NEGBINOM.DIST(10680,8,0.000682293909291637,FALSE)",
+   "density_times_quotient": "0.00010109703322174178"
+  },
+  {
+   "cell": "More!A3",
+   "formula": "NEGBINOM.DIST(47033,2,4.88999176378071e-05,FALSE)",
+   "density_times_quotient": "1.1276273511377772e-05"
+  },
+  {
+   "cell": "More!A4",
+   "formula": "NEGBINOM.DIST(26861,105,0.00788081219840705,FALSE)",
+   "density_times_quotient": "3.512184181542528e-19"
+  },
+  {
+   "cell": "More!A5",
+   "formula": "NEGBINOM.DIST(30,4,0.103655171529922,FALSE)",
+   "density_times_quotient": "0.02363152639006073"
+  },
+  {
+   "cell": "More!A6",
+   "formula": "NEGBINOM.DIST(1,30,0.934729186395601,FALSE)",
+   "density_times_quotient": "0.2584725253707426"
+  },
+  {
+   "cell": "More!A7",
+   "formula": "NEGBINOM.DIST(1695,954,0.296459236382432,FALSE)",
+   "density_times_quotient": "9.698998347117277e-14"
+  },
+  {
+   "cell": "More!A8",
+   "formula": "NEGBINOM.DIST(197,385,0.779167306454759,FALSE)",
+   "density_times_quotient": "1.5667204872548455e-11"
+  },
+  {
+   "cell": "More!A9",
+   "formula": "NEGBINOM.DIST(6365,6,0.00170634180198718,FALSE)",
+   "density_times_quotient": "4.0962583330999706e-05"
+  },
+  {
+   "cell": "More!A10",
+   "formula": "NEGBINOM.DIST(879,29,0.0333045327845561,FALSE)",
+   "density_times_quotient": "0.0023347343779220957"
+  },
+  {
+   "cell": "More!A11",
+   "formula": "NEGBINOM.DIST(3,452,0.990996333341441,FALSE)",
+   "density_times_quotient": "0.1896552995951187"
+  },
+  {
+   "cell": "More!A12",
+   "formula": "NEGBINOM.DIST(26,10,0.327560822701028,FALSE)",
+   "density_times_quotient": "0.0331702185146976"
+  },
+  {
+   "cell": "More!A13",
+   "formula": "NEGBINOM.DIST(10709,262,0.0389604368240581,FALSE)",
+   "density_times_quotient": "1.1473818551383444e-20"
+  },
+  {
+   "cell": "More!A14",
+   "formula": "NEGBINOM.DIST(6762,3413,0.352589363212313,FALSE)",
+   "density_times_quotient": "3.7735606257538406e-06"
+  },
+  {
+   "cell": "More!A15",
+   "formula": "NEGBINOM.DIST(5,6600,0.999570931680628,FALSE)",
+   "density_times_quotient": "0.08947617400476902"
+  },
+  {
+   "cell": "More!A16",
+   "formula": "NEGBINOM.DIST(33,2209,0.984880678308766,FALSE)",
+   "density_times_quotient": "0.06792827523619233"
+  },
+  {
+   "cell": "More!A17",
+   "formula": "NEGBINOM.DIST(223,1647,0.82933705858438,FALSE)",
+   "density_times_quotient": "1.240520340479249e-10"
+  },
+  {
+   "cell": "More!A18",
+   "formula": "NEGBINOM.DIST(1078,91,0.0442188535465798,FALSE)",
+   "density_times_quotient": "8.8284874877837e-09"
+  },
+  {
+   "cell": "More!A19",
+   "formula": "NEGBINOM.DIST(23012,965,0.0793684474034325,FALSE)",
+   "density_times_quotient": "2.5375618376914984e-135"
+  },
+  {
+   "cell": "More!A20",
+   "formula": "NEGBINOM.DIST(11,5812,0.997772385957929,FALSE)",
+   "density_times_quotient": "0.1017973791225433"
+  },
+  {
+   "cell": "More!A21",
+   "formula": "NEGBINOM.DIST(6521,1174,0.107113657237314,FALSE)",
+   "density_times_quotient": "8.078138888407293e-36"
+  },
+  {
+   "cell": "More!A22",
+   "formula": "NEGBINOM.DIST(6557,1755,0.379317747954838,FALSE)",
+   "density_times_quotient": "1.2581106580221477e-239"
+  },
+  {
+   "cell": "More!A23",
+   "formula": "NEGBINOM.DIST(212,27,0.106184235246572,FALSE)",
+   "density_times_quotient": "0.008672393277417272"
+  },
+  {
+   "cell": "More!A24",
+   "formula": "NEGBINOM.DIST(92,3,0.0355892345553829,FALSE)",
+   "density_times_quotient": "0.007024983612582165"
+  },
+  {
+   "cell": "More!A25",
+   "formula": "NEGBINOM.DIST(1,4,0.804296337857077,FALSE)",
+   "density_times_quotient": "0.3275844731967191"
+  },
+  {
+   "cell": "More!A26",
+   "formula": "NEGBINOM.DIST(263,2696,0.840860561103622,FALSE)",
+   "density_times_quotient": "8.765553465641622e-30"
+  },
+  {
+   "cell": "More!A27",
+   "formula": "NEGBINOM.DIST(6731,490,0.0413211796477194,FALSE)",
+   "density_times_quotient": "3.987547672414795e-27"
+  },
+  {
+   "cell": "More!A28",
+   "formula": "NEGBINOM.DIST(10,195,0.937327698447704,FALSE)",
+   "density_times_quotient": "0.08487995036384408"
+  },
+  {
+   "cell": "More!A29",
+   "formula": "NEGBINOM.DIST(276,10,0.0166654269358292,FALSE)",
+   "density_times_quotient": "0.00048101043309470553"
+  },
+  {
+   "cell": "More!A30",
+   "formula": "NEGBINOM.DIST(4244,5135,0.45853484250981,FALSE)",
+   "density_times_quotient": "1.0683251436610706e-67"
+  },
+  {
+   "cell": "More!A31",
+   "formula": "NEGBINOM.DIST(75920,13,8.46638580966237e-05,FALSE)",
+   "density_times_quotient": "1.4217856834785856e-06"
+  },
+  {
+   "cell": "More!A32",
+   "formula": "NEGBINOM.DIST(5,984,0.997125755163916,FALSE)",
+   "density_times_quotient": "0.08969224999614125"
+  },
+  {
+   "cell": "More!A33",
+   "formula": "NEGBINOM.DIST(1632,2,0.000647785443872171,FALSE)",
+   "density_times_quotient": "0.00023799607945047547"
+  },
+  {
+   "cell": "More!A34",
+   "formula": "NEGBINOM.DIST(14,1404,0.979364325795293,FALSE)",
+   "density_times_quotient": "0.0006937788566707431"
+  },
+  {
+   "cell": "More!A35",
+   "formula": "NEGBINOM.DIST(3,1008,0.995105320730902,FALSE)",
+   "density_times_quotient": "0.14278918085166475"
+  },
+  {
+   "cell": "More!A36",
+   "formula": "NEGBINOM.DIST(23572,16,0.000298828951828299,FALSE)",
+   "density_times_quotient": "1.0442253773181527e-06"
+  },
+  {
+   "cell": "More!A37",
+   "formula": "NEGBINOM.DIST(24,6,0.224585683368812,FALSE)",
+   "density_times_quotient": "0.034021689486332114"
+  },
+  {
+   "cell": "More!A38",
+   "formula": "NEGBINOM.DIST(310,2180,0.752732825864383,FALSE)",
+   "density_times_quotient": "4.61319222935538e-53"
+  },
+  {
+   "cell": "More!A39",
+   "formula": "NEGBINOM.DIST(85,3093,0.98112764514953,FALSE)",
+   "density_times_quotient": "0.00038149371758312216"
+  },
+  {
+   "cell": "More!A40",
+   "formula": "NEGBINOM.DIST(220,384,0.513080464477526,FALSE)",
+   "density_times_quotient": "2.0562969871159374e-10"
+  },
+  {
+   "cell": "More!A41",
+   "formula": "NEGBINOM.DIST(82856,4,5.55609876039831e-05,FALSE)",
+   "density_times_quotient": "9.048469987937361e-06"
+  },
+  {
+   "cell": "More!A42",
+   "formula": "NEGBINOM.DIST(14691,77,0.00852757486594259,FALSE)",
+   "density_times_quotient": "3.4615988285388484e-09"
+  },
+  {
+   "cell": "More!A43",
+   "formula": "NEGBINOM.DIST(6,144,0.951607607650533,FALSE)",
+   "density_times_quotient": "0.13935324924219203"
+  },
+  {
+   "cell": "More!A44",
+   "formula": "NEGBINOM.DIST(14,4077,0.996992836759624,FALSE)",
+   "density_times_quotient": "0.09455433372735801"
+  },
+  {
+   "cell": "More!A45",
+   "formula": "NEGBINOM.DIST(2,758,0.996807999327831,FALSE)",
+   "density_times_quotient": "0.25973766894575984"
+  },
+  {
+   "cell": "More!A46",
+   "formula": "NEGBINOM.DIST(3,8,0.756334202148534,FALSE)",
+   "density_times_quotient": "0.18589807284795834"
+  },
+  {
+   "cell": "More!A47",
+   "formula": "NEGBINOM.DIST(1,14,0.925580149507746,FALSE)",
+   "density_times_quotient": "0.3528688124614373"
+  },
+  {
+   "cell": "More!A48",
+   "formula": "NEGBINOM.DIST(41531,79,0.000840834364349893,FALSE)",
+   "density_times_quotient": "1.2334345403234868e-13"
+  },
+  {
+   "cell": "More!A49",
+   "formula": "NEGBINOM.DIST(28,6,0.0762326773485124,FALSE)",
+   "density_times_quotient": "0.0050578195158764985"
+  },
+  {
+   "cell": "More!A50",
+   "formula": "NEGBINOM.DIST(17962,1261,0.0412344392581213,FALSE)",
+   "density_times_quotient": "2.613887735474663e-57"
+  },
+  {
+   "cell": "More!A51",
+   "formula": "NEGBINOM.DIST(4,435,0.984503438389433,FALSE)",
+   "density_times_quotient": "0.09775965201986514"
+  },
+  {
+   "cell": "More!A52",
+   "formula": "NEGBINOM.DIST(30388,9,0.000578450544376203,FALSE)",
+   "density_times_quotient": "3.0254449500588816e-06"
+  },
+  {
+   "cell": "More!A53",
+   "formula": "NEGBINOM.DIST(9248,8,0.00166374095870643,FALSE)",
+   "density_times_quotient": "1.3872815791557098e-05"
+  },
+  {
+   "cell": "More!A54",
+   "formula": "NEGBINOM.DIST(3,7,0.779901405318144,FALSE)",
+   "density_times_quotient": "0.1571842456730426"
+  },
+  {
+   "cell": "More!A55",
+   "formula": "NEGBINOM.DIST(515,3275,0.914760789499563,FALSE)",
+   "density_times_quotient": "8.309560090575683e-26"
+  },
+  {
+   "cell": "More!A56",
+   "formula": "NEGBINOM.DIST(25,114,0.739021395293189,FALSE)",
+   "density_times_quotient": "0.005531034253290821"
+  },
+  {
+   "cell": "More!A57",
+   "formula": "NEGBINOM.DIST(12,31,0.541871978373225,FALSE)",
+   "density_times_quotient": "0.005325016268193471"
+  },
+  {
+   "cell": "More!A58",
+   "formula": "NEGBINOM.DIST(536,9,0.00853085602395617,FALSE)",
+   "density_times_quotient": "0.0004379253463904945"
+  },
+  {
+   "cell": "More!A59",
+   "formula": "NEGBINOM.DIST(3,11,0.714781723723122,FALSE)",
+   "density_times_quotient": "0.16512237255226403"
+  },
+  {
+   "cell": "More!A60",
+   "formula": "NEGBINOM.DIST(60214,12,0.000308837619939518,FALSE)",
+   "density_times_quotient": "5.959584732188844e-06"
+  },
+  {
+   "cell": "More!A61",
+   "formula": "NEGBINOM.DIST(777,13,0.0197746538395353,FALSE)",
+   "density_times_quotient": "0.0014379445844202"
+  },
+  {
+   "cell": "More!A62",
+   "formula": "NEGBINOM.DIST(8,8568,0.998109112042827,FALSE)",
+   "density_times_quotient": "0.010703831363345412"
+  },
+  {
+   "cell": "More!A63",
+   "formula": "NEGBINOM.DIST(503,546,0.575871646944828,FALSE)",
+   "density_times_quotient": "1.882842166821314e-05"
+  },
+  {
+   "cell": "More!A64",
+   "formula": "NEGBINOM.DIST(52383,26,0.000597621007339486,FALSE)",
+   "density_times_quotient": "2.394132495095501e-05"
+  },
+  {
+   "cell": "More!A65",
+   "formula": "NEGBINOM.DIST(4306,75,0.0200002287748659,FALSE)",
+   "density_times_quotient": "0.00029983040371229673"
+  },
+  {
+   "cell": "More!A66",
+   "formula": "NEGBINOM.DIST(203,1302,0.780044782431305,FALSE)",
+   "density_times_quotient": "9.913915353119528e-18"
+  },
+  {
+   "cell": "More!A67",
+   "formula": "NEGBINOM.DIST(94,218,0.716748919887208,FALSE)",
+   "density_times_quotient": "0.026847623187063678"
+  },
+  {
+   "cell": "More!A68",
+   "formula": "NEGBINOM.DIST(6930,103,0.0295346573615485,FALSE)",
+   "density_times_quotient": "2.0665834712947975e-18"
+  },
+  {
+   "cell": "More!A69",
+   "formula": "NEGBINOM.DIST(4239,89,0.0285770852025702,FALSE)",
+   "density_times_quotient": "3.4584510150252258e-06"
+  },
+  {
+   "cell": "More!A70",
+   "formula": "NEGBINOM.DIST(19,123,0.936869124676857,FALSE)",
+   "density_times_quotient": "0.0008313766384923977"
+  },
+  {
+   "cell": "More!A71",
+   "formula": "NEGBINOM.DIST(4,13,0.662983931018767,FALSE)",
+   "density_times_quotient": "0.11225685047616803"
+  },
+  {
+   "cell": "More!A72",
+   "formula": "NEGBINOM.DIST(27,21,0.529846389305876,FALSE)",
+   "density_times_quotient": "0.022242502613100703"
+  },
+  {
+   "cell": "More!A73",
+   "formula": "NEGBINOM.DIST(1517,377,0.387598963680183,FALSE)",
+   "density_times_quotient": "8.617535630048821e-71"
+  },
+  {
+   "cell": "More!A74",
+   "formula": "NEGBINOM.DIST(265,5,0.0192756655312283,FALSE)",
+   "density_times_quotient": "0.0032663128575049554"
+  },
+  {
+   "cell": "More!A75",
+   "formula": "NEGBINOM.DIST(130,17,0.125665697147128,FALSE)",
+   "density_times_quotient": "0.011053148742161381"
+  },
+  {
+   "cell": "More!A76",
+   "formula": "NEGBINOM.DIST(107,3841,0.98364717118264,FALSE)",
+   "density_times_quotient": "2.7077097451278794e-07"
+  },
+  {
+   "cell": "More!A77",
+   "formula": "NEGBINOM.DIST(3,1016,0.992645571248111,FALSE)",
+   "density_times_quotient": "0.038581105264072865"
+  },
+  {
+   "cell": "More!A78",
+   "formula": "NEGBINOM.DIST(18235,297,0.0122959249798331,FALSE)",
+   "density_times_quotient": "2.3063602353110165e-08"
+  },
+  {
+   "cell": "More!A79",
+   "formula": "NEGBINOM.DIST(267,23,0.0321255283762804,FALSE)",
+   "density_times_quotient": "4.0192624831948245e-06"
+  },
+  {
+   "cell": "More!A80",
+   "formula": "NEGBINOM.DIST(16,20,0.543442915382829,FALSE)",
+   "density_times_quotient": "0.0730328827028806"
+  },
+  {
+   "cell": "More!A81",
+   "formula": "NEGBINOM.DIST(13,20,0.371582337730689,FALSE)",
+   "density_times_quotient": "0.0020851007248285274"
+  }
+ ],
+ "tiny": [
+  {
+   "row": 2,
+   "failures": 1,
+   "p": "3e-308",
+   "density_times_quotient": "3.0000000000000007e-308",
+   "p_times_q_to_the_f": "3e-308",
+   "quotient_is_subnormal": true
+  },
+  {
+   "row": 3,
+   "failures": 3,
+   "p": "5e-308",
+   "density_times_quotient": "4.999999999999999e-308",
+   "p_times_q_to_the_f": "5e-308",
+   "quotient_is_subnormal": true
+  },
+  {
+   "row": 4,
+   "failures": 100,
+   "p": "1e-306",
+   "density_times_quotient": "1e-306",
+   "p_times_q_to_the_f": "1e-306",
+   "quotient_is_subnormal": true
+  },
+  {
+   "row": 5,
+   "failures": 1000,
+   "p": "1e-305",
+   "density_times_quotient": "1.0000000000000001e-305",
+   "p_times_q_to_the_f": "1e-305",
+   "quotient_is_subnormal": true
+  },
+  {
+   "row": 6,
+   "failures": 1000000.0,
+   "p": "1e-302",
+   "density_times_quotient": "9.999999999999996e-303",
+   "p_times_q_to_the_f": "1e-302",
+   "quotient_is_subnormal": true
+  },
+  {
+   "row": 7,
+   "failures": 1000000000.0,
+   "p": "2e-300",
+   "density_times_quotient": "2e-300",
+   "p_times_q_to_the_f": "2e-300",
+   "quotient_is_subnormal": true
+  },
+  {
+   "row": 8,
+   "failures": 1000000000000.0,
+   "p": "3e-308",
+   "density_times_quotient": "2.999966601551052e-308",
+   "p_times_q_to_the_f": "3e-308",
+   "quotient_is_subnormal": true
+  },
+  {
+   "row": 9,
+   "failures": 1000000000000000.0,
+   "p": "3e-308",
+   "density_times_quotient": "2.964393875047476e-308",
+   "p_times_q_to_the_f": "3e-308",
+   "quotient_is_subnormal": true
+  },
+  {
+   "row": 10,
+   "failures": 1000000000000000.0,
+   "p": "2.5e-308",
+   "density_times_quotient": "2.47032822920623e-308",
+   "p_times_q_to_the_f": "2.5e-308",
+   "quotient_is_subnormal": true
+  },
+  {
+   "row": 11,
+   "failures": 1000000000000000.0,
+   "p": "1e-300",
+   "density_times_quotient": "9.999999984816827e-301",
+   "p_times_q_to_the_f": "1e-300",
+   "quotient_is_subnormal": true
+  }
+ ]
+}
