@@ -5502,7 +5502,7 @@ predictions in docs/research/probe-request-val4-fvs.md). Raw observations; T-510
 - The isolated value: `FVSCHEDULE(2^1023,{1,0})`, `{1,1E-300}` and `{1,-0.5}` (val4-fvs-03, -04, -05) are each a live
   0 (Probe!B1:B5: 0, TYPE 1, ISNUMBER TRUE, error code 0, `+0` 0). The `=2^1023` that Excel calculates after them
   (Probe!A1) is `#NUM!`, and the canary passes. So the overflow leaves a state that the next calculation of the right
-  kind takes once. val4-fvs-06, with the same layout and no overflow (`FVSCHEDULE(1E+300,0)`), has every detector
+  kind takes once. val4-fvs-06, with val4-fvs-01's layout and no overflow (`FVSCHEDULE(1E+300,0)` in each block), has every detector
   8.98846567431158E+307.
 - Which calls take it (val4-fvs-01, sheet P; each block has the overflow A(4i+4), then the candidate A(4i+3), then two
   `=2^1023` detectors). The candidate takes the state when the first detector is 2^1023, and leaves it when the first

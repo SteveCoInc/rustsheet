@@ -22,7 +22,7 @@ eval/render/refs/graph/charts.refused.json.
   (docs/excel-semantics/xlsx-storage.md, "A chart's `mc:Choice` must have its `Requires` prefix in scope";
   eval/render/README.md, "First recording").
 - The file comes from T1's chart writer, which is not in this repository. The writer fix (declare `xmlns:c14` on
-  `mc:Choice`, as Excel does) is T1's. This task waits for a corrected file, then pins and records it. Do not patch
+  `mc:Choice`, as the Excel Online-saved eval/roundtrip/excel-saved/cases/t4187-pivot-chart-caches.xlsx does) is T1's. This task waits for a corrected file, then pins and records it. Do not patch
   the bytes here: the pinned file must be the writer's own output.
 - Blocked until T1 supplies the corrected workbook.
 
