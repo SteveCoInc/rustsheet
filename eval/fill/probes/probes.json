@@ -1,0 +1,1214 @@
+{
+  "schema": "rustsheet.fill-probes/1",
+  "dateSystem": "1900",
+  "locale": "en-US",
+  "formats": {
+    "date": {
+      "num_format": "yyyy-mm-dd"
+    },
+    "decimal-red": {
+      "num_format": "0.00",
+      "bold": true,
+      "font_color": "#C00000",
+      "bg_color": "#FFF2CC"
+    },
+    "decimal-blue": {
+      "num_format": "0.000",
+      "italic": true,
+      "font_color": "#0070C0",
+      "bg_color": "#DDEBF7"
+    },
+    "merged": {
+      "bold": true,
+      "bg_color": "#E2F0D9"
+    }
+  },
+  "probes": [
+    {
+      "id": "number-single-default",
+      "file": "number-single-default.xlsx",
+      "sheet": "Fill",
+      "source": "A1",
+      "target": "A1:A6",
+      "sourceRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 0,
+        "c1": 0
+      },
+      "targetRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 5,
+        "c1": 0
+      },
+      "direction": "down",
+      "length": 5,
+      "lengthUnit": "rows",
+      "seriesKindToProbe": "single-number default",
+      "autoFillType": "FillDefault",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false
+      },
+      "seeds": [
+        {
+          "cell": "A1",
+          "value": 7,
+          "format": null
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "9c7320870b9a56dfa24d6cceb9c0167b8db07ce8746f71ba8db9655d9ccf8dd9"
+    },
+    {
+      "id": "number-single-series",
+      "file": "number-single-series.xlsx",
+      "sheet": "Fill",
+      "source": "A1",
+      "target": "A1:A6",
+      "sourceRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 0,
+        "c1": 0
+      },
+      "targetRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 5,
+        "c1": 0
+      },
+      "direction": "down",
+      "length": 5,
+      "lengthUnit": "rows",
+      "seriesKindToProbe": "single-number forced series",
+      "autoFillType": "FillSeries",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": true
+      },
+      "seeds": [
+        {
+          "cell": "A1",
+          "value": 7,
+          "format": null
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "31fc9f4946f2a9f377eea12aa0db26be11a3f0128a6d3f91d734fcf953d8af73"
+    },
+    {
+      "id": "number-step-down",
+      "file": "number-step-down.xlsx",
+      "sheet": "Fill",
+      "source": "A1:A2",
+      "target": "A1:A7",
+      "sourceRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 1,
+        "c1": 0
+      },
+      "targetRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 6,
+        "c1": 0
+      },
+      "direction": "down",
+      "length": 5,
+      "lengthUnit": "rows",
+      "seriesKindToProbe": "two-number linear",
+      "autoFillType": "FillDefault",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false
+      },
+      "seeds": [
+        {
+          "cell": "A1",
+          "value": 1,
+          "format": null
+        },
+        {
+          "cell": "A2",
+          "value": 3,
+          "format": null
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "441070818a2b995035c038a84456745e5479457dec2bd7b3cd5aba70368379d7"
+    },
+    {
+      "id": "number-step-up",
+      "file": "number-step-up.xlsx",
+      "sheet": "Fill",
+      "source": "A4:A5",
+      "target": "A1:A5",
+      "sourceRect": {
+        "r0": 3,
+        "c0": 0,
+        "r1": 4,
+        "c1": 0
+      },
+      "targetRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 4,
+        "c1": 0
+      },
+      "direction": "up",
+      "length": 3,
+      "lengthUnit": "rows",
+      "seriesKindToProbe": "two-number linear backwards",
+      "autoFillType": "FillDefault",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false
+      },
+      "seeds": [
+        {
+          "cell": "A4",
+          "value": 7,
+          "format": null
+        },
+        {
+          "cell": "A5",
+          "value": 9,
+          "format": null
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "89ca192025c3883b3129490cacececf80a07bac0537e3e35ea30032f961ab4c5"
+    },
+    {
+      "id": "number-step-right",
+      "file": "number-step-right.xlsx",
+      "sheet": "Fill",
+      "source": "B2:C2",
+      "target": "B2:H2",
+      "sourceRect": {
+        "r0": 1,
+        "c0": 1,
+        "r1": 1,
+        "c1": 2
+      },
+      "targetRect": {
+        "r0": 1,
+        "c0": 1,
+        "r1": 1,
+        "c1": 7
+      },
+      "direction": "right",
+      "length": 5,
+      "lengthUnit": "columns",
+      "seriesKindToProbe": "two-number linear horizontal",
+      "autoFillType": "FillDefault",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false
+      },
+      "seeds": [
+        {
+          "cell": "B2",
+          "value": 10,
+          "format": null
+        },
+        {
+          "cell": "C2",
+          "value": 20,
+          "format": null
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "4b01aeb76a44ea85d2070c7d134764722f91feacf55c6688b319451d2a361915"
+    },
+    {
+      "id": "number-step-left",
+      "file": "number-step-left.xlsx",
+      "sheet": "Fill",
+      "source": "E2:F2",
+      "target": "A2:F2",
+      "sourceRect": {
+        "r0": 1,
+        "c0": 4,
+        "r1": 1,
+        "c1": 5
+      },
+      "targetRect": {
+        "r0": 1,
+        "c0": 0,
+        "r1": 1,
+        "c1": 5
+      },
+      "direction": "left",
+      "length": 4,
+      "lengthUnit": "columns",
+      "seriesKindToProbe": "two-number linear horizontal backwards",
+      "autoFillType": "FillDefault",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false
+      },
+      "seeds": [
+        {
+          "cell": "E2",
+          "value": 10,
+          "format": null
+        },
+        {
+          "cell": "F2",
+          "value": 20,
+          "format": null
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "e13e39b4a6a5a59af8e2dd949142298d058f8bc4895faae0a7caf01f19d19516"
+    },
+    {
+      "id": "number-negative-decimal",
+      "file": "number-negative-decimal.xlsx",
+      "sheet": "Fill",
+      "source": "A1:A2",
+      "target": "A1:A6",
+      "sourceRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 1,
+        "c1": 0
+      },
+      "targetRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 5,
+        "c1": 0
+      },
+      "direction": "down",
+      "length": 4,
+      "lengthUnit": "rows",
+      "seriesKindToProbe": "negative decimal linear",
+      "autoFillType": "FillDefault",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false
+      },
+      "seeds": [
+        {
+          "cell": "A1",
+          "value": -1.5,
+          "format": null
+        },
+        {
+          "cell": "A2",
+          "value": -1.25,
+          "format": null
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "28d806d9d6e3f1710f9effb1573a7cc43d3c260e8bdea037c3f8c5250235cdf0"
+    },
+    {
+      "id": "number-copy",
+      "file": "number-copy.xlsx",
+      "sheet": "Fill",
+      "source": "A1:A2",
+      "target": "A1:A7",
+      "sourceRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 1,
+        "c1": 0
+      },
+      "targetRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 6,
+        "c1": 0
+      },
+      "direction": "down",
+      "length": 5,
+      "lengthUnit": "rows",
+      "seriesKindToProbe": "explicit repeating copy",
+      "autoFillType": "FillCopy",
+      "engineOptions": {
+        "mode": "copy",
+        "ctrl": false,
+        "series": false
+      },
+      "seeds": [
+        {
+          "cell": "A1",
+          "value": 2,
+          "format": null
+        },
+        {
+          "cell": "A2",
+          "value": 4,
+          "format": null
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "92eb8e81f3c009690b86ebd560af89aee88c5c74ece7b322e2c2912abc6745fa"
+    },
+    {
+      "id": "date-days-leap",
+      "file": "date-days-leap.xlsx",
+      "sheet": "Fill",
+      "source": "A1",
+      "target": "A1:A5",
+      "sourceRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 0,
+        "c1": 0
+      },
+      "targetRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 4,
+        "c1": 0
+      },
+      "direction": "down",
+      "length": 4,
+      "lengthUnit": "rows",
+      "seriesKindToProbe": "daily date across leap day",
+      "autoFillType": "FillDays",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false,
+        "dateUnit": "day"
+      },
+      "seeds": [
+        {
+          "cell": "A1",
+          "value": 45350,
+          "format": "date"
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "16a8dee3d855b116dc9a035e770203a2fda5b7b12ee98b42bba3c3f73676ba0a"
+    },
+    {
+      "id": "date-weekdays",
+      "file": "date-weekdays.xlsx",
+      "sheet": "Fill",
+      "source": "A1",
+      "target": "A1:A6",
+      "sourceRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 0,
+        "c1": 0
+      },
+      "targetRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 5,
+        "c1": 0
+      },
+      "direction": "down",
+      "length": 5,
+      "lengthUnit": "rows",
+      "seriesKindToProbe": "weekday dates skipping weekend",
+      "autoFillType": "FillWeekdays",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false,
+        "dateUnit": "weekday"
+      },
+      "seeds": [
+        {
+          "cell": "A1",
+          "value": 46332,
+          "format": "date"
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "1537f7896a8177a834f4b94231975a5882651c7326a17b1a5e2e6f77004257c2"
+    },
+    {
+      "id": "date-month-end",
+      "file": "date-month-end.xlsx",
+      "sheet": "Fill",
+      "source": "A1",
+      "target": "A1:A5",
+      "sourceRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 0,
+        "c1": 0
+      },
+      "targetRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 4,
+        "c1": 0
+      },
+      "direction": "down",
+      "length": 4,
+      "lengthUnit": "rows",
+      "seriesKindToProbe": "monthly date from month end",
+      "autoFillType": "FillMonths",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false,
+        "dateUnit": "month"
+      },
+      "seeds": [
+        {
+          "cell": "A1",
+          "value": 45322,
+          "format": "date"
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "cd85b821b197b98c6a3cb536c091734d216663b484f9186ac53b618db3c5da74"
+    },
+    {
+      "id": "date-years-leap",
+      "file": "date-years-leap.xlsx",
+      "sheet": "Fill",
+      "source": "A1",
+      "target": "A1:A6",
+      "sourceRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 0,
+        "c1": 0
+      },
+      "targetRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 5,
+        "c1": 0
+      },
+      "direction": "down",
+      "length": 5,
+      "lengthUnit": "rows",
+      "seriesKindToProbe": "yearly date from leap day",
+      "autoFillType": "FillYears",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false,
+        "dateUnit": "year"
+      },
+      "seeds": [
+        {
+          "cell": "A1",
+          "value": 45351,
+          "format": "date"
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "0273abec5274b9f4da63f69921b49b0db3bde5001c84cc7642832da3ad52eead"
+    },
+    {
+      "id": "date-two-seeds",
+      "file": "date-two-seeds.xlsx",
+      "sheet": "Fill",
+      "source": "A1:A2",
+      "target": "A1:A6",
+      "sourceRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 1,
+        "c1": 0
+      },
+      "targetRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 5,
+        "c1": 0
+      },
+      "direction": "down",
+      "length": 4,
+      "lengthUnit": "rows",
+      "seriesKindToProbe": "two-date inferred interval",
+      "autoFillType": "FillDefault",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false
+      },
+      "seeds": [
+        {
+          "cell": "A1",
+          "value": 46335,
+          "format": "date"
+        },
+        {
+          "cell": "A2",
+          "value": 46337,
+          "format": "date"
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "6da2a5a04a945b75969199f1d3a2d7384b5061fc6c71008e3b8926b7ec3f76d8"
+    },
+    {
+      "id": "weekday-names",
+      "file": "weekday-names.xlsx",
+      "sheet": "Fill",
+      "source": "A1:A2",
+      "target": "A1:A8",
+      "sourceRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 1,
+        "c1": 0
+      },
+      "targetRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 7,
+        "c1": 0
+      },
+      "direction": "down",
+      "length": 6,
+      "lengthUnit": "rows",
+      "seriesKindToProbe": "English weekday custom list",
+      "autoFillType": "FillDefault",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false
+      },
+      "seeds": [
+        {
+          "cell": "A1",
+          "value": "Mon",
+          "format": null
+        },
+        {
+          "cell": "A2",
+          "value": "Tue",
+          "format": null
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "46e59ae5a19ce4bf0ba776d770f79aa45ad7baaca373e827cad4008c5e832d76"
+    },
+    {
+      "id": "text-trailing-padded",
+      "file": "text-trailing-padded.xlsx",
+      "sheet": "Fill",
+      "source": "A1:A2",
+      "target": "A1:A6",
+      "sourceRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 1,
+        "c1": 0
+      },
+      "targetRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 5,
+        "c1": 0
+      },
+      "direction": "down",
+      "length": 4,
+      "lengthUnit": "rows",
+      "seriesKindToProbe": "trailing digits with leading zeros",
+      "autoFillType": "FillDefault",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false
+      },
+      "seeds": [
+        {
+          "cell": "A1",
+          "value": "Item007",
+          "format": null
+        },
+        {
+          "cell": "A2",
+          "value": "Item009",
+          "format": null
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "ebed2befd842bc3a913363ed0601c26119f02b94bede4ae2025fbc05f7a5d2f8"
+    },
+    {
+      "id": "text-trailing-single",
+      "file": "text-trailing-single.xlsx",
+      "sheet": "Fill",
+      "source": "A1",
+      "target": "A1:A5",
+      "sourceRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 0,
+        "c1": 0
+      },
+      "targetRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 4,
+        "c1": 0
+      },
+      "direction": "down",
+      "length": 4,
+      "lengthUnit": "rows",
+      "seriesKindToProbe": "single trailing-number text",
+      "autoFillType": "FillDefault",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false
+      },
+      "seeds": [
+        {
+          "cell": "A1",
+          "value": "Part 9",
+          "format": null
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "19b4574cf2a2f531cbe760cf6d39556f0b6fb91736bb8426ba11e427e7227e2d"
+    },
+    {
+      "id": "formula-relative-down",
+      "file": "formula-relative-down.xlsx",
+      "sheet": "Fill",
+      "source": "B2",
+      "target": "B2:B6",
+      "sourceRect": {
+        "r0": 1,
+        "c0": 1,
+        "r1": 1,
+        "c1": 1
+      },
+      "targetRect": {
+        "r0": 1,
+        "c0": 1,
+        "r1": 5,
+        "c1": 1
+      },
+      "direction": "down",
+      "length": 4,
+      "lengthUnit": "rows",
+      "seriesKindToProbe": "relative A1 formula",
+      "autoFillType": "FillDefault",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false
+      },
+      "seeds": [
+        {
+          "cell": "B2",
+          "value": "=A2*2",
+          "format": null
+        },
+        {
+          "cell": "A1",
+          "value": 1,
+          "format": null
+        },
+        {
+          "cell": "A2",
+          "value": 2,
+          "format": null
+        },
+        {
+          "cell": "A3",
+          "value": 3,
+          "format": null
+        },
+        {
+          "cell": "A4",
+          "value": 4,
+          "format": null
+        },
+        {
+          "cell": "A5",
+          "value": 5,
+          "format": null
+        },
+        {
+          "cell": "A6",
+          "value": 6,
+          "format": null
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "afee13d10ff801de8a7261aa24c94cbd150e66d55b08f60bc6396a86ed46d7e8"
+    },
+    {
+      "id": "formula-mixed-down",
+      "file": "formula-mixed-down.xlsx",
+      "sheet": "Fill",
+      "source": "B2",
+      "target": "B2:B6",
+      "sourceRect": {
+        "r0": 1,
+        "c0": 1,
+        "r1": 1,
+        "c1": 1
+      },
+      "targetRect": {
+        "r0": 1,
+        "c0": 1,
+        "r1": 5,
+        "c1": 1
+      },
+      "direction": "down",
+      "length": 4,
+      "lengthUnit": "rows",
+      "seriesKindToProbe": "relative and absolute row/column references",
+      "autoFillType": "FillDefault",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false
+      },
+      "seeds": [
+        {
+          "cell": "B2",
+          "value": "=A2+$A2+A$1+$A$1",
+          "format": null
+        },
+        {
+          "cell": "A1",
+          "value": 1,
+          "format": null
+        },
+        {
+          "cell": "A2",
+          "value": 2,
+          "format": null
+        },
+        {
+          "cell": "A3",
+          "value": 3,
+          "format": null
+        },
+        {
+          "cell": "A4",
+          "value": 4,
+          "format": null
+        },
+        {
+          "cell": "A5",
+          "value": 5,
+          "format": null
+        },
+        {
+          "cell": "A6",
+          "value": 6,
+          "format": null
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "68644ec0295cab8b3d19c62abd1152c8323a84a813bcfdbdcd69916df2e03946"
+    },
+    {
+      "id": "formula-mixed-right",
+      "file": "formula-mixed-right.xlsx",
+      "sheet": "Fill",
+      "source": "B2",
+      "target": "B2:F2",
+      "sourceRect": {
+        "r0": 1,
+        "c0": 1,
+        "r1": 1,
+        "c1": 1
+      },
+      "targetRect": {
+        "r0": 1,
+        "c0": 1,
+        "r1": 1,
+        "c1": 5
+      },
+      "direction": "right",
+      "length": 4,
+      "lengthUnit": "columns",
+      "seriesKindToProbe": "relative and absolute horizontal references",
+      "autoFillType": "FillDefault",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false
+      },
+      "seeds": [
+        {
+          "cell": "B2",
+          "value": "=B1+$A1+B$1+$A$1",
+          "format": null
+        },
+        {
+          "cell": "A1",
+          "value": 1,
+          "format": null
+        },
+        {
+          "cell": "B1",
+          "value": 2,
+          "format": null
+        },
+        {
+          "cell": "C1",
+          "value": 3,
+          "format": null
+        },
+        {
+          "cell": "D1",
+          "value": 4,
+          "format": null
+        },
+        {
+          "cell": "E1",
+          "value": 5,
+          "format": null
+        },
+        {
+          "cell": "F1",
+          "value": 6,
+          "format": null
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "22a554423e286d046eba3e10bcb605f2cb5cccf06ef5819b7bb7231eb47a5cff"
+    },
+    {
+      "id": "formula-relative-up",
+      "file": "formula-relative-up.xlsx",
+      "sheet": "Fill",
+      "source": "B5",
+      "target": "B2:B5",
+      "sourceRect": {
+        "r0": 4,
+        "c0": 1,
+        "r1": 4,
+        "c1": 1
+      },
+      "targetRect": {
+        "r0": 1,
+        "c0": 1,
+        "r1": 4,
+        "c1": 1
+      },
+      "direction": "up",
+      "length": 3,
+      "lengthUnit": "rows",
+      "seriesKindToProbe": "backward formula adjustment",
+      "autoFillType": "FillDefault",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false
+      },
+      "seeds": [
+        {
+          "cell": "B5",
+          "value": "=A4+$A$1",
+          "format": null
+        },
+        {
+          "cell": "A1",
+          "value": 1,
+          "format": null
+        },
+        {
+          "cell": "A2",
+          "value": 2,
+          "format": null
+        },
+        {
+          "cell": "A3",
+          "value": 3,
+          "format": null
+        },
+        {
+          "cell": "A4",
+          "value": 4,
+          "format": null
+        },
+        {
+          "cell": "A5",
+          "value": 5,
+          "format": null
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "6ce29d6ecd76554ec767bb9bdb287699a98e0e0ac92dff2d52aaae9337a4aecc"
+    },
+    {
+      "id": "formatted-series",
+      "file": "formatted-series.xlsx",
+      "sheet": "Fill",
+      "source": "A1:A2",
+      "target": "A1:A6",
+      "sourceRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 1,
+        "c1": 0
+      },
+      "targetRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 5,
+        "c1": 0
+      },
+      "direction": "down",
+      "length": 4,
+      "lengthUnit": "rows",
+      "seriesKindToProbe": "numeric series with alternating source formats",
+      "autoFillType": "FillDefault",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false
+      },
+      "seeds": [
+        {
+          "cell": "A1",
+          "value": 1.25,
+          "format": "decimal-red"
+        },
+        {
+          "cell": "A2",
+          "value": 1.5,
+          "format": "decimal-blue"
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "decc3736f168cdccc116a230daaab7b02408bdb8716793de37d2df8db56dab6b"
+    },
+    {
+      "id": "formatted-blank",
+      "file": "formatted-blank.xlsx",
+      "sheet": "Fill",
+      "source": "A1:A2",
+      "target": "A1:A6",
+      "sourceRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 1,
+        "c1": 0
+      },
+      "targetRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 5,
+        "c1": 0
+      },
+      "direction": "down",
+      "length": 4,
+      "lengthUnit": "rows",
+      "seriesKindToProbe": "number and styled blank",
+      "autoFillType": "FillDefault",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false
+      },
+      "seeds": [
+        {
+          "cell": "A1",
+          "value": 2,
+          "format": "decimal-red"
+        },
+        {
+          "cell": "A2",
+          "value": null,
+          "format": "decimal-blue"
+        }
+      ],
+      "merges": [],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "5c0fb58a2bddacc56f2cce3a8c41c0ccd70f6a5bf500a6699e7d87ebee52a560"
+    },
+    {
+      "id": "merged-source-tiled",
+      "file": "merged-source-tiled.xlsx",
+      "sheet": "Fill",
+      "source": "A1:B1",
+      "target": "A1:F1",
+      "sourceRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 0,
+        "c1": 1
+      },
+      "targetRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 0,
+        "c1": 5
+      },
+      "direction": "right",
+      "length": 4,
+      "lengthUnit": "columns",
+      "seriesKindToProbe": "merged source complete tiles",
+      "autoFillType": "FillDefault",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false
+      },
+      "seeds": [
+        {
+          "cell": "A1",
+          "value": "Tile 1",
+          "format": "merged"
+        }
+      ],
+      "merges": [
+        "A1:B1"
+      ],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "451ae1ebe4d37a3dc665d960f3ed9639df542045622f080676bed962b4d02a32"
+    },
+    {
+      "id": "merged-source-partial",
+      "file": "merged-source-partial.xlsx",
+      "sheet": "Fill",
+      "source": "A1:B1",
+      "target": "A1:E1",
+      "sourceRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 0,
+        "c1": 1
+      },
+      "targetRect": {
+        "r0": 0,
+        "c0": 0,
+        "r1": 0,
+        "c1": 4
+      },
+      "direction": "right",
+      "length": 3,
+      "lengthUnit": "columns",
+      "seriesKindToProbe": "merged source partial final tile or refusal",
+      "autoFillType": "FillDefault",
+      "engineOptions": {
+        "mode": "series",
+        "ctrl": false,
+        "series": false
+      },
+      "seeds": [
+        {
+          "cell": "A1",
+          "value": "Tile 1",
+          "format": "merged"
+        }
+      ],
+      "merges": [
+        "A1:B1"
+      ],
+      "recording": {
+        "graph": "no documented autofill operation in v1.0",
+        "officeJs": "Range.autoFill; actual behavior unverified"
+      },
+      "sha256": "5211c5e414a6faccc25ac7444e74a088a66745c094dba1ea7a082c5c4eb49ca4"
+    }
+  ]
+}

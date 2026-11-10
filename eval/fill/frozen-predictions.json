@@ -1,0 +1,1388 @@
+{
+  "engineCommit": "b17511b88b5ddee8c161147bc96453c3c4234e35",
+  "engineOptions": {
+    "clockMs": 1794268800000,
+    "loops": "fresh",
+    "seed": 1,
+    "timezone": "UTC"
+  },
+  "entry": "rustsheet_wasm::Engine::load_xlsx then Engine::fill_plan (native)",
+  "isExcelObservation": false,
+  "predictions": [
+    {
+      "id": "number-single-default",
+      "outcome": {
+        "plan": {
+          "axis": "rows",
+          "cells": [
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "7",
+              "numberFormat": null,
+              "row": 1,
+              "series": false
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "7",
+              "numberFormat": null,
+              "row": 2,
+              "series": false
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "7",
+              "numberFormat": null,
+              "row": 3,
+              "series": false
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "7",
+              "numberFormat": null,
+              "row": 4,
+              "series": false
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "7",
+              "numberFormat": null,
+              "row": 5,
+              "series": false
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "9c7320870b9a56dfa24d6cceb9c0167b8db07ce8746f71ba8db9655d9ccf8dd9"
+    },
+    {
+      "id": "number-single-series",
+      "outcome": {
+        "plan": {
+          "axis": "rows",
+          "cells": [
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "8",
+              "numberFormat": null,
+              "row": 1,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "9",
+              "numberFormat": null,
+              "row": 2,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "10",
+              "numberFormat": null,
+              "row": 3,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "11",
+              "numberFormat": null,
+              "row": 4,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "12",
+              "numberFormat": null,
+              "row": 5,
+              "series": true
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "31fc9f4946f2a9f377eea12aa0db26be11a3f0128a6d3f91d734fcf953d8af73"
+    },
+    {
+      "id": "number-step-down",
+      "outcome": {
+        "plan": {
+          "axis": "rows",
+          "cells": [
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "5",
+              "numberFormat": null,
+              "row": 2,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 1
+              },
+              "input": "7",
+              "numberFormat": null,
+              "row": 3,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "9",
+              "numberFormat": null,
+              "row": 4,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 1
+              },
+              "input": "11",
+              "numberFormat": null,
+              "row": 5,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "13",
+              "numberFormat": null,
+              "row": 6,
+              "series": true
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "441070818a2b995035c038a84456745e5479457dec2bd7b3cd5aba70368379d7"
+    },
+    {
+      "id": "number-step-up",
+      "outcome": {
+        "plan": {
+          "axis": "rows",
+          "cells": [
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 4
+              },
+              "input": "5",
+              "numberFormat": null,
+              "row": 2,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 3
+              },
+              "input": "3",
+              "numberFormat": null,
+              "row": 1,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 4
+              },
+              "input": "1",
+              "numberFormat": null,
+              "row": 0,
+              "series": true
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "89ca192025c3883b3129490cacececf80a07bac0537e3e35ea30032f961ab4c5"
+    },
+    {
+      "id": "number-step-right",
+      "outcome": {
+        "plan": {
+          "axis": "cols",
+          "cells": [
+            {
+              "col": 3,
+              "from": {
+                "col": 1,
+                "row": 1
+              },
+              "input": "30",
+              "numberFormat": null,
+              "row": 1,
+              "series": true
+            },
+            {
+              "col": 4,
+              "from": {
+                "col": 2,
+                "row": 1
+              },
+              "input": "40",
+              "numberFormat": null,
+              "row": 1,
+              "series": true
+            },
+            {
+              "col": 5,
+              "from": {
+                "col": 1,
+                "row": 1
+              },
+              "input": "50",
+              "numberFormat": null,
+              "row": 1,
+              "series": true
+            },
+            {
+              "col": 6,
+              "from": {
+                "col": 2,
+                "row": 1
+              },
+              "input": "60",
+              "numberFormat": null,
+              "row": 1,
+              "series": true
+            },
+            {
+              "col": 7,
+              "from": {
+                "col": 1,
+                "row": 1
+              },
+              "input": "70",
+              "numberFormat": null,
+              "row": 1,
+              "series": true
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "4b01aeb76a44ea85d2070c7d134764722f91feacf55c6688b319451d2a361915"
+    },
+    {
+      "id": "number-step-left",
+      "outcome": {
+        "plan": {
+          "axis": "cols",
+          "cells": [
+            {
+              "col": 3,
+              "from": {
+                "col": 5,
+                "row": 1
+              },
+              "input": "0",
+              "numberFormat": null,
+              "row": 1,
+              "series": true
+            },
+            {
+              "col": 2,
+              "from": {
+                "col": 4,
+                "row": 1
+              },
+              "input": "-10",
+              "numberFormat": null,
+              "row": 1,
+              "series": true
+            },
+            {
+              "col": 1,
+              "from": {
+                "col": 5,
+                "row": 1
+              },
+              "input": "-20",
+              "numberFormat": null,
+              "row": 1,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 4,
+                "row": 1
+              },
+              "input": "-30",
+              "numberFormat": null,
+              "row": 1,
+              "series": true
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "e13e39b4a6a5a59af8e2dd949142298d058f8bc4895faae0a7caf01f19d19516"
+    },
+    {
+      "id": "number-negative-decimal",
+      "outcome": {
+        "plan": {
+          "axis": "rows",
+          "cells": [
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "-1",
+              "numberFormat": null,
+              "row": 2,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 1
+              },
+              "input": "-0.75",
+              "numberFormat": null,
+              "row": 3,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "-0.5",
+              "numberFormat": null,
+              "row": 4,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 1
+              },
+              "input": "-0.25",
+              "numberFormat": null,
+              "row": 5,
+              "series": true
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "28d806d9d6e3f1710f9effb1573a7cc43d3c260e8bdea037c3f8c5250235cdf0"
+    },
+    {
+      "id": "number-copy",
+      "outcome": {
+        "plan": {
+          "axis": "rows",
+          "cells": [
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2",
+              "numberFormat": null,
+              "row": 2,
+              "series": false
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 1
+              },
+              "input": "4",
+              "numberFormat": null,
+              "row": 3,
+              "series": false
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2",
+              "numberFormat": null,
+              "row": 4,
+              "series": false
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 1
+              },
+              "input": "4",
+              "numberFormat": null,
+              "row": 5,
+              "series": false
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2",
+              "numberFormat": null,
+              "row": 6,
+              "series": false
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "92eb8e81f3c009690b86ebd560af89aee88c5c74ece7b322e2c2912abc6745fa"
+    },
+    {
+      "id": "date-days-leap",
+      "outcome": {
+        "plan": {
+          "axis": "rows",
+          "cells": [
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2024-02-29",
+              "numberFormat": null,
+              "row": 1,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2024-03-01",
+              "numberFormat": null,
+              "row": 2,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2024-03-02",
+              "numberFormat": null,
+              "row": 3,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2024-03-03",
+              "numberFormat": null,
+              "row": 4,
+              "series": true
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "16a8dee3d855b116dc9a035e770203a2fda5b7b12ee98b42bba3c3f73676ba0a"
+    },
+    {
+      "id": "date-weekdays",
+      "outcome": {
+        "plan": {
+          "axis": "rows",
+          "cells": [
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2026-11-09",
+              "numberFormat": null,
+              "row": 1,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2026-11-10",
+              "numberFormat": null,
+              "row": 2,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2026-11-11",
+              "numberFormat": null,
+              "row": 3,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2026-11-12",
+              "numberFormat": null,
+              "row": 4,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2026-11-13",
+              "numberFormat": null,
+              "row": 5,
+              "series": true
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "1537f7896a8177a834f4b94231975a5882651c7326a17b1a5e2e6f77004257c2"
+    },
+    {
+      "id": "date-month-end",
+      "outcome": {
+        "plan": {
+          "axis": "rows",
+          "cells": [
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2024-02-29",
+              "numberFormat": null,
+              "row": 1,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2024-03-31",
+              "numberFormat": null,
+              "row": 2,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2024-04-30",
+              "numberFormat": null,
+              "row": 3,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2024-05-31",
+              "numberFormat": null,
+              "row": 4,
+              "series": true
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "cd85b821b197b98c6a3cb536c091734d216663b484f9186ac53b618db3c5da74"
+    },
+    {
+      "id": "date-years-leap",
+      "outcome": {
+        "plan": {
+          "axis": "rows",
+          "cells": [
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2025-02-28",
+              "numberFormat": null,
+              "row": 1,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2026-02-28",
+              "numberFormat": null,
+              "row": 2,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2027-02-28",
+              "numberFormat": null,
+              "row": 3,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2028-02-29",
+              "numberFormat": null,
+              "row": 4,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2029-02-28",
+              "numberFormat": null,
+              "row": 5,
+              "series": true
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "0273abec5274b9f4da63f69921b49b0db3bde5001c84cc7642832da3ad52eead"
+    },
+    {
+      "id": "date-two-seeds",
+      "outcome": {
+        "plan": {
+          "axis": "rows",
+          "cells": [
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2026-11-13",
+              "numberFormat": null,
+              "row": 2,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 1
+              },
+              "input": "2026-11-15",
+              "numberFormat": null,
+              "row": 3,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2026-11-17",
+              "numberFormat": null,
+              "row": 4,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 1
+              },
+              "input": "2026-11-19",
+              "numberFormat": null,
+              "row": 5,
+              "series": true
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "6da2a5a04a945b75969199f1d3a2d7384b5061fc6c71008e3b8926b7ec3f76d8"
+    },
+    {
+      "id": "weekday-names",
+      "outcome": {
+        "plan": {
+          "axis": "rows",
+          "cells": [
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "Wed",
+              "numberFormat": null,
+              "row": 2,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 1
+              },
+              "input": "Thu",
+              "numberFormat": null,
+              "row": 3,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "Fri",
+              "numberFormat": null,
+              "row": 4,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 1
+              },
+              "input": "Sat",
+              "numberFormat": null,
+              "row": 5,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "Sun",
+              "numberFormat": null,
+              "row": 6,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 1
+              },
+              "input": "Mon",
+              "numberFormat": null,
+              "row": 7,
+              "series": true
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "46e59ae5a19ce4bf0ba776d770f79aa45ad7baaca373e827cad4008c5e832d76"
+    },
+    {
+      "id": "text-trailing-padded",
+      "outcome": {
+        "plan": {
+          "axis": "rows",
+          "cells": [
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "Item011",
+              "numberFormat": null,
+              "row": 2,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 1
+              },
+              "input": "Item013",
+              "numberFormat": null,
+              "row": 3,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "Item015",
+              "numberFormat": null,
+              "row": 4,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 1
+              },
+              "input": "Item017",
+              "numberFormat": null,
+              "row": 5,
+              "series": true
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "ebed2befd842bc3a913363ed0601c26119f02b94bede4ae2025fbc05f7a5d2f8"
+    },
+    {
+      "id": "text-trailing-single",
+      "outcome": {
+        "plan": {
+          "axis": "rows",
+          "cells": [
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "Part 10",
+              "numberFormat": null,
+              "row": 1,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "Part 11",
+              "numberFormat": null,
+              "row": 2,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "Part 12",
+              "numberFormat": null,
+              "row": 3,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "Part 13",
+              "numberFormat": null,
+              "row": 4,
+              "series": true
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "19b4574cf2a2f531cbe760cf6d39556f0b6fb91736bb8426ba11e427e7227e2d"
+    },
+    {
+      "id": "formula-relative-down",
+      "outcome": {
+        "plan": {
+          "axis": "rows",
+          "cells": [
+            {
+              "col": 1,
+              "from": {
+                "col": 1,
+                "row": 1
+              },
+              "input": "=A3*2",
+              "numberFormat": null,
+              "row": 2,
+              "series": false
+            },
+            {
+              "col": 1,
+              "from": {
+                "col": 1,
+                "row": 1
+              },
+              "input": "=A4*2",
+              "numberFormat": null,
+              "row": 3,
+              "series": false
+            },
+            {
+              "col": 1,
+              "from": {
+                "col": 1,
+                "row": 1
+              },
+              "input": "=A5*2",
+              "numberFormat": null,
+              "row": 4,
+              "series": false
+            },
+            {
+              "col": 1,
+              "from": {
+                "col": 1,
+                "row": 1
+              },
+              "input": "=A6*2",
+              "numberFormat": null,
+              "row": 5,
+              "series": false
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "afee13d10ff801de8a7261aa24c94cbd150e66d55b08f60bc6396a86ed46d7e8"
+    },
+    {
+      "id": "formula-mixed-down",
+      "outcome": {
+        "plan": {
+          "axis": "rows",
+          "cells": [
+            {
+              "col": 1,
+              "from": {
+                "col": 1,
+                "row": 1
+              },
+              "input": "=A3+$A3+A$1+$A$1",
+              "numberFormat": null,
+              "row": 2,
+              "series": false
+            },
+            {
+              "col": 1,
+              "from": {
+                "col": 1,
+                "row": 1
+              },
+              "input": "=A4+$A4+A$1+$A$1",
+              "numberFormat": null,
+              "row": 3,
+              "series": false
+            },
+            {
+              "col": 1,
+              "from": {
+                "col": 1,
+                "row": 1
+              },
+              "input": "=A5+$A5+A$1+$A$1",
+              "numberFormat": null,
+              "row": 4,
+              "series": false
+            },
+            {
+              "col": 1,
+              "from": {
+                "col": 1,
+                "row": 1
+              },
+              "input": "=A6+$A6+A$1+$A$1",
+              "numberFormat": null,
+              "row": 5,
+              "series": false
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "68644ec0295cab8b3d19c62abd1152c8323a84a813bcfdbdcd69916df2e03946"
+    },
+    {
+      "id": "formula-mixed-right",
+      "outcome": {
+        "plan": {
+          "axis": "cols",
+          "cells": [
+            {
+              "col": 2,
+              "from": {
+                "col": 1,
+                "row": 1
+              },
+              "input": "=C1+$A1+C$1+$A$1",
+              "numberFormat": null,
+              "row": 1,
+              "series": false
+            },
+            {
+              "col": 3,
+              "from": {
+                "col": 1,
+                "row": 1
+              },
+              "input": "=D1+$A1+D$1+$A$1",
+              "numberFormat": null,
+              "row": 1,
+              "series": false
+            },
+            {
+              "col": 4,
+              "from": {
+                "col": 1,
+                "row": 1
+              },
+              "input": "=E1+$A1+E$1+$A$1",
+              "numberFormat": null,
+              "row": 1,
+              "series": false
+            },
+            {
+              "col": 5,
+              "from": {
+                "col": 1,
+                "row": 1
+              },
+              "input": "=F1+$A1+F$1+$A$1",
+              "numberFormat": null,
+              "row": 1,
+              "series": false
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "22a554423e286d046eba3e10bcb605f2cb5cccf06ef5819b7bb7231eb47a5cff"
+    },
+    {
+      "id": "formula-relative-up",
+      "outcome": {
+        "plan": {
+          "axis": "rows",
+          "cells": [
+            {
+              "col": 1,
+              "from": {
+                "col": 1,
+                "row": 4
+              },
+              "input": "=A3+$A$1",
+              "numberFormat": null,
+              "row": 3,
+              "series": false
+            },
+            {
+              "col": 1,
+              "from": {
+                "col": 1,
+                "row": 4
+              },
+              "input": "=A2+$A$1",
+              "numberFormat": null,
+              "row": 2,
+              "series": false
+            },
+            {
+              "col": 1,
+              "from": {
+                "col": 1,
+                "row": 4
+              },
+              "input": "=A1+$A$1",
+              "numberFormat": null,
+              "row": 1,
+              "series": false
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "6ce29d6ecd76554ec767bb9bdb287699a98e0e0ac92dff2d52aaae9337a4aecc"
+    },
+    {
+      "id": "formatted-series",
+      "outcome": {
+        "plan": {
+          "axis": "rows",
+          "cells": [
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "1.75",
+              "numberFormat": "0.00",
+              "row": 2,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 1
+              },
+              "input": "2.000",
+              "numberFormat": "0.000",
+              "row": 3,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "2.25",
+              "numberFormat": "0.00",
+              "row": 4,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 1
+              },
+              "input": "2.500",
+              "numberFormat": "0.000",
+              "row": 5,
+              "series": true
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "decc3736f168cdccc116a230daaab7b02408bdb8716793de37d2df8db56dab6b"
+    },
+    {
+      "id": "formatted-blank",
+      "outcome": {
+        "plan": {
+          "axis": "rows",
+          "cells": [
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "3.00",
+              "numberFormat": "0.00",
+              "row": 2,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 1
+              },
+              "input": "",
+              "numberFormat": null,
+              "row": 3,
+              "series": false
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "4.00",
+              "numberFormat": "0.00",
+              "row": 4,
+              "series": true
+            },
+            {
+              "col": 0,
+              "from": {
+                "col": 0,
+                "row": 1
+              },
+              "input": "",
+              "numberFormat": null,
+              "row": 5,
+              "series": false
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "5c0fb58a2bddacc56f2cce3a8c41c0ccd70f6a5bf500a6699e7d87ebee52a560"
+    },
+    {
+      "id": "merged-source-tiled",
+      "outcome": {
+        "plan": {
+          "axis": "cols",
+          "cells": [
+            {
+              "col": 2,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "Tile 2",
+              "numberFormat": null,
+              "row": 0,
+              "series": true
+            },
+            {
+              "col": 3,
+              "from": {
+                "col": 1,
+                "row": 0
+              },
+              "input": "",
+              "numberFormat": null,
+              "row": 0,
+              "series": false
+            },
+            {
+              "col": 4,
+              "from": {
+                "col": 0,
+                "row": 0
+              },
+              "input": "Tile 3",
+              "numberFormat": null,
+              "row": 0,
+              "series": true
+            },
+            {
+              "col": 5,
+              "from": {
+                "col": 1,
+                "row": 0
+              },
+              "input": "",
+              "numberFormat": null,
+              "row": 0,
+              "series": false
+            }
+          ]
+        },
+        "status": "plan"
+      },
+      "sha256": "451ae1ebe4d37a3dc665d960f3ed9639df542045622f080676bed962b4d02a32"
+    },
+    {
+      "id": "merged-source-partial",
+      "outcome": {
+        "debug": "Edit(Engine(\"Cannot auto-fill: the fill size must fit whole merged cells\"))",
+        "message": "engine error: Cannot auto-fill: the fill size must fit whole merged cells",
+        "status": "error"
+      },
+      "sha256": "5211c5e414a6faccc25ac7444e74a088a66745c094dba1ea7a082c5c4eb49ca4"
+    }
+  ],
+  "schema": "rustsheet.fill-predictions/1"
+}
