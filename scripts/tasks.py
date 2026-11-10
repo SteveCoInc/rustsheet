@@ -48,6 +48,7 @@ from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 
+import ids as task_ids
 import milestone_order
 import pivot_owners
 import task_usage
@@ -97,8 +98,8 @@ ISSUE_LIMITS = {"per_author": 2, "per_day": 6}
 OPEN = ("todo", "in-progress", "blocked")  # not done or dropped
 ACTIVE = ("todo", "in-progress")
 MILESTONE = re.compile(r"^M\d+$")
-TASK_FILE = re.compile(r"(?:^|/)(T-\d{4})-[^/]*\.md$")
-TODO_OWNER = re.compile(r"TODO\((T-\d{4})\)")
+TASK_FILE = re.compile(rf"(?:^|/)({task_ids.TASK_ID})-[^/]*\.md$")
+TODO_OWNER = re.compile(rf"TODO\(({task_ids.TASK_ID})\)")
 # Code whose TODOs must name an open task; docs/ quotes old TODOs as history.
 TODO_DIRS = ("crates", "bindings", "tools", "scripts")
 
@@ -152,7 +153,7 @@ def validate(tasks: list[dict[str, object]]) -> list[str]:
     for t in tasks:
         tid = str(t.get("id", ""))
         where = t["path"].relative_to(ROOT)  # type: ignore[union-attr]
-        if not re.match(r"^T-\d{4}$", tid):
+        if not re.fullmatch(task_ids.TASK_ID, tid):
             errors.append(f"{where}: bad id {tid!r}")
         if tid in ids:
             first = path_of(ids[tid]).relative_to(ROOT)
@@ -575,22 +576,21 @@ def issue_stats(copies: list[dict[str, object]], today_ids: set[str]) -> dict[st
             "limits": ISSUE_LIMITS}
 
 
-# The first task id this repository allocates (decision 0360). Another repository's agents file
-# `T-NNNN` tasks below it, so ids from the two never collide. `T-NNNN` names ids up to T-9999.
-ID_FLOOR = 9000
-ID_CEILING = 9999
+# Ids allocated here (decision 0360): the other repository's agents file four-digit ids below them.
+ID_FLOOR = 90000
+ID_CEILING = 99999
 
 
 def next_id(taken: set[str]) -> str:
-    """Next id above every taken id at or above `ID_FLOOR` (T-9000 when none is). Ids only grow, so
-    gaps are never reused. Past `ID_CEILING` there is no `T-NNNN` id left: refuse rather than write a
-    five-digit id the validators reject (decision 0360)."""
+    """Next id above every taken id at or above `ID_FLOOR` (T-90000 when none is). Ids only grow, so
+    gaps are never reused. Past `ID_CEILING` there is no id `task_ids.TASK_ID` names: refuse rather than write a
+    six-digit id the validators reject (decision 0360)."""
     used = [n for n in (int(i[2:]) for i in taken) if n >= ID_FLOOR]
     n = max(used, default=ID_FLOOR - 1) + 1
     if n > ID_CEILING:
         msg = f"no task id left: T-{ID_FLOOR}..T-{ID_CEILING} are taken (decision 0360)"
         raise ValueError(msg)
-    return f"T-{n:04d}"
+    return f"T-{n}"
 
 
 def slug(title: str, default: str = "task") -> str:
@@ -666,7 +666,7 @@ def new_task(tasks: list[dict[str, object]], fetch: bool = True) -> int:
     return 0
 
 
-AGENT_BRANCH = re.compile(r"^refs/remotes/origin/agent/([^/]+)/(T-\d{4})(?:-|$)")
+AGENT_BRANCH = re.compile(rf"^refs/remotes/origin/agent/([^/]+)/({task_ids.TASK_ID})(?:-|$)")
 # An unresumed handoff; the opus run that picks it up renames it "## Handoff (resumed)".
 HANDOFF = re.compile(r"^## Handoff\s*$", re.M)
 # A branch whose task was ever handed off or re-reviewed after the review-round limit is the opus
@@ -676,7 +676,7 @@ OPUS_BRANCH = re.compile(r"^## Handoff\b|^Resumed after the review-round limit",
 # block writes "review-round limit, twice", which this does not match (decision 0095).
 REVIEW_LIMIT = re.compile(r"^Blocked because: review-round limit\s*$", re.M)
 # `next` prints a re-review's branch for an agent to check out, so only plain names qualify.
-SAFE_BRANCH = re.compile(r"^agent/[a-z0-9-]+/T-\d{4}[A-Za-z0-9._-]*$")
+SAFE_BRANCH = re.compile(rf"^agent/[a-z0-9-]+/{task_ids.TASK_ID}(?!\d)[A-Za-z0-9._-]*$")
 CLAIM_TTL_SECONDS = 24 * 3600  # a pushed agent/* branch younger than this claims its task
 
 

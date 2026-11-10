@@ -33,7 +33,7 @@ NUMBER = re.compile(r"(?<!\w)\d[\d,]*(?:\.\d+)?%?(?![.,]\d)")
 # decision ids. Milestone names (M2) need no entry: NUMBER never matches digits after a letter.
 IGNORED = re.compile(
     rf"{blocks.AS_OF.pattern}|{RUN_DATE.pattern}"
-    r"|\bT-\d{4}\b|\bSPEC-\d{4}\b|#\d+|\b[Dd]ecision \d{4}\b"
+    r"|\bT-\d{4,5}\b|\bSPEC-\d{4}\b|#\d+|\b[Dd]ecision \d{4}\b"
 )
 # Plain text only (SPEC-0022 "Plain text only"): (what is wrong, pattern). Banning every bracket and
 # every `<` outright closes the nested, escaped and indented link and reference-definition forms and

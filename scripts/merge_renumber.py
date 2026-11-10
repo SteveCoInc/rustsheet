@@ -43,7 +43,8 @@ Allocate = Callable[[Path, str, str, set[str]], str]
 
 def reserve(root: Path, old: str, milestone: str, taken: set[str]) -> str:
     """A fresh id of `old`'s kind, reserved in the id registry by the rule `make new-task` (from
-    T-9000 up, whatever `milestone` is: decision 0360) or `make new-decision` uses; Refused when the registry cannot reserve it. Those
+    T-90000 up, decision 0360; `milestone` stays for the `Allocate` signature) or `make new-decision`
+    uses; Refused when the registry cannot reserve it. Those
     rules read the task files and branches of the checkout this script belongs to, so `root`
     must be that checkout."""
     if root.resolve() != tasks.ROOT.resolve():

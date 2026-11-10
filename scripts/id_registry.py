@@ -29,15 +29,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import git_ops  # noqa: E402 (the sys.path line above must run first)
+import ids  # noqa: E402
 from git_ops import GitError, git  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 REF = "refs/heads/id-registry"
 SEEN_REF = "refs/id-registry/seen"
 HEADER = "id-registry v1"
-TASK = re.compile(r"T-\d{4}")
+TASK = re.compile(ids.TASK_ID)
 DECISION = re.compile(r"\d{4}")
-CLAIM = re.compile(r"T-\d{4}|\d{4}")
+CLAIM = re.compile(rf"{ids.TASK_ID}|\d{{4}}")
 KEEP = 400
 ATTEMPTS = 10
 IDENTITY = ("-c", "user.name=id-registry", "-c", "user.email=id-registry@invalid")
@@ -62,8 +63,8 @@ def read(root: Path = ROOT) -> tuple[str, list[str]]:
 
 def kept(claims: list[str]) -> list[str]:
     """The newest KEEP claims, plus the high-water marks they would drop: the highest claim in
-    each task hundred-block (ids allocated before decision 0360 grew within milestone blocks) and the highest
-    decision number. Ids only grow, so the marks alone keep a pruned id from being handed out
+    each task hundred-block (old ids grew within milestone blocks, new ones within T-900xx: decision
+    0360) and the highest decision number. Ids only grow, so the marks alone keep a pruned id from being handed out
     again, even when its branch was never pushed."""
     newest = claims[-KEEP:]
     marks: dict[str, str] = {}

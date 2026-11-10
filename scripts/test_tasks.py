@@ -22,23 +22,32 @@ def task(tid: str, milestone: str) -> dict[str, object]:
 
 class NextId(unittest.TestCase):
     def test_starts_at_the_floor_whatever_lies_below_it(self) -> None:
-        # Ids below T-9000 are the old milestone blocks and the other repository's (decision 0360).
-        self.assertEqual(tasks.next_id({"T-0004", "T-5113", "T-8999"}), "T-9000")
-        self.assertEqual(tasks.next_id(set()), "T-9000")
+        # Four-digit ids are the old milestone blocks and the other repository's (decision 0360).
+        self.assertEqual(tasks.next_id({"T-0004", "T-5113", "T-9999"}), "T-90000")
+        self.assertEqual(tasks.next_id(set()), "T-90000")
 
     def test_takes_next_after_the_highest_at_or_above_the_floor(self) -> None:
-        self.assertEqual(tasks.next_id({"T-5113", "T-9000", "T-9007"}), "T-9008")
+        self.assertEqual(tasks.next_id({"T-5113", "T-90000", "T-90007"}), "T-90008")
 
     def test_never_reuses_a_gap(self) -> None:
-        self.assertEqual(tasks.next_id({"T-9002", "T-9009"}), "T-9010")
+        self.assertEqual(tasks.next_id({"T-90002", "T-90009"}), "T-90010")
 
     def test_ids_on_other_branches_count_as_taken(self) -> None:
-        # T-9013 and T-9014 exist only on another session's pushed branch.
-        self.assertEqual(tasks.next_id({"T-9012", "T-9013", "T-9014"}), "T-9015")
+        # T-90013 and T-90014 exist only on another session's pushed branch.
+        self.assertEqual(tasks.next_id({"T-90012", "T-90013", "T-90014"}), "T-90015")
 
-    def test_refuses_past_the_last_four_digit_id(self) -> None:
+    def test_refuses_past_the_last_five_digit_id(self) -> None:
         with self.assertRaises(ValueError):
-            tasks.next_id({"T-9999"})
+            tasks.next_id({"T-99999"})
+
+
+class FiveDigitIds(unittest.TestCase):
+    def test_every_id_pattern_reads_a_five_digit_id_whole(self) -> None:
+        self.assertEqual(tasks.TASK_FILE.search("docs/tasks/M9/T-90001-x.md")[1], "T-90001")
+        self.assertEqual(tasks.TODO_OWNER.search("// TODO" + "(T-90001) later")[1], "T-90001")
+        self.assertEqual(tasks.AGENT_BRANCH.match("refs/remotes/origin/agent/x/T-90001-y")[2], "T-90001")
+        self.assertTrue(tasks.SAFE_BRANCH.match("agent/x/T-90001-y"))
+        self.assertIsNone(tasks.TASK_FILE.search("docs/tasks/M9/T-900012-x.md"))
 
 
 class GitTaskIds(unittest.TestCase):
@@ -78,7 +87,7 @@ class NewTask(unittest.TestCase):
     def test_writes_the_next_free_id_from_the_template(self) -> None:
         code, files = self.run_new("--milestone", "M0", "--lane", "harness", "--title", "Do a thing")
         self.assertEqual(code, 0)
-        self.assertEqual(files, [Path("docs/tasks/M0/T-9000-do-a-thing.md")])  # decision 0360
+        self.assertEqual(files, [Path("docs/tasks/M0/T-90000-do-a-thing.md")])  # decision 0360
 
     def test_tier_is_written_and_validated(self) -> None:
         code, files = self.run_new(
