@@ -5608,8 +5608,8 @@ Ours since T-4435 (the `accuracy` stage, not Excel's arithmetic):
   0.09.
   - Of the 322 t3568 cells that move, 195 move toward Excel and 122 away.
   - 14 change class for the worse, and two of those (A223, A359) cross the 13-digit bar. T-4435's Outcome lists them.
-- Three cells where Excel is 1.5E-13 to 1.2E-12 off the math, and ours moved onto it, now show the gap visibly
-  (decision 0341).
+- Six cells now show the gap visibly (decision 0341). On three, Excel is 1.5E-13 to 1.2E-12 off the math (T-4214). On
+  the other three (t3568 A223, A359; t4434 A295), Excel is at its double floor (T-90001).
 
 Evidence: the six t4017 cases; probes-numeric/t4434-huge-shape-outside-large-shape-beta; docs/research/t4435.
 Tasks: T-4017, T-4018, T-3209, T-4053 (df1 = 2; decision 0267), T-4434, T-4435.

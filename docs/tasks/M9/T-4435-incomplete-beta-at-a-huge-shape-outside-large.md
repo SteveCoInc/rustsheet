@@ -324,11 +324,17 @@ The cells among them that change class:
   (ulp1 → residue13), A931 (ulp4 → digits15) and B789 (ulp1 → digits15).
 - t4434: A295 (residue13 → visibly off, Excel 1.2 units).
 
-Decision 0341 accepts as Excel noise only B45, C45 and D40 of t4434. On those, Excel is 1.5E-13 to 1.2E-12 off the
-math, and ours went onto it. The other class change, t4974 D88 (ulp1 → residue13), has Excel 7.2 units off the math
-and ours on it.
+Decision 0341 accepts all six cells that cross the 13-digit bar, in two groups:
+- t4434 B45, C45 and D40: Excel is 1.5E-13 to 1.2E-12 off the math (the noisy side), and ours went onto it. Owner
+  T-4214.
+- t3568 A223, t3568 A359 and t4434 A295: Excel sits at its double floor (0.9 to 1.7 units). Main's kernel was not
+  Excel's arithmetic and only sat nearer, and recovering them needs a model of Excel's L140 arithmetic. They have an
+  active owner, T-90001 (filed here), since T-3871, T-3712 and T-3209 are deferred, and A223 and A359 lie below
+  T-3871's a0 > 3000 scope.
 
-**Follow-up:** T-4908 (the 11 cells above).
+The other class change, t4974 D88 (ulp1 → residue13), has Excel 7.2 units off the math and ours on it.
+
+**Follow-ups:** T-4908 (the 11 cells above), T-90001 (the three floor-level cells).
 
 **Review fixes** (design, security, fidelity minors):
 - `Arithmetic` enum, and `f_expansion_route` with one call to `f_large_shape_tails`.
