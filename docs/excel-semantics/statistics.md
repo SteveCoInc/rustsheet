@@ -7290,11 +7290,12 @@ names sweep, second family"). These are the only probed cells with number_pop = 
   far beyond decision 0188 R3's 1E-4 relative bound, so whether to follow it is an owner ruling for T-5109 (decision
   0300). Ours: the math (E2 2.831465855970309E-04, E13 2.227593374051108E-13).
   - The cdf snaps to 0 or 1 on the same rows. U and V are exactly 1 on rows 2 and 8 to 18; the math there runs from
-    0.904083223033478 (U2) up to 1 (U8 0.965623042841267, U9:V12 0.98969 to 0.99997). On the mirrored rows 3 and 4 they
+    0.903800076447881 (V2) up to 1 (U8 0.965623042841267, U9:V12 0.98969 to 0.99997, U13:V18 0.999999999997 to 1). On the mirrored rows 3 and 4 they
     are exactly 0, where the math is about 0.096 to 0.098 (U3 0.0961999235521186, U4 0.0979117103609510). V5, whose
     x-1 is row 4's point, is 0 as well (math 0.0979117103609510), while U5 (0.09819916440952194) and U6:V7 are within
-    about 1E-13 of the math. So the "within 1E-10 of the math" of the Gate A tables does not reach this band. Ours: the
-    math, which is inside the envelope there, so these are not visibly-off cells.
+    about 3E-14 absolute (3E-13 relative) of the math. So the "within 1E-10 of the math" of the Gate A tables does not reach this band. Ours: the
+    math. That is inside decision 0355's envelope, so the visible-parity lock does not count these cells, though U2
+    (ours 0.904 against Excel's 1) is visibly off by decision 0083.
 - Elsewhere Excel's pmf and cdf are within 1E-10 relative of the math on all 400 points of the two tables, populations up
   to 2147483646 included, and every Excel error in them is a domain error of the Gate A definition (T-4105).
 - Unprobed (an oracle limit, not an Excel value): the excel-graph oracle's calculate request fails on every retry for a
