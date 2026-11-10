@@ -5496,7 +5496,8 @@ val2-fvs-02 (B30), which supports the carried-state caveat above. The three isol
 overflows, `FVSCHEDULE(2^1023,{1,0})`, `{1,1E-300}` and `{1,-0.5}` (val3-fvs-05, -06, -08), gave no value: on two
 attempts each, the oracle's canary cell `SQRT(2)` came back `#NUM!` and `rustsheet-oracle fill` refused the workbook
 ("canary failed, so this workbook was not recalculated; refusing its values: A4 =SQRT(2): expected
-1.4142135623730951, got #NUM!"). The val4 runs below show it is state the overflow leaves in the workbook.
+1.4142135623730951, got #NUM!"). The val4 runs below show it is a state the overflow leaves for the calculation that follows, within one
+recalculation, and not a Graph session effect.
 val4 (probes/val4-fvs-01..06, excel-graph, 2026-11-10, one case per workbook, none refused; protocol and frozen
 predictions in docs/research/probe-request-val4-fvs.md). Raw observations; T-5108 scores them:
 - The isolated value: `FVSCHEDULE(2^1023,{1,0})`, `{1,1E-300}` and `{1,-0.5}` (val4-fvs-03, -04, -05) are each a live

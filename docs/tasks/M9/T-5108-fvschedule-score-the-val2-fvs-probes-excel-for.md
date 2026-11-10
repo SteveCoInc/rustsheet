@@ -62,7 +62,7 @@ Owns: probes/val2-fvs-01, probes/val2-fvs-02 and probes/val2-fvs-03 (every visib
   refused attempts was kept (2026-11-09, between the fvs-04 and fvs-07 fills, then one retry); rerun to capture one.
 - val4 batch, docs/research/probe-request-val4-fvs.md (excel-graph fill, 2026-11-10, one session per case). Owns:
   probes/val4-fvs-01, probes/val4-fvs-02, probes/val4-fvs-03, probes/val4-fvs-04, probes/val4-fvs-05 and
-  probes/val4-fvs-06 (every visibly-off cell). No fill was refused. In probes/val4-fvs-03,
+  probes/val4-fvs-06 (every visibly-off cell; val4-fvs-06, the control, has none). No fill was refused. In probes/val4-fvs-03,
   probes/val4-fvs-04 and probes/val4-fvs-05, as the request predicted, Probe!A1 `=2^1023` is `#NUM!` and B1:B5 are 0, 1,
   TRUE, 0, 0. The val4-fvs-06 control (no overflow) has every detector 2^1023. So the overflowing call leaves a state
   that the next calculation of the right kind takes once. Which kind that is, is not the request's "two literal
