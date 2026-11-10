@@ -1,0 +1,598 @@
+{
+ "notice": "Frozen research predictions for the val4 NSI probe request (docs/research/t5112/next_val4_nsi.py), written 2026-11-10 before any val4 value exists. NOT Excel oracle values; never copy into expected values.",
+ "model": "x = |2p-1|; t = fl(x*x); core w = fl(x*fl(P(t)/Q(t))), P and Q by binary64 Horner with every step stored, Q(0) = 1; GAMMA.INV(x,0.5,1) = fl(w*w); NORM.S.INV = RN53(RN64(sqrt2*w)). Piece A is x*x < 0.5.",
+ "candidates": "Relative-error minimax (Remez) rationals P_m/Q_n of erfinv(sqrt t)/sqrt t on [0, 0.5], computed at 150 digits and rounded to binary64 (remez-t-0-0.5.json). They generate structure (degrees, normalisation, magnitudes of the Horner partial sums), not Excel's doubles.",
+ "evidence_today": {
+  "excel_lattice_first_64_rows": {
+   "x=0.6127348261931": {
+    "Q_ulp": 3.9,
+    "c": 0.97,
+    "coherence": 0.88,
+    "w_over_Q": 0.1568
+   },
+   "x=0.6573192847611": {
+    "Q_ulp": 5.75,
+    "c": 1.13,
+    "coherence": 0.88,
+    "w_over_Q": 0.1167
+   },
+   "x=0.7041837294613": {
+    "Q_ulp": 9.6,
+    "c": 1.38,
+    "coherence": 0.94,
+    "w_over_Q": 0.077
+   }
+  },
+  "candidate_Q_values_at_those_x": {
+   "(7,7)": [
+    0.1784,
+    0.1293,
+    0.0874
+   ],
+   "(7,8)": [
+    0.1582,
+    0.1121,
+    0.0737
+   ],
+   "(8,7)": [
+    0.1604,
+    0.1139,
+    0.0751
+   ],
+   "(8,8)": [
+    0.1401,
+    0.097,
+    0.062
+   ]
+  }
+ },
+ "frozen_rules": [
+  {
+   "id": "F1",
+   "prediction": "On every GAMMA.INV cell of val4-nsi-01..07, w = SQRT(cell) in binary64 squares back to the cell (w*w == cell).",
+   "if_false": "GAMMA.INV at shape 0.5 is not the plain square of a binary64 core at that x; the readout must be re-derived there before any other rule is scored."
+  },
+  {
+   "id": "F2",
+   "prediction": "On the 512 control rows of val4-nsi-06 E!B, -NORM.S.INV((1-x)/2) == RN53(RN64(SQRT(E!A)*RN53(sqrt 2))).",
+   "if_false": "NORM.S.INV does not take the same core as GAMMA.INV at that x (a second kernel or a different product)."
+  },
+  {
+   "id": "F3",
+   "prediction": "In piece A (x*x < 0.5) the core of a run of consecutive doubles moves as c*i + Q*k_i (k_i small integers) with coherence >= 0.8 wherever Q >= 3 ulp, and Q*ulp(w) = 2^-53 * w / D(t) with D within 3 percent of the (7,8) or the (8,7) candidate's Q(t) (table below for 16 of the 64 runs; D for the (7,7) candidate is 12 to 19 percent larger and for (8,8) 11 to 17 percent smaller).",
+   "if_false": "D off by more than 5 percent from both: the denominator is not a degree-15 near-minimax rational on [0,0.5] with Q(0)=1 (other degree, interval, normalisation or variable); no lattice at all: the kernel is not a stored Horner rational."
+  },
+  {
+   "id": "F4",
+   "prediction": "No reset inside piece A: the error spread and Q vary smoothly across x = 0.5 (t = 1/4; runs 25 and 26 of val4-nsi-02, the second half of val4-nsi-05, the T = 1/4 ladders of val4-nsi-06) and across every other power of two of t. The only break below 0.85 is at x*x = 0.5: the last double of val4-nsi-05 R!A8192 is still noisy (spread about 12 ulp over the last rows).",
+   "if_false": "A second break: piece A is split and each part needs its own fit."
+  },
+  {
+   "id": "F5",
+   "prediction": "Phase-free spectral test (nsi_kernel_lab.py score-val4; smoothed power spectrum of the de-trended core integers of each 1024-row run against a stored-Horner simulation of each candidate): if Excel's doubles lie within about 1e-6 relative of one candidate's, that candidate scores above 0.9 on the runs with x0 > 0.6 and every other candidate below 0.6 (synthetic control: 0.96 to 0.99 against 0.13 to 0.65 at 3.5e-7 coefficient distance; 1.00 against 0.07 to 0.54 for the exact set).",
+   "if_false": "All candidates below 0.6: Excel's rational is not within 1e-6 of a relative minimax fit on [0,0.5]; fit P and Q to the measured cores instead (the function rows) before any phase solve."
+  },
+  {
+   "id": "F6",
+   "prediction": "Piece B (val4-nsi-07, sqrt(0.5) < x < 0.85): the spread starts near 1.5 ulp at x = 0.708 and grows with x (about 10 ulp of w near 0.84), again as a quantised lattice; val4-nsi-06 S locates any further break of the core above 0.85 (0.85 itself, sqrt(0.75), 0.75 and 0.9375 are sampled with 64 consecutive doubles each).",
+   "if_false": "A flat spread in piece B would mean a well-conditioned formula there (for example a shifted variable); only piece A then needs the coefficient solve for the Gate B cells."
+  }
+ ],
+ "piece_A_runs": {
+  "note": "Simulated on the first 64 rows of the run with the same code as for Excel. Q_ulp and coherence are listed only where the noise exceeds one ulp (run >= 40); below that only D_t0 and the spread are predictions.",
+  "runs": [
+   {
+    "run": 0,
+    "case": "val4-nsi-01",
+    "first_row": 1,
+    "x0": "0.28834267807593106",
+    "t0": "0.08314150000000001",
+    "candidates": {
+     "(7,8)": {
+      "D_t0": 0.69968,
+      "sd_ulp": 0.55,
+      "c": 0.95
+     },
+     "(8,7)": {
+      "D_t0": 0.70167,
+      "sd_ulp": 0.6,
+      "c": 0.95
+     },
+     "(7,7)": {
+      "D_t0": 0.7161,
+      "sd_ulp": 0.47,
+      "c": 0.95
+     },
+     "(8,8)": {
+      "D_t0": 0.68343,
+      "sd_ulp": 0.49,
+      "c": 0.95
+     }
+    }
+   },
+   {
+    "run": 4,
+    "case": "val4-nsi-01",
+    "first_row": 4097,
+    "x0": "0.33044863443506617",
+    "t0": "0.1091963",
+    "candidates": {
+     "(7,8)": {
+      "D_t0": 0.62249,
+      "sd_ulp": 0.64,
+      "c": 0.97
+     },
+     "(8,7)": {
+      "D_t0": 0.62482,
+      "sd_ulp": 0.71,
+      "c": 0.97
+     },
+     "(7,7)": {
+      "D_t0": 0.64195,
+      "sd_ulp": 0.68,
+      "c": 0.97
+     },
+     "(8,8)": {
+      "D_t0": 0.60336,
+      "sd_ulp": 0.73,
+      "c": 0.97
+     }
+    }
+   },
+   {
+    "run": 8,
+    "case": "val4-nsi-01",
+    "first_row": 8193,
+    "x0": "0.3677650064919173",
+    "t0": "0.13525109999999996",
+    "candidates": {
+     "(7,8)": {
+      "D_t0": 0.55238,
+      "sd_ulp": 0.77,
+      "c": 0.99
+     },
+     "(8,7)": {
+      "D_t0": 0.55497,
+      "sd_ulp": 0.92,
+      "c": 1.0
+     },
+     "(7,7)": {
+      "D_t0": 0.5741,
+      "sd_ulp": 0.83,
+      "c": 0.99
+     },
+     "(8,8)": {
+      "D_t0": 0.53121,
+      "sd_ulp": 0.73,
+      "c": 1.0
+     }
+    }
+   },
+   {
+    "run": 12,
+    "case": "val4-nsi-01",
+    "first_row": 12289,
+    "x0": "0.4016290577137067",
+    "t0": "0.16130589999999997",
+    "candidates": {
+     "(7,8)": {
+      "D_t0": 0.48885,
+      "sd_ulp": 0.67,
+      "c": 1.02
+     },
+     "(8,7)": {
+      "D_t0": 0.4916,
+      "sd_ulp": 0.81,
+      "c": 1.02
+     },
+     "(7,7)": {
+      "D_t0": 0.51213,
+      "sd_ulp": 0.74,
+      "c": 1.01
+     },
+     "(8,8)": {
+      "D_t0": 0.46633,
+      "sd_ulp": 0.85,
+      "c": 1.02
+     }
+    }
+   },
+   {
+    "run": 16,
+    "case": "val4-nsi-02",
+    "first_row": 1,
+    "x0": "0.4328518222209536",
+    "t0": "0.18736070000000002",
+    "candidates": {
+     "(7,8)": {
+      "D_t0": 0.43139,
+      "sd_ulp": 0.87,
+      "c": 1.04
+     },
+     "(8,7)": {
+      "D_t0": 0.43423,
+      "sd_ulp": 0.9,
+      "c": 1.05
+     },
+     "(7,7)": {
+      "D_t0": 0.45563,
+      "sd_ulp": 1.0,
+      "c": 1.04
+     },
+     "(8,8)": {
+      "D_t0": 0.40814,
+      "sd_ulp": 1.42,
+      "c": 1.05
+     }
+    }
+   },
+   {
+    "run": 20,
+    "case": "val4-nsi-02",
+    "first_row": 4097,
+    "x0": "0.4619691548144746",
+    "t0": "0.21341549999999998",
+    "candidates": {
+     "(7,8)": {
+      "D_t0": 0.37954,
+      "sd_ulp": 1.37,
+      "c": 1.06
+     },
+     "(8,7)": {
+      "D_t0": 0.38241,
+      "sd_ulp": 1.48,
+      "c": 1.07
+     },
+     "(7,7)": {
+      "D_t0": 0.40423,
+      "sd_ulp": 1.36,
+      "c": 1.07
+     },
+     "(8,8)": {
+      "D_t0": 0.35606,
+      "sd_ulp": 1.72,
+      "c": 1.07
+     }
+    }
+   },
+   {
+    "run": 24,
+    "case": "val4-nsi-02",
+    "first_row": 8193,
+    "x0": "0.4893570271284556",
+    "t0": "0.2394703",
+    "candidates": {
+     "(7,8)": {
+      "D_t0": 0.33287,
+      "sd_ulp": 2.4,
+      "c": 1.09
+     },
+     "(8,7)": {
+      "D_t0": 0.33572,
+      "sd_ulp": 2.06,
+      "c": 1.09
+     },
+     "(7,7)": {
+      "D_t0": 0.35757,
+      "sd_ulp": 1.78,
+      "c": 1.09
+     },
+     "(8,8)": {
+      "D_t0": 0.30959,
+      "sd_ulp": 2.32,
+      "c": 1.08
+     }
+    }
+   },
+   {
+    "run": 28,
+    "case": "val4-nsi-02",
+    "first_row": 12289,
+    "x0": "0.5152912768522285",
+    "t0": "0.2655251",
+    "candidates": {
+     "(7,8)": {
+      "D_t0": 0.29097,
+      "sd_ulp": 2.53,
+      "c": 1.69
+     },
+     "(8,7)": {
+      "D_t0": 0.29375,
+      "sd_ulp": 2.57,
+      "c": 1.67
+     },
+     "(7,7)": {
+      "D_t0": 0.31532,
+      "sd_ulp": 2.55,
+      "c": 1.7
+     },
+     "(8,8)": {
+      "D_t0": 0.26821,
+      "sd_ulp": 3.04,
+      "c": 1.68
+     }
+    }
+   },
+   {
+    "run": 32,
+    "case": "val4-nsi-03",
+    "first_row": 1,
+    "x0": "0.5399813885681617",
+    "t0": "0.2915799",
+    "candidates": {
+     "(7,8)": {
+      "D_t0": 0.25344,
+      "sd_ulp": 1.93,
+      "c": 1.16
+     },
+     "(8,7)": {
+      "D_t0": 0.25612,
+      "sd_ulp": 1.67,
+      "c": 1.17
+     },
+     "(7,7)": {
+      "D_t0": 0.27714,
+      "sd_ulp": 1.15,
+      "c": 1.17
+     },
+     "(8,8)": {
+      "D_t0": 0.23149,
+      "sd_ulp": 1.83,
+      "c": 1.17
+     }
+    }
+   },
+   {
+    "run": 36,
+    "case": "val4-nsi-03",
+    "first_row": 4097,
+    "x0": "0.5635908977263561",
+    "t0": "0.31763469999999994",
+    "candidates": {
+     "(7,8)": {
+      "D_t0": 0.21992,
+      "sd_ulp": 2.26,
+      "c": 1.18
+     },
+     "(8,7)": {
+      "D_t0": 0.22248,
+      "sd_ulp": 2.27,
+      "c": 1.21
+     },
+     "(7,7)": {
+      "D_t0": 0.24273,
+      "sd_ulp": 2.16,
+      "c": 1.18
+     },
+     "(8,8)": {
+      "D_t0": 0.199,
+      "sd_ulp": 2.91,
+      "c": 0.88
+     }
+    }
+   },
+   {
+    "run": 40,
+    "case": "val4-nsi-03",
+    "first_row": 8193,
+    "x0": "0.5862503731342097",
+    "t0": "0.3436895000000001",
+    "candidates": {
+     "(7,8)": {
+      "D_t0": 0.19008,
+      "sd_ulp": 2.5,
+      "c": 0.92,
+      "Q_ulp": 3.15,
+      "coherence": 0.82
+     },
+     "(8,7)": {
+      "D_t0": 0.19249,
+      "sd_ulp": 2.87,
+      "c": 0.94,
+      "Q_ulp": 3.03,
+      "coherence": 0.81
+     },
+     "(7,7)": {
+      "D_t0": 0.2118,
+      "sd_ulp": 2.41,
+      "c": 0.92,
+      "Q_ulp": 2.85,
+      "coherence": 0.78
+     },
+     "(8,8)": {
+      "D_t0": 0.17034,
+      "sd_ulp": 3.33,
+      "c": 0.93,
+      "Q_ulp": 3.4,
+      "coherence": 0.82
+     }
+    }
+   },
+   {
+    "run": 44,
+    "case": "val4-nsi-03",
+    "first_row": 12289,
+    "x0": "0.6080660325984342",
+    "t0": "0.3697443",
+    "candidates": {
+     "(7,8)": {
+      "D_t0": 0.16358,
+      "sd_ulp": 3.1,
+      "c": 0.98,
+      "Q_ulp": 3.7,
+      "coherence": 0.87
+     },
+     "(8,7)": {
+      "D_t0": 0.16584,
+      "sd_ulp": 2.97,
+      "c": 0.97,
+      "Q_ulp": 3.77,
+      "coherence": 0.86
+     },
+     "(7,7)": {
+      "D_t0": 0.18408,
+      "sd_ulp": 2.51,
+      "c": 0.99,
+      "Q_ulp": 3.12,
+      "coherence": 0.93
+     },
+     "(8,8)": {
+      "D_t0": 0.14515,
+      "sd_ulp": 4.12,
+      "c": 0.98,
+      "Q_ulp": 4.18,
+      "coherence": 0.91
+     }
+    }
+   },
+   {
+    "run": 48,
+    "case": "val4-nsi-04",
+    "first_row": 1,
+    "x0": "0.6291256631230362",
+    "t0": "0.3957991",
+    "candidates": {
+     "(7,8)": {
+      "D_t0": 0.14015,
+      "sd_ulp": 4.09,
+      "c": 1.01,
+      "Q_ulp": 4.72,
+      "coherence": 0.95
+     },
+     "(8,7)": {
+      "D_t0": 0.14223,
+      "sd_ulp": 4.93,
+      "c": 1.04,
+      "Q_ulp": 4.45,
+      "coherence": 0.71
+     },
+     "(7,7)": {
+      "D_t0": 0.15932,
+      "sd_ulp": 4.07,
+      "c": 1.02,
+      "Q_ulp": 4.15,
+      "coherence": 0.9
+     },
+     "(8,8)": {
+      "D_t0": 0.12308,
+      "sd_ulp": 5.05,
+      "c": 1.04,
+      "Q_ulp": 5.15,
+      "coherence": 0.81
+     }
+    }
+   },
+   {
+    "run": 52,
+    "case": "val4-nsi-04",
+    "first_row": 4097,
+    "x0": "0.6495028098476557",
+    "t0": "0.42185390000000006",
+    "candidates": {
+     "(7,8)": {
+      "D_t0": 0.11948,
+      "sd_ulp": 5.82,
+      "c": 1.09,
+      "Q_ulp": 5.55,
+      "coherence": 0.88
+     },
+     "(8,7)": {
+      "D_t0": 0.1214,
+      "sd_ulp": 5.0,
+      "c": 1.1,
+      "Q_ulp": 5.53,
+      "coherence": 0.88
+     },
+     "(7,7)": {
+      "D_t0": 0.13726,
+      "sd_ulp": 4.69,
+      "c": 1.09,
+      "Q_ulp": 4.88,
+      "coherence": 0.84
+     },
+     "(8,8)": {
+      "D_t0": 0.10383,
+      "sd_ulp": 6.48,
+      "c": 1.1,
+      "Q_ulp": 6.38,
+      "coherence": 0.89
+     }
+    }
+   },
+   {
+    "run": 56,
+    "case": "val4-nsi-04",
+    "first_row": 8193,
+    "x0": "0.6692598150195483",
+    "t0": "0.44790870000000005",
+    "candidates": {
+     "(7,8)": {
+      "D_t0": 0.10134,
+      "sd_ulp": 7.15,
+      "c": 1.18,
+      "Q_ulp": 6.78,
+      "coherence": 0.9
+     },
+     "(8,7)": {
+      "D_t0": 0.10308,
+      "sd_ulp": 5.69,
+      "c": 1.18,
+      "Q_ulp": 6.68,
+      "coherence": 0.91
+     },
+     "(7,7)": {
+      "D_t0": 0.11768,
+      "sd_ulp": 5.15,
+      "c": 1.17,
+      "Q_ulp": 5.83,
+      "coherence": 0.88
+     },
+     "(8,8)": {
+      "D_t0": 0.0871,
+      "sd_ulp": 8.79,
+      "c": 1.2,
+      "Q_ulp": 7.78,
+      "coherence": 0.92
+     }
+    }
+   },
+   {
+    "run": 60,
+    "case": "val4-nsi-04",
+    "first_row": 12289,
+    "x0": "0.688450070811239",
+    "t0": "0.4739635",
+    "candidates": {
+     "(7,8)": {
+      "D_t0": 0.08546,
+      "sd_ulp": 8.86,
+      "c": 1.28,
+      "Q_ulp": 8.35,
+      "coherence": 0.94
+     },
+     "(8,7)": {
+      "D_t0": 0.08703,
+      "sd_ulp": 7.31,
+      "c": 1.29,
+      "Q_ulp": 8.18,
+      "coherence": 0.93
+     },
+     "(7,7)": {
+      "D_t0": 0.10037,
+      "sd_ulp": 7.23,
+      "c": 1.27,
+      "Q_ulp": 7.1,
+      "coherence": 0.92
+     },
+     "(8,8)": {
+      "D_t0": 0.07263,
+      "sd_ulp": 10.96,
+      "c": 1.3,
+      "Q_ulp": 9.8,
+      "coherence": 0.93
+     }
+    }
+   }
+  ]
+ }
+}

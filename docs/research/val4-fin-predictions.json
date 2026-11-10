@@ -1,0 +1,110 @@
+{
+ "notice": "Frozen research predictions of the r8fin candidate engine (subnormal-residual stop, split-z bpser with a stored ln B, stored Loader lc with a compensated sum of the log terms, x87 Newton quotient), computed before any val4 fill. Hypotheses, not Excel oracle values; never copy into expected values.",
+ "cases": {
+  "val4-fin-01": {
+   "Seed": {
+    "B4": 30.205594179579634,
+    "B7": 3386.373966498032,
+    "B8": 1.1447298858494002,
+    "B9": 0.0,
+    "B10": 1e-06,
+    "B11": 2.705579217115277e-151,
+    "B12": 2.7055792171152472e-151,
+    "B13": 2.705579217115277e-151,
+    "B14": 3.0,
+    "B15": 0.0
+   },
+   "cached_excel": {
+    "BETA.INV(1E-200,0.5,0.5)": 2.7055792171147168e-151,
+    "F.INV(1E-200,1,1)": 2.705579217114786e-151
+   },
+   "trace": {
+    "first_stop_row": 609,
+    "stop_code": 3,
+    "accepted_rows": 303,
+    "x_rows_2_to_9": [
+     1e-06,
+     1e-06,
+     3.333335555556442e-07,
+     3.333335555556442e-07,
+     1.1111120987660889e-07,
+     1.1111120987660889e-07,
+     3.703707270235887e-08,
+     3.703707270235887e-08
+    ],
+    "cdf_rows_2_4_6_8": [
+     0.0006366198784709245,
+     0.0003675527398850344,
+     0.00021220668903303296,
+     0.00012251759206218925
+    ],
+    "density_rows_2_4_6_8": [
+     318.31004533885306,
+     551.3288035337149,
+     954.9292871898668,
+     1653.9859205307903
+    ],
+    "x_last": 2.705579217115277e-151
+   },
+   "reading": "If Seed!B13 = Seed!B11 the public-kernel AS 109 trace is the private search at shape 1/2 too (one-third retries, 1E-300 squared-step floor, 1E-6 end seed). The candidate engine is NOT expected to match the trace columns C and D bit for bit: its kernels at shape 1/2 are known to be 1-2 ulp off; the first row where Trace!C or Trace!D differs from the engine isolates the kernel to repair."
+  },
+  "val4-fin-02": {
+   "Inverse": {
+    "BETA.INV(1E-200,0.5,0.5)": 2.705579217115277e-151,
+    "F.INV(1E-200,1,1)": 2.7055792171152472e-151,
+    "BETA.INV(1E-300,0.5,0.5)": 2.705579217115277e-151,
+    "BETA.INV(1E-300,0.5,4.5)": 2.7055575725385792e-151,
+    "F.INV(1E-300,1,9)": 2.4350018152847542e-150,
+    "BETA.INV(1E-300,0.5,5)": 2.705554866974572e-151,
+    "F.INV(1E-300,1,10)": 2.70555486697456e-150,
+    "BETA.INV(1E-300,0.5,1)": 2.7055765115351927e-151,
+    "F.INV(1E-300,1,2)": 5.4111530230704736e-151,
+    "F.INV.RT(1E-300,2,1)": 1.848034967291621e+150,
+    "FINV(1E-300,2,1)": 1.848034967291621e+150,
+    "F.INV.RT(1E-200,2,1)": 1.848034967291621e+150,
+    "BETA.INV(1E-300,0.5,1.5)": 2.7055738059608172e-151,
+    "F.INV(1E-300,1,3)": 8.116721417882563e-151,
+    "F.INV.RT(1E-300,3,1)": 5.992310449541052e+307,
+    "FINV(1E-300,3,1)": 5.992310449541052e+307,
+    "BETA.INV(1E-200,0.5,4.5)": 2.7055575725385792e-151,
+    "F.INV(1E-200,1,9)": 2.4350018152847542e-150,
+    "F.INV.RT(1E-200,9,1)": 1.9974368165136842e+307,
+    "FINV(1E-200,9,1)": 1.9974368165136842e+307,
+    "F.INV.RT(1E-300,9,1)": 1.9974368165136842e+307,
+    "F.INV.RT(1E-300,10,1)": 1.797693134862316e+307,
+    "F.INV.RT(1E-300,1,1)": 3.696066238512224e+150,
+    "F.INV(1E-300,2,2)": 1.0000000000000237e-300,
+    "BETA.INV(1E-300,1,1)": 1.0000000000000237e-300
+   },
+   "cached_excel": {
+    "F.INV(1E-200,1,1)": 2.705579217114786e-151,
+    "F.INV(1E-300,1,9)": 2.4350018152839236e-150,
+    "F.INV(1E-300,1,10)": 2.705554866974867e-150,
+    "F.INV.RT(1E-300,2,1)": 1.8480349672907807e+150,
+    "F.INV.RT(1E-200,2,1)": 1.8480349672907807e+150,
+    "F.INV.RT(1E-300,3,1)": 1.2320245435514617e+150,
+    "FINV(1E-200,9,1)": 4.1067731191132565e+149,
+    "BETA.INV(1E-200,0.5,0.5)": 2.7055792171147168e-151
+   },
+   "reading": "The candidate values above are the engine today; at the cached cells it is 1E-13 to 5E-13 off, or returns about DBL_MAX/df on the two flipped saturations. Right-tail hypothesis: F.INV.RT(p,d1,d2) = EXP(LN(d2) + LN(1-s) - LN(d1) - LN(s)) summed in double-double with s = BETA.INV(p,d2/2,d1/2); it predicts F.INV.RT(1E-300,3,1)*BETA.INV(1E-300,0.5,1.5)*3 = 1 to 1E-15 and likewise for the other pairs on the sheet."
+  },
+  "val4-fin-03": {
+   "Seed": {
+    "B10": 2.962050899461562e-13,
+    "B11": 5.496245684579318e-12,
+    "B12": 60647458731.098335,
+    "B13": 5.496245684579318e-12,
+    "B14": 60647458731.09828,
+    "B15": 0.9999999999941069
+   },
+   "trace": {
+    "first_stop_row": 37,
+    "stop_code": 4
+   },
+   "cached_excel": {
+    "F.INV.RT(1E-16,9,3)": 60647458731.09812
+   },
+   "reading": "Sheet L: under the split-z rule each cdf cell D or G admits only one or two doubles L; the two x per shape intersect them. Expected: a single L per shape within 2 ulp of RN53(ln B(a,b)); for max(a,b) <= 8 the GAMMALN sum fl(GL(lo) + fl(GL(hi) - GL(lo+hi))) (not probed here), for max > 8 a form to be identified from these 181 values (TOMS 708 betaln with algdiv/bcorr is the first candidate). Trace: the candidate engine reproduces its own BETA.INV on this path (Seed!B13 = B11 in the engine) but its F.INV.RT is 28 ulp above the cached Excel value, so Excel must differ on this path in a kernel bit, the stop row or the mapping; the first differing row says which."
+  }
+ }
+}
