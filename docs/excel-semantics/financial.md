@@ -5496,15 +5496,39 @@ val2-fvs-02 (B30), which supports the carried-state caveat above. The three isol
 overflows, `FVSCHEDULE(2^1023,{1,0})`, `{1,1E-300}` and `{1,-0.5}` (val3-fvs-05, -06, -08), gave no value: on two
 attempts each, the oracle's canary cell `SQRT(2)` came back `#NUM!` and `rustsheet-oracle fill` refused the workbook
 ("canary failed, so this workbook was not recalculated; refusing its values: A4 =SQRT(2): expected
-1.4142135623730951, got #NUM!"). Whether that is state an overflow leaves in the workbook or a Graph session effect is
-open (T-5108).
+1.4142135623730951, got #NUM!"). The val4 runs below show it is state the overflow leaves in the workbook.
+val4 (probes/val4-fvs-01..06, excel-graph, 2026-11-10, one case per workbook, none refused; protocol and frozen
+predictions in docs/research/probe-request-val4-fvs.md). Raw observations; T-5108 scores them:
+- The isolated value: `FVSCHEDULE(2^1023,{1,0})`, `{1,1E-300}` and `{1,-0.5}` (val4-fvs-03, -04, -05) are each a live
+  0 (Probe!B1:B5: 0, TYPE 1, ISNUMBER TRUE, error code 0, `+0` 0). The `=2^1023` that Excel calculates after them
+  (Probe!A1) is `#NUM!`, and the canary passes. So the overflow leaves a state that the next calculation of the right
+  kind takes once. val4-fvs-06, with the same layout and no overflow (`FVSCHEDULE(1E+300,0)`), has every detector
+  8.98846567431158E+307.
+- Which calls take it (val4-fvs-01, sheet P; each block has the overflow A(4i+4), then the candidate A(4i+3), then two
+  `=2^1023` detectors). The candidate takes the state when the first detector is 2^1023, and leaves it when the first
+  detector is `#NUM!`. The second detector is 2^1023 in every block, so there is one state and it is taken once.
+  - Takes it, `#NUM!` in place of its value (sheet Ctl gives each alone): `=2^0`, `=2^10`, `=(2^1023)`, `=2^0.5`,
+    `=2^K1`, `=2^K5` (K5 = 0), `=K4^1023`, `=K4^K1`, `=0*2^1023`, `=POWER(2,1023)`, `=POWER(2,K1)`, `=SQRT(2)`,
+    `=SQRT(K4)`, `=EXP(1)`, `=LN(2)`, `=SIN(1)`, `=1/3`, `=ROUND(2.675,2)`. `=2^1023` is `#NUM!` too (A3).
+  - Takes it, `"err"`: `=IFERROR(2^1023,"err")` and `=IFERROR(2^K1,"err")`.
+  - Takes it, 0 in place of a small value: `=2^-52` and `=2^K2` (K2 = -52), both 0 where alone they are
+    2.220446049250313E-16. `=2^-1023`, `=2^K3`, `=0*2^K3` and `=IFERROR(0*2^K3,"err")` are 0 either way.
+  - Leaves it, with its own value: `=1.5^2` (2.25), `=3*5`, `=1+1`, `=VALUE("1.5")`, `=K1+0`, `=FVSCHEDULE(1,1)`, `=1`.
+  - `=1E+300*1E+300` (`#NUM!` alone too) and a second overflowing `=FVSCHEDULE(1E+300,1E+300)` (0) leave the first
+    detector `#NUM!`.
+- Readers of the overflowing cell (val4-fvs-02; in each block B is the overflow and G one reader of it). All of these
+  take the state: `IFERROR(B*2^F,"err")` with F = -1023 or -997 is 0, `B*2^F` (F = -1023) is 0,
+  `IFERROR(B*2^-1023,"err")` is 0, `B+2^F` and `B+2^1023` (F = 1023) are `#NUM!`, `B+2^-52` and `B+2^F` (F = -52) are 0,
+  and `B+SQRT(2)` is `#NUM!`. Only `ISNUMBER(B)` (TRUE) leaves it, so the detector above it, A29, is `#NUM!`. In
+  val2-fvs-02 the same `IFERROR(B*2^F,"err")` shape seemed to leave the state, so the one-sheet val2 order mattered
+  there.
 Smaller workbooks holding an overflowing FVSCHEDULE do open on excel-graph (val2-fvs-01, and val2-fvs-02 with about
 twenty such calls), unlike the T-3312 attempts of 2026-11-04 (`createSession` 501 FileCorruptTryRepair).
 Ours: `#DIV/0!` for the overflowing calls above except B29 and B35 (`#NUM!`), B30 (0), B34 (`#VALUE!`) and B14:B18
 (DBL_MAX); ours matches B2, B3, B6, B7, B19:B22 and B33 (`#N/A`). Desktop Excel decides the live and seeded steps and the isolated
 rows (T-4250, decision 0039).
-Evidence: probes/val2-fvs-01, probes/val2-fvs-02 (excel-graph, 2026-11-09); gen-m9/89f0aee953a55a45 A349; T-3312 oracle
-attempts (2026-11-04).
+Evidence: probes/val2-fvs-01, probes/val2-fvs-02 (excel-graph, 2026-11-09); probes/val3-fvs-01..08 (2026-11-09);
+probes/val4-fvs-01..06 (2026-11-10); gen-m9/89f0aee953a55a45 A349; T-3312 oracle attempts (2026-11-04).
 Status: OPEN
 Tasks: T-4250, T-5108
 

@@ -248,7 +248,10 @@ def test_a_probe_excel_will_not_open_is_recorded_as_refused(
 
     def call(method: str, url: str, **_: Any) -> Any:
         if url.endswith("/createSession"):
-            raise GraphRequestError("501", "FileCorruptTryRepair", "something went wrong")
+            body = '{"error":{"code":"FileCorruptTryRepair","innerError":{"code":"unsupportedWorkbook"}}}'
+            raise GraphRequestError(f"POST x -> 501: {body}", "FileCorruptTryRepair", "something went wrong")
+        if url.endswith("format=pdf"):
+            raise GraphRequestError("GET x -> 406: {}", None, None)
         if method == "DELETE":
             deleted.append(url)
         return _reply({"id": "1"})

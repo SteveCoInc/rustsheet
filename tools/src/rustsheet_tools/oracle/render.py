@@ -17,6 +17,7 @@ import argparse
 import base64
 import hashlib
 import json
+import re
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -47,6 +48,28 @@ MAX_PROBE_CELLS = 5_000  # per sheet: the probes hold at most a few hundred (dir
 
 class RenderError(OracleError):
     """A probe that cannot be recorded or a dump that does not cover its probe."""
+
+
+class RenderRefusedError(OracleRefusedError):
+    """Excel for the web would not open a probe. `codes` are every error code of Graph's reply, outer to
+    inner (`FileCorruptTryRepair`, then `unsupportedWorkbook`, ...); `pdf` is what the drive's PDF
+    conversion of the same file answered (`"converted"` or its HTTP status)."""
+
+    def __init__(self, code: str, message: str | None, codes: list[str], pdf: str) -> None:
+        super().__init__(code, message)
+        self.codes = codes
+        self.pdf = pdf
+
+
+def _graph_codes(text: str) -> list[str]:
+    """The `"code"` values of a Graph error body quoted in `text`, outer to inner."""
+    return re.findall(r'"code"\s*:\s*"([A-Za-z0-9_.]+)"', text)
+
+
+def _status(e: OracleError) -> str:
+    """The HTTP status a `_call` error names (`GET … -> 406: …`), or its text."""
+    m = re.search(r"-> (\d{3}):", str(e))
+    return m.group(1) if m else str(e)[:80]
 
 
 def render_dir() -> Path:
@@ -204,9 +227,15 @@ def record(
                 "POST", f"{item_url}/workbook/createSession", json={"persistChanges": False}
             ).json()
         except GraphRequestError as e:
-            if e.code in OPEN_REFUSALS:
-                raise OracleRefusedError(e.code, e.message) from e
-            raise
+            if e.code not in OPEN_REFUSALS:
+                raise
+            # The refusal is the result: keep its inner codes, and whether the PDF converter takes the file.
+            try:
+                graph._call("GET", f"{item_url}/content?format=pdf")
+                converter = "converted"
+            except OracleError as pe:
+                converter = _status(pe)
+            raise RenderRefusedError(e.code, e.message, _graph_codes(str(e)), converter) from e
         sid = {"workbook-session-id": session["id"]}
         sheets = [read_sheet(graph, item_url, sid, s["name"], s["range"]) for s in probe["sheets"]]
         if images:
@@ -258,6 +287,8 @@ def write_refusal(probe: dict[str, Any], out: Path, e: OracleRefusedError) -> Pa
         "sha256": probe["sha256"],
         "source": {"api": "graph-v1.0", "recordedAt": _now()},
         "code": e.code,
+        "codes": getattr(e, "codes", [e.code]),
+        "pdf": getattr(e, "pdf", None),
         "detail": str(e),
     }
     path.write_text(json.dumps(record_, indent=1, ensure_ascii=False) + "\n")

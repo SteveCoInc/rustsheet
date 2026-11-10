@@ -28,7 +28,7 @@ eval/render/refs/graph/charts.refused.json.
 
 ## Acceptance criteria
 - [ ] probes.json and SHA256SUMS pin the corrected charts.xlsx, and every chart part declares `c14` on `mc:Choice`.
-- [ ] `rustsheet-oracle render --probe charts` writes charts.render.json (14 charts with placement), chart PNGs and
+- [ ] `rustsheet-oracle render --probe charts` writes charts.render.json (14 charts with placement), chart images and
       charts.pdf, and charts.refused.json is removed; `render --check` passes.
 - [ ] `make check` green; reviewers approve.
 

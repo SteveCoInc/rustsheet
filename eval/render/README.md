@@ -54,14 +54,14 @@ autofit would change them.
 
 | Field | Graph source | Verified | Note |
 |---|---|---|---|
-| `columns[].columnWidth` | `range(address='C:C')/format` → `columnWidth`, one column at a time | yes: the property exists | Points (settled 2026-11-10: the default 8.43-character column is 48.0, 64 px at 96 dpi). A hidden column reads 0.0. |
+| `columns[].columnWidth` | `range(address='C:C')/format` → `columnWidth`, one column at a time | yes: the property exists | Points (settled 2026-11-10: a column with no `<col>` element, at the default width, reads 48.0, which is 64 px at 96 dpi; Widths!B). A `<col width="8.43" customWidth="1">` reads 44.25 (Widths!H), so the file's width attribute does not map to 48. A hidden column reads 0.0. |
 | `columns[].hidden` | the column's range → `columnHidden` | yes | |
-| `rows[].rowHeight` | `range(address='5:5')/format` → `rowHeight` | yes: the property exists | Points, as for columns; a hidden row reads 0.0. A row with no custom height reads 15.0 even when it holds 36-pt text that the print PDF shows fitted taller (`fonts-fills-borders` Fonts rows 2:14): Graph reports the default height, not the web's fitted one (settled 2026-11-10). Fitted heights are tier 2. |
+| `rows[].rowHeight` | `range(address='5:5')/format` → `rowHeight` | yes: the property exists | Points, as for columns; a hidden row reads 0.0. A row with no custom height reads 15.0 even when it holds larger text that the print PDF shows fitted taller (`fonts-fills-borders` Fonts rows 2:13, 8 to 36 pt; row 13 is 36 pt): Graph reports the default height, not the web's fitted one (settled 2026-11-10). Fitted heights are tier 2. |
 | `rows[].hidden` | the row's range → `rowHidden` | yes | |
 | `cells[].text` | `range(address='B2')` → `text[0][0]` | yes | Graph documents that `text` **does not depend on cell width** and is not affected by `#` substitution. So the gate compares it with our engine's display text, not with what we paint. `####` fitting is tier 2. |
 | `value`, `valueType`, `numberFormat` | `values`, `valueTypes`, `numberFormat` | yes | Recorded for diagnosis, not compared. |
 | `hAlign`, `vAlign`, `wrap` | `…/format` → `horizontalAlignment`, `verticalAlignment`, `wrapText` | yes | Values as Graph names them (`General`, `CenterAcrossSelection`, …). |
-| `font.*` | `…/format/font` → `name`, `size`, `bold`, `italic`, `underline`, `color` | yes | `color` is "#RRGGBB". An automatic colour reads "#000000", the same as explicit black (settled 2026-11-10). |
+| `font.*` | `…/format/font` → `name`, `size`, `bold`, `italic`, `underline`, `color` | yes | `color` is "#RRGGBB". An automatic colour reads "#000000" (settled 2026-11-10). No probe sets an explicit black font, so whether that reads the same is not probed. |
 | `fill.color` | `…/format/fill` → `color` | yes | Graph has no fill pattern. Keep the raw value. An unfilled cell reads `""` (empty string), not null (settled 2026-11-10). |
 | `borders.*` | `…/format/borders` → each item's `sideIndex`, `style`, `weight`, `color` | yes, all six sides including both diagonals | Record each side Graph returns, keyed by `sideIndex`. |
 | `charts[]` | `worksheet/charts` → `name`, `left`, `top`, `width`, `height` | yes, in points | |
