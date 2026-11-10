@@ -21,26 +21,33 @@ def task(tid: str, milestone: str) -> dict[str, object]:
 
 
 class NextId(unittest.TestCase):
-    def test_takes_next_after_highest_in_the_milestones_block(self) -> None:
-        ts = [task("T-0004", "M0"), task("T-0023", "M0"), task("T-0300", "M0"), task("T-0110", "M1")]
-        taken = {str(t["id"]) for t in ts}
-        self.assertEqual(tasks.next_id("M0", ts, taken), "T-0024")
-        self.assertEqual(tasks.next_id("M1", ts, taken), "T-0111")
+    def test_starts_at_the_floor_whatever_lies_below_it(self) -> None:
+        # Four-digit ids are the old milestone blocks and the other repository's (decision 0360).
+        self.assertEqual(tasks.next_id({"T-0004", "T-5113", "T-9999"}), "T-90000")
+        self.assertEqual(tasks.next_id(set()), "T-90000")
+
+    def test_takes_next_after_the_highest_at_or_above_the_floor(self) -> None:
+        self.assertEqual(tasks.next_id({"T-5113", "T-90000", "T-90007"}), "T-90008")
 
     def test_never_reuses_a_gap(self) -> None:
-        ts = [task("T-0002", "M0"), task("T-0009", "M0")]
-        self.assertEqual(tasks.next_id("M0", ts, {"T-0002", "T-0009"}), "T-0010")
+        self.assertEqual(tasks.next_id({"T-90002", "T-90009"}), "T-90010")
 
     def test_ids_on_other_branches_count_as_taken(self) -> None:
-        ts = [task("T-0012", "M0")]
-        # T-0013 and T-0014 exist only on another session's pushed branch.
-        self.assertEqual(tasks.next_id("M0", ts, {"T-0012", "T-0013", "T-0014"}), "T-0015")
+        # T-90013 and T-90014 exist only on another session's pushed branch.
+        self.assertEqual(tasks.next_id({"T-90012", "T-90013", "T-90014"}), "T-90015")
 
-    def test_new_milestone_or_full_block_goes_above_everything(self) -> None:
-        ts = [task("T-0099", "M0"), task("T-0932", "M9")]
-        taken = {"T-0099", "T-0932"}
-        self.assertEqual(tasks.next_id("M0", ts, taken), "T-0933")
-        self.assertEqual(tasks.next_id("M5", ts, taken), "T-0933")
+    def test_refuses_past_the_last_five_digit_id(self) -> None:
+        with self.assertRaises(ValueError):
+            tasks.next_id({"T-99999"})
+
+
+class FiveDigitIds(unittest.TestCase):
+    def test_every_id_pattern_reads_a_five_digit_id_whole(self) -> None:
+        self.assertEqual(tasks.TASK_FILE.search("docs/tasks/M9/T-90001-x.md")[1], "T-90001")
+        self.assertEqual(tasks.TODO_OWNER.search("// TODO" + "(T-90001) later")[1], "T-90001")
+        self.assertEqual(tasks.AGENT_BRANCH.match("refs/remotes/origin/agent/x/T-90001-y")[2], "T-90001")
+        self.assertTrue(tasks.SAFE_BRANCH.match("agent/x/T-90001-y"))
+        self.assertIsNone(tasks.TASK_FILE.search("docs/tasks/M9/T-900012-x.md"))
 
 
 class GitTaskIds(unittest.TestCase):
@@ -80,7 +87,7 @@ class NewTask(unittest.TestCase):
     def test_writes_the_next_free_id_from_the_template(self) -> None:
         code, files = self.run_new("--milestone", "M0", "--lane", "harness", "--title", "Do a thing")
         self.assertEqual(code, 0)
-        self.assertEqual(files, [Path("docs/tasks/M0/T-0004-do-a-thing.md")])
+        self.assertEqual(files, [Path("docs/tasks/M0/T-90000-do-a-thing.md")])  # decision 0360
 
     def test_tier_is_written_and_validated(self) -> None:
         code, files = self.run_new(

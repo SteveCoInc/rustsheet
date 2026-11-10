@@ -29,14 +29,15 @@ import tempfile
 from collections.abc import Mapping
 from pathlib import Path
 
+import ids
 from git_ops import GitError, git
 
-TASK_PATH = re.compile(r"^(docs/tasks/(?:[^/]+/)*)(T-\d{4})(-[^/]*\.md)$")
+TASK_PATH = re.compile(rf"^(docs/tasks/(?:[^/]+/)*)({ids.TASK_ID})(-[^/]*\.md)$")
 DECISION_PATH = re.compile(r"^(docs/decisions/)(\d{4})(-[a-z0-9-]+\.md)$")
 ID_DIRS = ("docs/tasks", "docs/decisions")
 # A renumber rewrites ids only under here; elsewhere an id may be code, not a reference.
 DOCS = "docs/"
-TASK_ID = re.compile(r"T-\d{4}")
+TASK_ID = re.compile(ids.TASK_ID)
 DECISION_ID = re.compile(r"\d{4}")
 # A pinned diff, so the PR's added lines are numbered alike whatever the local git config.
 DIFF = (
