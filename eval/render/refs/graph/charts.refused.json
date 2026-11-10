@@ -1,0 +1,11 @@
+{
+ "schema": "rustsheet.excel-render-refused/1",
+ "probe": "charts",
+ "sha256": "f254966247195b1a8ec1631f5024cd7ccca8e4e4625576d0d32df86e088c7114",
+ "source": {
+  "api": "graph-v1.0",
+  "recordedAt": "2026-11-10T03:27:01Z"
+ },
+ "code": "FileCorruptTryRepair",
+ "detail": "FileCorruptTryRepair: We're sorry, but something went wrong with this file."
+}

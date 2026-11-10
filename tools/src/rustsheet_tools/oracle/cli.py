@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any
 
 from rustsheet_tools import repo_root
+from rustsheet_tools.oracle import render
 from rustsheet_tools.oracle.backends import BACKENDS, OracleError, OracleInfo, OracleRefusedError
 from rustsheet_tools.oracle.calibrate import calibrate, to_markdown
 from rustsheet_tools.oracle.canary import checked_values, embed_canary
@@ -435,6 +436,7 @@ def main() -> None:
     p.add_argument("--out", type=Path, required=True, help="where the backend's saves go")
     p.add_argument("--limit", type=int, default=0)
     p.set_defaults(fn=cmd_resave)
+    render.add_parser(sub)
     args = ap.parse_args()
     with tempfile.TemporaryDirectory():
         sys.exit(args.fn(args))

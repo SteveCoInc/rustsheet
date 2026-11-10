@@ -904,6 +904,26 @@ the Normal style. Since T-4909 the poi link-external-workbook-a R1/all save open
 Implemented in: `get_cell_styles_xml` (crates/rustsheet-xlsx/src/export/styles.rs).
 Status: VERIFIED (excel-graph; desktop not observed). Tasks: T-4890, T-4909.
 
+## A chart's `mc:Choice` must have its `Requires` prefix in scope
+Rule: Excel for the web refuses to open a package with a chart part that writes
+`<mc:Choice Requires="c14"><c14:style xmlns:c14="…/drawing/2007/8/2/chart" val="102"/></mc:Choice>`, where the
+`c14` prefix that `Requires` names is declared only on the child element. Graph reports createSession 501
+`FileCorruptTryRepair` (inner `unsupportedWorkbook`), and the drive's PDF conversion refuses the file too (406). The
+same package opens when the declaration moves up to `<mc:Choice Requires="c14" xmlns:c14="…">`, which is where Excel's
+own charts declare it, or when the `mc:AlternateContent` is dropped. Markup Compatibility (ECMA-376 Part 3) resolves a
+`Requires` prefix in the scope of the `mc:Choice` element, and a child's declaration is not in that scope.
+Evidence: oracle excel-graph, 2026-11-10, recording the render probes (eval/render/README.md, "First recording").
+- eval/render/probes/charts.xlsx (sha256 f254966247195b1a8ec1631f5024cd7ccca8e4e4625576d0d32df86e088c7114, 14 charts
+  on 3 sheets, written by the charts lane's chart writer) is refused.
+- It opens with every `<drawing>` removed. Any one sheet's drawing is enough to make it refused, and so is one chart
+  (chart1.xml) alone.
+- That one chart opens without its `mc:AlternateContent`.
+- With the declaration moved in all 14 charts (3209e9497e4f75e1d9cf28764bd723c739f835b1da0419938dbb049931fe95dd), the
+  whole workbook opens.
+
+Ours: RustSheet's export writes no chart parts of its own (pivot charts aside; they do not write this element).
+Status: VERIFIED (excel-graph; desktop not observed).
+
 ## A [n] reference without its externalLink part makes Excel refuse the package
 Rule: Excel for the web refuses to open a package whose formulas use `[1]Sheet!A1` while the package has no
 `xl/externalLinks/externalLink1.xml` and no `<externalReferences>`. Graph reports `FileCorruptTryRepair`.
