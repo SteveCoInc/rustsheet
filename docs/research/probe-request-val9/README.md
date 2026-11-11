@@ -12,3 +12,4 @@ All of these are excel-graph fills. They come from several lanes, and are batche
 
 Wanted back: the *.oracle.json sidecars for 1 and 2, and the printed JSON for 3.
 4. **F.INV / BETA.INV search fresh sweep (T-5107, P559210060, decision 0188 R4.2)**: one case, 526 cells, eval/suites/probes/cases/t5107-search-fresh.case.json; frozen values of both engines in docs/research/t5107-fin-val4/search-fresh-predictions.tsv; details in T5107-SEARCH-FRESH.md. The probes-suite fill picks it up.
+5. **F.INV / BETA.INV search, the tails (T-5107, R4.2 full domain)**: one case, 287 cells: inverse probabilities above 0.981 and below 1E-300, small, large and extreme shapes. See T5107-SEARCH-FRESH-TAILS.md. The probes-suite fill picks it up.
