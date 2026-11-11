@@ -2572,7 +2572,16 @@ down to 1E-10 / up to 0.9999999999. The values are the targets for T-0969 and T-
   relative of the true quantile at the double p (mpmath `betainc(1/2, df/2, 0, w) = 1 - p`), so a solver on
   y = df/(df+t^2) near 1 that back-transforms through 1 - y (statrs; ours before T-2724 gave 2.36E-8 and 0
   for the first two) is wrong. The central probability c = 1 - p (or |2p - 1|, or 1 - 2q for an upper tail q) is
-  exact by Sterbenz while 1 - q is not for q just below 1/2, so it has to be formed that way. Excel's own last
+  exact by Sterbenz while 1 - q is not for q just below 1/2, so it has to be formed that way. T-3370 (probes-numeric m9-t-inv-centre, excel-graph, df 2, 5, 30, 1000, 1E6): T.INV near p = 1/2 is the
+  true quantile too: `T.INV(0.5+1E-10,5)` = 2.6343057421036885E-10, `T.INV(0.5+1E-16,5)` =
+  2.924666646797773E-16, `T.INV(0.5000001,df)` (A4, A14, A24, A34, A44), each within 3.1E-15 relative of mpmath at
+  the double p. So is c = 0.06 and 0.07 (p = 0.47, 0.53, 0.93) and c = 0.08: `T.INV(0.46,5)` =
+  -0.10560715671306431, `T.INV(0.54,5)` = 0.10560715671306448, `T.INV.2T(0.92,5)` = 0.10560715671306431 (true
+  0.10560715671306432), and at df 1E6 `T.INV(0.46,1E6)` = -0.10043374587317014 against our rounded-y
+  -0.10043374575030144 (1.2E-9 off). Excel's switch to the rounded-y form (T-3061: at q = 0.45, c = 0.1) therefore
+  lies between c = 0.08 and 0.1, past our `T_CENTRE_C` = 0.075: UNVERIFIED where (T-5038 probes it, T-3477 moves the
+  cut).
+  Excel's own last
   digits are noise of up to 3.6E-15 relative around the true value (`TINV(1-1E-16,8)` = 1.4355131050823135E-16,
   true 1.4355131050823086E-16; `CONFIDENCE.T(1-1E-10,2.5,16)` = 7.964763775429037E-11, true
   7.964763775429023E-11), which an accurate kernel does not reproduce (T-0967).

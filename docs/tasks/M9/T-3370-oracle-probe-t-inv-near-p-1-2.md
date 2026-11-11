@@ -3,7 +3,7 @@ id: T-3370
 title: "Oracle probe: T.INV near p = 1/2 (centre quantile, follow-up of T-2724)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -37,3 +37,8 @@ Probe with the `excel-probe` skill (a probes-numeric case), at df 2, 5, 30, 1000
 
 ## Out of scope
 - Changing the engine (a follow-up task does that if the evidence calls for it); df 1 (T-2858).
+
+## Outcome
+Probe `probes-numeric/m9-t-inv-centre` (50 cells) filled by excel-graph. Excel is the true quantile near p = 1/2 and out to
+c = 0.08 at every df; the engine is not at c = 0.08 (off 1.4E-15 at df 2, then 2.2E-14 at df 5 up to 1.2E-9 at df 1E6). statistics.md "Centre quantiles are accurate"
+records it; where the switch to the rounded-y form lies in c = 0.08 to 0.1 is open: probe T-5038, then the cut move T-3477 (no engine change here).
