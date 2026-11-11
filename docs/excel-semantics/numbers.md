@@ -2143,7 +2143,7 @@ correctly rounded. Fit over those 38 and 224 web cells (m9-trig-reduction and tr
 - An idealized x87 `fsin` (the true sine at 64 bits, then a double) 38 / 115. A double-π reduction 20 / 94.
 - All of these give ...282 except the double-π reduction (...284).
 So no formulation reaches the desktop value. The three cells stay known failures as an Excel-vs-Excel last-digit conflict, and the
-desktop target waits for T-1075 (M14).
+desktop target waits for T-4373 (decision 0324).
 ATAN2 (gap triage 2026-10-20, T-2142): the two ATAN2 cells of `ironcalc-calc/MATH_AND_TRIGONOMETRY/ATAN2_POWER.xlsx`
 (Mac 16.0300) where desktop and web differ have the same shape as SIN(4). Sheet1!D14 is `ATAN2(1,3.141592653589793)`:
 desktop 1.2626272556789115, web and engine ...118. D26 is `ATAN2(TRUE,2)`: desktop 1.1071487177940906, web and engine ...904.
@@ -2162,7 +2162,7 @@ Results, desktop / web:
 - The quotient rounded to 64 bits only: 18 / 217. x87 `FPATAN` of the exact (y, x): 18 / 198. Adding ±π in x87: 18 / 238.
 - asin(q/sqrt(1+q²)): 18 / 169. 2·atan(q/(1+sqrt(1+q²))): 12 / 175.
 No candidate gives both desktop cells, and the two that give D14 lose web cells. The engine keeps the web value, and decision 0086
-names D14 and D26 as an Excel-vs-Excel last-digit conflict. Their desktop target waits for T-1075 (M14), as SIN(4) does.
+names D14 and D26 as an Excel-vs-Excel last-digit conflict. Their desktop target waits for T-4373 (decision 0324), as SIN(4) does.
 MIRR (T-0959): Mac 16.0300 caches `MIRR({40,-5,-5,-5,-5,-5},0.1,0.2)` as 0.3933280241536672, the web gives ...674. The engine keeps
 the desktop value with MIRR's own root (financial.md "MIRR's evaluation order"); `^` follows the web.
 

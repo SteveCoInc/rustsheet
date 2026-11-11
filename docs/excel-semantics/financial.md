@@ -981,8 +981,8 @@ guess of 0.1 or -0.5), `IRR(A4:B4)` on -4 and 4, and `IRR({-1,1})`, but -2^-52 f
 - ironcalc-calc/FINANCIAL/IRR.xlsx Two Values!C4, the same formula on the same cells, caches 2^-52, though its
   app.xml names Excel Online 16.0300. docs/research/oracle-calibration.md (T-0004) recorded the web's 0 there too.
   That is consistent with a build that rounds the final quotient once, though other paths could give the same bits. Decision 0196 names the cell M14
-  desktop-only evidence (T-1075 item 23); it stays a known failure.
-Status: VERIFIED (web); the desktop value is T-1075 item 23
+  desktop-only evidence (T-4373, decision 0324); it stays a known failure.
+Status: VERIFIED (web); the desktop value is T-4373 (decision 0324)
 Tasks: T-3410
 
 ## The IRR and XIRR solver caps
