@@ -1,0 +1,52 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "A range whose right operand is a call that returns a reference, in cells (the existing t4506-pivot-index-name-corner holds it only in a defined name). A plain $ corner, a sheet-qualified corner with absolute and relative references, a ROWS over a COUNTA end, and FORMULATEXT of two of them, so the next oracle fill pins Excel's values and its formula text.",
+ "tags": [
+  "probe",
+  "references",
+  "M2"
+ ],
+ "check": [
+  "Calc!B5",
+  "Calc!C1",
+  "Calc!C2",
+  "Calc!C3",
+  "Calc!D1",
+  "Calc!D2"
+ ],
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "1",
+    "A2": "2",
+    "A3": "3",
+    "A4": "4",
+    "A5": "5",
+    "B5": "=SUM(A$3:INDEX($A:$A,ROW()-1))",
+    "C1": "=SUM(Data!$A$1:INDEX(Data!$B:$B,3))",
+    "C2": "=SUM(Data!A1:INDEX(Data!B:B,3))",
+    "C3": "=ROWS(Data!$A$1:INDEX(Data!$B:$B,COUNTA(Data!$A:$A)))",
+    "D1": "=FORMULATEXT(C1)",
+    "D2": "=FORMULATEXT(B5)"
+   }
+  },
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "10",
+    "A2": "20",
+    "A3": "30",
+    "A4": "40",
+    "A5": "50",
+    "B1": "100",
+    "B2": "200",
+    "B3": "300",
+    "B4": "400",
+    "B5": "500"
+   }
+  }
+ ],
+ "expected": {},
+ "expected_source": null
+}

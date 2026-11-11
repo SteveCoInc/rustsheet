@@ -1,0 +1,68 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "Part of t1896-hypgeom-cdf-wide (pending since #4123): sheet Rare rows 9, 12 (and its header row 1), plus the Precision sheet. The whole t1896-hypgeom-cdf-wide workbook failed twice on excel-graph (Graph's calculate or createSession, retries exhausted; #4124), so docs/research/probe-handoff-2026-11-11-wave2.md splits it into one workbook per sheet, with each HYPGEOM.DIST cdf row over 2^17 summed terms in groups of at most 6 rows. Sheet names, cell addresses and formulas are t1896-hypgeom-cdf-wide's, so its frozen predictions apply cell for cell. t1896-hypgeom-cdf-wide: T-1896: HYPGEOM.DIST cdf at wide distributions (standard deviation 3,500 to 11,585; populations 4E8 to 2^31 - 2), x at the mean and within three standard deviations, and one call 43 standard deviations above the mode. E the cdf, F the pmf, G (E)=1. The engine returns Excel's identified form there (the pmf at x times one plus a sum of ratios, T-2481); Excel's values are unprobed. A calculate request on a single wide cdf has failed before (statistics.md, \"HYPGEOM.DIST of an empty population is 1 ...\"): if the fill fails, say which rows. Sheet Rare: twelve points where successes or failures are rare (2E5 to 5E6) in a population of 1E9 to 2^31 - 2, x within three standard deviations below the mean: there the engine's cdf is up to 4E-10 (relative) from the 50-digit value, the relative error of its pmf at x, and whether that is Excel's own is what these rows ask (E the cdf, F the pmf, G (E)=0). Frozen model values: docs/research/t1896-cdf-wide-predictions.json. Predictions are hypotheses, NOT expected values. Precision!B2:B4 must retain 0.9999999999999998, 1, 1.0000000000000002; C2:C4 must be -1,0,1.",
+ "tags": [
+  "M9",
+  "statistical",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Rare",
+   "cells": {
+    "A1": "x",
+    "B1": "draws",
+    "C1": "successes",
+    "D1": "population",
+    "E1": "cdf",
+    "F1": "pmf",
+    "G1": "cdf_is_0",
+    "A9": 938712575,
+    "B9": 938932501,
+    "C9": 1314390140,
+    "D9": 1314697533,
+    "E9": "=HYPGEOM.DIST(A9,B9,C9,D9,TRUE)",
+    "F9": "=HYPGEOM.DIST(A9,B9,C9,D9,FALSE)",
+    "G9": "=(E9)=0",
+    "A12": 89087,
+    "B12": 292359,
+    "C12": 539335017,
+    "D12": 1757469069,
+    "E12": "=HYPGEOM.DIST(A12,B12,C12,D12,TRUE)",
+    "F12": "=HYPGEOM.DIST(A12,B12,C12,D12,FALSE)",
+    "G12": "=(E12)=0"
+   }
+  },
+  {
+   "name": "Precision",
+   "cells": {
+    "A1": "offset",
+    "B1": "raw",
+    "C1": "raw subtraction, not SUM",
+    "A2": -1,
+    "B2": "=1+A2*2^-52",
+    "C2": "=(B2-1)*2^52",
+    "A3": 0,
+    "B3": "=1+A3*2^-52",
+    "C3": "=(B3-1)*2^52",
+    "A4": 1,
+    "B4": "=1+A4*2^-52",
+    "C4": "=(B4-1)*2^52"
+   }
+  }
+ ],
+ "check": [
+  "Rare!E9",
+  "Rare!F9",
+  "Rare!G9",
+  "Rare!E12",
+  "Rare!F12",
+  "Rare!G12",
+  "Precision!B2",
+  "Precision!B3",
+  "Precision!B4",
+  "Precision!C2",
+  "Precision!C3",
+  "Precision!C4"
+ ]
+}

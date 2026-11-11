@@ -1,0 +1,69 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "Typed 3-D references over sheets named like cells (T2, T3) between Sales and Other: =SUM(Sales:T3!C2) and =SUM(T2:T3!A1) unquoted, their quoted forms, and FORMULATEXT of each, to see whether Excel reads the unquoted span and how it prints it ('Sales:T3'!C2 expected).",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": {
+     "entered": "=SUM(Sales:T3!C2)"
+    },
+    "B1": "=FORMULATEXT(A1)",
+    "A2": {
+     "entered": "=SUM(T2:T3!A1)"
+    },
+    "B2": "=FORMULATEXT(A2)",
+    "A3": {
+     "entered": "=SUM('Sales:T3'!C2)"
+    },
+    "B3": "=FORMULATEXT(A3)",
+    "A4": {
+     "entered": "=SUM('T2:T3'!A1)"
+    },
+    "B4": "=FORMULATEXT(A4)",
+    "A5": {
+     "entered": "=SUM(Sales:Other!C2)"
+    },
+    "B5": "=FORMULATEXT(A5)",
+    "A6": {
+     "entered": "=T3!C2"
+    },
+    "B6": "=FORMULATEXT(A6)"
+   }
+  },
+  {
+   "name": "Sales",
+   "cells": {
+    "A1": 1,
+    "C2": 10
+   }
+  },
+  {
+   "name": "T2",
+   "cells": {
+    "A1": 2,
+    "C2": 20
+   }
+  },
+  {
+   "name": "T3",
+   "cells": {
+    "A1": 3,
+    "C2": 30
+   }
+  },
+  {
+   "name": "Other",
+   "cells": {
+    "A1": 4,
+    "C2": 40
+   }
+  }
+ ],
+ "expected": {}
+}

@@ -1,0 +1,67 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "Part of t5109-fresh (pending since #4123): sheet CdfWide rows 50-55 (and its header row 1), plus the Precision sheet. The whole t5109-fresh workbook failed twice on excel-graph (Graph's calculate or createSession, retries exhausted; #4124), so docs/research/probe-handoff-2026-11-11-wave2.md splits it into one workbook per sheet, with each HYPGEOM.DIST cdf row over 2^17 summed terms in groups of at most 6 rows. Sheet names, cell addresses and formulas are t5109-fresh's, so its frozen predictions apply cell for cell. t5109-fresh: T-5109 and T-2481 fresh sweep (decision 0188 R4.2), generated 2026-11-10 after the whole-count Loader kernel and the hypergeometric cdf were frozen. Sheet Calc (seed \"r4-T-5109\"): interior BINOM.DIST pmf (n log-uniform to 1E9), saddle-point POISSON.DIST pmf (k log-uniform to 1E9) and in-support HYPGEOMDIST / HYPGEOM.DIST pmf (population log-uniform to 2^31 - 2), literal arguments of at most 15 significant digits. Sheet Poisson (seed \"r4-T-2481\"): k from 1E4 to 1E15 with the mean within a few to thirty standard deviations of k, the inputs in cells. Sheet Closed: HYPGEOMDIST tuples with x = successes, where the factor BINOM.DIST(x, successes, p) is the closed form p^x and a subnormal that the engine keeps (G, with its (cell)=0 companion H): E is a normal double only if Excel keeps it too. Sheet Cdf: 60 HYPGEOM.DIST(..,TRUE) points, x within four standard deviations of the mean. Sheet CdfWide (seed \"r4-T-2481-wide\"): 66 HYPGEOM.DIST(..,TRUE) points at populations from 2E7 to 2^31 - 2 with draws and successes between 5% and 95% of the population (a standard deviation of 600 to 11,585), x at the mean and 0.5, 1, 2 and 4 standard deviations either side: beyond every cached cdf cell (standard deviation at most 602, products of the ratio below 2^53). Sheet CdfTie (seed \"r4-T-2481-tie\"): near-ties of the mirror test, x N = n K + 1, - 1 and 0 with products above 2^53, where the two branches differ by a few hundred ulp. Column B or D or I is the (cell)=0 companion (decision 0042). Frozen model values: docs/research/t5109-fresh-predictions.json. Predictions are hypotheses, NOT expected values. Precision!B2:B4 must retain 0.9999999999999998, 1, 1.0000000000000002; C2:C4 must be -1,0,1.",
+ "tags": [
+  "M9",
+  "statistical",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "CdfWide",
+   "cells": {
+    "A1": "formula",
+    "B1": "is_0",
+    "A50": "=HYPGEOM.DIST(21829487,124310948,23676477,134836199,TRUE)",
+    "B50": "=(A50)=0",
+    "A51": "=HYPGEOM.DIST(817779177,1016230512,879154875,1092495855,TRUE)",
+    "B51": "=(A51)=0",
+    "A52": "=HYPGEOM.DIST(379857311,682754485,649651214,1167732741,TRUE)",
+    "B52": "=(A52)=0",
+    "A53": "=HYPGEOM.DIST(354687884,684384872,383771640,740488152,TRUE)",
+    "B53": "=(A53)=0",
+    "A54": "=HYPGEOM.DIST(23337783,82049187,99398316,349671192,TRUE)",
+    "B54": "=(A54)=0",
+    "A55": "=HYPGEOM.DIST(50087958,61568401,962244991,1182516106,TRUE)",
+    "B55": "=(A55)=0"
+   }
+  },
+  {
+   "name": "Precision",
+   "cells": {
+    "A1": "offset",
+    "B1": "raw",
+    "C1": "raw subtraction, not SUM",
+    "A2": -1,
+    "B2": "=1+A2*2^-52",
+    "C2": "=(B2-1)*2^52",
+    "A3": 0,
+    "B3": "=1+A3*2^-52",
+    "C3": "=(B3-1)*2^52",
+    "A4": 1,
+    "B4": "=1+A4*2^-52",
+    "C4": "=(B4-1)*2^52"
+   }
+  }
+ ],
+ "check": [
+  "CdfWide!A50",
+  "CdfWide!B50",
+  "CdfWide!A51",
+  "CdfWide!B51",
+  "CdfWide!A52",
+  "CdfWide!B52",
+  "CdfWide!A53",
+  "CdfWide!B53",
+  "CdfWide!A54",
+  "CdfWide!B54",
+  "CdfWide!A55",
+  "CdfWide!B55",
+  "Precision!B2",
+  "Precision!B3",
+  "Precision!B4",
+  "Precision!C2",
+  "Precision!C3",
+  "Precision!C4"
+ ]
+}
