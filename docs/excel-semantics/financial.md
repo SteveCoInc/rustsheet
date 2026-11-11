@@ -3433,8 +3433,9 @@ The computed arguments do (A82:B96): at `1E15+1` (equally `10^15+1`) Excel's D i
 the same cells for the 1.5 dollar, 1.5551115123125783 and 1.4503599627370496, the correctly rounded math with D = 10^16
 (A83:B84). For the 0.3 dollar they differ (A93 0.333066907387547, A94 0.33306690738754696; B93 0.2702159776422297, B94
 0.27021597764222977) and A93 is not the correctly rounded value, which is 0.33306690738754696. At `1E300` Excel returns
-the dollar unchanged (A27:B27), so its D is 10^300; the Gate A math definition takes D = 10^301 there from the double
-above 10^300, which its sidecar shows (T-4880). The errors, truncation and D rules hold for all three dollars, and the negative dollar's cells are the exact mirror of
+the dollar unchanged (A27:B27), so its D is 10^300. The Gate A math definition reads D off the double `log10` of the truncated fraction
+(10^ceil(log10 F)), which gives Excel's D at 1E15+1 and 1E300, and the math sidecar agrees with the oracle on its 126 numeric and 12 error cells
+(T-4880). The errors, truncation and D rules hold for all three dollars, and the negative dollar's cells are the exact mirror of
 the positive one's (A28:B54 of A1:B27, A87:B91 of A82:B86). The last digits are not always the correctly rounded math
 for any dollar: for example `DOLLARDE(1.5,15.9)` is 4.333333333333334 (A11; correctly rounded 4.333333333333333),
 `DOLLARDE(0.3,999999999999999)` 0.3000000000000003 (A76; correctly rounded 0.30000000000000027) and `DOLLARFR(0.3,1E15+1)`
