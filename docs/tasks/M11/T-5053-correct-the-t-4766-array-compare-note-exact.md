@@ -3,7 +3,7 @@ id: T-5053
 title: "Correct the T-4766 array-compare note: exact-boundary evidence, the 15-digit literal cut, unprobed edges"
 milestone: M11
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -27,10 +27,15 @@ From the excel-fidelity review of PR #4036 (T-4766), MINOR findings, docs only:
   the Outcome's "Fit guards" paragraph calls the training cells "(the hold-out)" and should be reworded.
 
 ## Acceptance criteria
-- [ ] numbers.md's T-4766 paragraph cites fresh A1/A2 for the exact boundary, names the 15-digit literal cut for E4:E6, and marks
+- [x] numbers.md's T-4766 paragraph cites fresh A1/A2 for the exact boundary, names the 15-digit literal cut for E4:E6, and marks
       the two unprobed edges as the engine's choice; the code comment of `arithmetic::within_array_compare_gap` agrees.
-- [ ] The T-4766 task file's Outcome calls 2^-1026 a measured boundary (no R4 fit) and drops the "(the hold-out)" wording.
-- [ ] `make check` green; reviewers approve.
+- [x] The T-4766 task file's Outcome calls 2^-1026 a measured boundary (no R4 fit) and drops the "(the hold-out)" wording.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Probing the two unprobed edges (file a probe task if wanted).
+
+## Outcome
+Docs and a code comment only. numbers.md's T-4766 paragraph now cites fresh A1/A2 for the exact boundary, names the 15-digit
+literal cut behind E4:E6 and marks the two unprobed edges as the engine's choice; the `within_array_compare_gap` comment agrees;
+the T-4766 Outcome calls 2^-1026 a measured boundary, not an R4 fit. Eval delta: none.
