@@ -1,0 +1,75 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "A review follow-up: which names a defined name's body reads when the sheet holding sheet-local names is the first sheet, when only a sheet defines the name the body uses, and for a name the body calls. Data is the first sheet. Rate: workbook 1, Data!Rate 10; Data!DoubleRate = Rate*2 (sheet-local), TripleRate = Rate*3 (workbook). Own: only Data!Own 10; Data!DoubleOwn = Own*2, TripleOwn = Own*3. Dbl: workbook LAMBDA(x,x*2), Data!Dbl LAMBDA(x,x*3); CallsDbl = Dbl(7) (workbook), Data!LocalCallsDbl = Dbl(7). probes/defined-name-local-formula-scope asks the first question with Data second.",
+  "tags": [
+    "M8",
+    "names",
+    "probe"
+  ],
+  "names": {
+    "Rate": "=1",
+    "Data!Rate": "=10",
+    "Data!DoubleRate": "=Rate*2",
+    "TripleRate": "=Rate*3",
+    "Data!Own": "=10",
+    "Data!DoubleOwn": "=Own*2",
+    "TripleOwn": "=Own*3",
+    "Dbl": "=LAMBDA(x,x*2)",
+    "Data!Dbl": "=LAMBDA(x,x*3)",
+    "CallsDbl": "=Dbl(7)",
+    "Data!LocalCallsDbl": "=Dbl(7)"
+  },
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "A1": "=DoubleRate",
+        "A2": "=TripleRate",
+        "A3": "=Rate",
+        "A4": "=DoubleOwn",
+        "A5": "=TripleOwn",
+        "A6": "=ISERROR(DoubleOwn)",
+        "A7": "=ISERROR(TripleOwn)",
+        "A8": "=CallsDbl",
+        "A9": "=LocalCallsDbl",
+        "A10": "=Dbl(7)"
+      }
+    },
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=Data!DoubleRate",
+        "A2": "=TripleRate",
+        "A3": "=Data!DoubleOwn",
+        "A4": "=TripleOwn",
+        "A5": "=ISERROR(Data!DoubleOwn)",
+        "A6": "=ISERROR(TripleOwn)",
+        "A7": "=CallsDbl",
+        "A8": "=Data!LocalCallsDbl",
+        "A9": "=Dbl(7)"
+      }
+    }
+  ],
+  "expected": {},
+  "check": [
+    "Data!A1",
+    "Data!A2",
+    "Data!A3",
+    "Data!A4",
+    "Data!A5",
+    "Data!A6",
+    "Data!A7",
+    "Data!A8",
+    "Data!A9",
+    "Data!A10",
+    "Sheet1!A1",
+    "Sheet1!A2",
+    "Sheet1!A3",
+    "Sheet1!A4",
+    "Sheet1!A5",
+    "Sheet1!A6",
+    "Sheet1!A7",
+    "Sheet1!A8",
+    "Sheet1!A9"
+  ]
+}

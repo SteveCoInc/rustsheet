@@ -1,0 +1,346 @@
+{
+ "notice": "Frozen engine values for the second T-2586 NEGBINOM.DIST pmf probe, written 2026-11-11 before any value returned. Research metadata, NOT oracle values. flush: sheet Flush (engine_pmf is what the engine returns: 0 where the stored quotient p / (f + 1) is below 2.2250738585072014E-308, the density times the quotient elsewhere; pmf_to_60_digits_rounded is the math, which Excel did not return on the ten rows of the first probe). large: sheet Large (engine_pmf is what the engine returns, the kernel's arithmetic as identified up to r + f = 7.3E9; pmf_to_60_digits_rounded is the math, which the engine is NOT expected to return if Excel's pmf carries the same noise). kernel: sheet Kernel (cached_beta_density is Excel's value of the cached cell; count_form_beta_density is the whole-count form NEGBINOM.DIST multiplies, which is the cached value on rows 2 and 4 and 19 doubles above it on row 3; engine_beta_density is the worksheet function, still on its fitted model; engine_negbinom_pmf is the count form times the stored quotient).",
+ "flush": [
+  {
+   "row": 2,
+   "failures": 1,
+   "p": "4e-308",
+   "quotient": "2e-308",
+   "quotient_is_subnormal": true,
+   "engine_pmf": "0.0",
+   "engine_pmf_is_0": "TRUE",
+   "pmf_to_60_digits_rounded": "4e-308"
+  },
+  {
+   "row": 3,
+   "failures": 1,
+   "p": "4.4e-308",
+   "quotient": "2.2e-308",
+   "quotient_is_subnormal": true,
+   "engine_pmf": "0.0",
+   "engine_pmf_is_0": "TRUE",
+   "pmf_to_60_digits_rounded": "4.4e-308"
+  },
+  {
+   "row": 4,
+   "failures": 1,
+   "p": "4.5e-308",
+   "quotient": "2.25e-308",
+   "quotient_is_subnormal": false,
+   "engine_pmf": "4.5e-308",
+   "engine_pmf_is_0": "FALSE",
+   "pmf_to_60_digits_rounded": "4.5e-308"
+  },
+  {
+   "row": 5,
+   "failures": 1,
+   "p": "4.6e-308",
+   "quotient": "2.3e-308",
+   "quotient_is_subnormal": false,
+   "engine_pmf": "4.6e-308",
+   "engine_pmf_is_0": "FALSE",
+   "pmf_to_60_digits_rounded": "4.6e-308"
+  },
+  {
+   "row": 6,
+   "failures": 1,
+   "p": "6e-308",
+   "quotient": "3e-308",
+   "quotient_is_subnormal": false,
+   "engine_pmf": "6e-308",
+   "engine_pmf_is_0": "FALSE",
+   "pmf_to_60_digits_rounded": "6e-308"
+  },
+  {
+   "row": 7,
+   "failures": 1,
+   "p": "2e-307",
+   "quotient": "1e-307",
+   "quotient_is_subnormal": false,
+   "engine_pmf": "2e-307",
+   "engine_pmf_is_0": "FALSE",
+   "pmf_to_60_digits_rounded": "2e-307"
+  },
+  {
+   "row": 8,
+   "failures": 1,
+   "p": "2e-305",
+   "quotient": "1e-305",
+   "quotient_is_subnormal": false,
+   "engine_pmf": "2e-305",
+   "engine_pmf_is_0": "FALSE",
+   "pmf_to_60_digits_rounded": "2e-305"
+  },
+  {
+   "row": 9,
+   "failures": 1,
+   "p": "2e-303",
+   "quotient": "1e-303",
+   "quotient_is_subnormal": false,
+   "engine_pmf": "2e-303",
+   "engine_pmf_is_0": "FALSE",
+   "pmf_to_60_digits_rounded": "2e-303"
+  },
+  {
+   "row": 10,
+   "failures": 3,
+   "p": "8.8e-308",
+   "quotient": "2.2e-308",
+   "quotient_is_subnormal": true,
+   "engine_pmf": "0.0",
+   "engine_pmf_is_0": "TRUE",
+   "pmf_to_60_digits_rounded": "8.8e-308"
+  },
+  {
+   "row": 11,
+   "failures": 3,
+   "p": "9.2e-308",
+   "quotient": "2.3e-308",
+   "quotient_is_subnormal": false,
+   "engine_pmf": "9.2e-308",
+   "engine_pmf_is_0": "FALSE",
+   "pmf_to_60_digits_rounded": "9.2e-308"
+  },
+  {
+   "row": 12,
+   "failures": 9,
+   "p": "2.2e-307",
+   "quotient": "2.2e-308",
+   "quotient_is_subnormal": true,
+   "engine_pmf": "0.0",
+   "engine_pmf_is_0": "TRUE",
+   "pmf_to_60_digits_rounded": "2.2e-307"
+  },
+  {
+   "row": 13,
+   "failures": 9,
+   "p": "2.3e-307",
+   "quotient": "2.3e-308",
+   "quotient_is_subnormal": false,
+   "engine_pmf": "2.3000000000000003e-307",
+   "engine_pmf_is_0": "FALSE",
+   "pmf_to_60_digits_rounded": "2.3e-307"
+  },
+  {
+   "row": 14,
+   "failures": 1000000000000000,
+   "p": "2e-293",
+   "quotient": "2e-308",
+   "quotient_is_subnormal": true,
+   "engine_pmf": "0.0",
+   "engine_pmf_is_0": "TRUE",
+   "pmf_to_60_digits_rounded": "2e-293"
+  },
+  {
+   "row": 15,
+   "failures": 1000000000000000,
+   "p": "2.3e-293",
+   "quotient": "2.3e-308",
+   "quotient_is_subnormal": false,
+   "engine_pmf": "2.299999999999995e-293",
+   "engine_pmf_is_0": "FALSE",
+   "pmf_to_60_digits_rounded": "2.3e-293"
+  },
+  {
+   "row": 16,
+   "failures": 1000000000000000,
+   "p": "2e-292",
+   "quotient": "2e-307",
+   "quotient_is_subnormal": false,
+   "engine_pmf": "1.999999999999996e-292",
+   "engine_pmf_is_0": "FALSE",
+   "pmf_to_60_digits_rounded": "2e-292"
+  },
+  {
+   "row": 17,
+   "failures": 228725374468052,
+   "p": "1.78443119182287e-296",
+   "quotient": "7.802e-311",
+   "quotient_is_subnormal": true,
+   "engine_pmf": "0.0",
+   "engine_pmf_is_0": "TRUE",
+   "pmf_to_60_digits_rounded": "1.78443119182287e-296"
+  },
+  {
+   "row": 18,
+   "failures": 211417060362647,
+   "p": "3.14432242570879e-297",
+   "quotient": "1.487e-311",
+   "quotient_is_subnormal": true,
+   "engine_pmf": "0.0",
+   "engine_pmf_is_0": "TRUE",
+   "pmf_to_60_digits_rounded": "3.14432242570879e-297"
+  },
+  {
+   "row": 19,
+   "failures": 9000000000000000,
+   "p": "2e-292",
+   "quotient": "2.222e-308",
+   "quotient_is_subnormal": true,
+   "engine_pmf": "0.0",
+   "engine_pmf_is_0": "TRUE",
+   "pmf_to_60_digits_rounded": "2e-292"
+  },
+  {
+   "row": 20,
+   "failures": 9000000000000000,
+   "p": "2.1e-292",
+   "quotient": "2.333e-308",
+   "quotient_is_subnormal": false,
+   "engine_pmf": "2.100000000000002e-292",
+   "engine_pmf_is_0": "FALSE",
+   "pmf_to_60_digits_rounded": "2.1e-292"
+  }
+ ],
+ "large": [
+  {
+   "row": 2,
+   "failures": 490347271985598,
+   "successes": 534412586005354,
+   "p": "0.521500280203314",
+   "engine_pmf": "1.5628052907262164e-9",
+   "pmf_to_60_digits_rounded": "1.5628052724402663e-09",
+   "relative_error_of_the_engine_pmf": "1.17e-08"
+  },
+  {
+   "row": 3,
+   "failures": 77745997281,
+   "successes": 7918907,
+   "p": "0.000101923826877835",
+   "engine_pmf": "1.4116284841840883e-9",
+   "pmf_to_60_digits_rounded": "1.4116284841831467e-09",
+   "relative_error_of_the_engine_pmf": "6.67e-13"
+  },
+  {
+   "row": 4,
+   "failures": 45060520282,
+   "successes": 54045086062,
+   "p": "0.545331205307863",
+   "engine_pmf": "2.3992773197349034e-7",
+   "pmf_to_60_digits_rounded": "2.399277319532935e-07",
+   "relative_error_of_the_engine_pmf": "8.42e-11"
+  },
+  {
+   "row": 5,
+   "failures": 260872319843,
+   "successes": 278448378,
+   "p": "0.00106627040394969",
+   "engine_pmf": "2.2079545184099448e-8",
+   "pmf_to_60_digits_rounded": "2.2079545184076443e-08",
+   "relative_error_of_the_engine_pmf": "1.04e-12"
+  },
+  {
+   "row": 6,
+   "failures": 174856771870,
+   "successes": 139961033501,
+   "p": "0.444580120334882",
+   "engine_pmf": "2.6179473344345142e-8",
+   "pmf_to_60_digits_rounded": "2.6179473350356664e-08",
+   "relative_error_of_the_engine_pmf": "2.30e-10"
+  },
+  {
+   "row": 7,
+   "failures": 7046354717314,
+   "successes": 4620580813,
+   "p": "0.000655303164527025",
+   "engine_pmf": "2.7928522021189052e-9",
+   "pmf_to_60_digits_rounded": "2.792852202120685e-09",
+   "relative_error_of_the_engine_pmf": "6.37e-13"
+  },
+  {
+   "row": 8,
+   "failures": 4502103849379,
+   "successes": 875174124003,
+   "p": "0.162754444242713",
+   "engine_pmf": "9.072282081215439e-9",
+   "pmf_to_60_digits_rounded": "9.07228208796585e-09",
+   "relative_error_of_the_engine_pmf": "7.44e-10"
+  },
+  {
+   "row": 9,
+   "failures": 74826069298924,
+   "successes": 3942991251793,
+   "p": "0.05005760344812",
+   "engine_pmf": "9.359697009249785e-9",
+   "pmf_to_60_digits_rounded": "9.359697008364249e-09",
+   "relative_error_of_the_engine_pmf": "9.46e-11"
+  },
+  {
+   "row": 10,
+   "failures": 29698213306918,
+   "successes": 21234111796067,
+   "p": "0.416908530662525",
+   "engine_pmf": "1.7611889374024856e-9",
+   "pmf_to_60_digits_rounded": "1.7611889338412828e-09",
+   "relative_error_of_the_engine_pmf": "2.02e-09"
+  },
+  {
+   "row": 11,
+   "failures": 186023984408082,
+   "successes": 20246006276757,
+   "p": "0.0981529925971274",
+   "engine_pmf": "4.2446313436524714e-10",
+   "pmf_to_60_digits_rounded": "4.244631335944367e-10",
+   "relative_error_of_the_engine_pmf": "1.82e-09"
+  },
+  {
+   "row": 12,
+   "failures": 461867924307255,
+   "successes": 417539132421561,
+   "p": "0.4747962520652",
+   "engine_pmf": "2.2254588330717764e-10",
+   "pmf_to_60_digits_rounded": "2.2254588569400693e-10",
+   "relative_error_of_the_engine_pmf": "1.07e-08"
+  },
+  {
+   "row": 13,
+   "failures": 179328327288079,
+   "successes": 856013645170224,
+   "p": "0.826793124692528",
+   "engine_pmf": "6.4431959440652345e-9",
+   "pmf_to_60_digits_rounded": "6.443195935446858e-09",
+   "relative_error_of_the_engine_pmf": "1.34e-09"
+  },
+  {
+   "row": 14,
+   "failures": 989342215041012,
+   "successes": 776301101687699,
+   "p": "0.439670364252785",
+   "engine_pmf": "1.0910285234527356e-10",
+   "pmf_to_60_digits_rounded": "1.0910285061694984e-10",
+   "relative_error_of_the_engine_pmf": "1.58e-08"
+  }
+ ],
+ "kernel": [
+  {
+   "row": 2,
+   "x": "0.8408888000000013",
+   "cached_cell": "probes-numeric/t3571-r5-bfrac-hold Calc!B685",
+   "cached_beta_density": "0.0371477880334206",
+   "count_form_beta_density": "0.0371477880334206",
+   "engine_beta_density": "0.0371477880334204",
+   "engine_negbinom_pmf": "3.95908224360931e-5",
+   "count_form_negbinom_pmf": "3.95908224360931e-05"
+  },
+  {
+   "row": 3,
+   "x": "0.8408888000000014",
+   "cached_cell": "probes-numeric/t3571-r5-bfrac-hold Calc!B686",
+   "cached_beta_density": "0.0371477880334213",
+   "count_form_beta_density": "0.03714778803342143",
+   "engine_beta_density": "0.037147788033421225",
+   "engine_negbinom_pmf": "3.959082243609399e-5",
+   "count_form_negbinom_pmf": "3.959082243609399e-05"
+  },
+  {
+   "row": 4,
+   "x": "0.8408888000000015",
+   "cached_cell": "probes-numeric/t3571-r5-bfrac-hold Calc!B687",
+   "cached_beta_density": "0.03714778803342255",
+   "count_form_beta_density": "0.03714778803342255",
+   "engine_beta_density": "0.037147788033422495",
+   "engine_negbinom_pmf": "3.959082243609519e-5",
+   "count_form_negbinom_pmf": "3.959082243609519e-05"
+  }
+ ]
+}
