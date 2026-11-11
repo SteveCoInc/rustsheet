@@ -608,7 +608,21 @@ fn add_table(
             .map(|r| r.saturating_sub(1))
             .collect();
         let column = usize::try_from(criterion.column).unwrap_or(usize::MAX);
-        tx.filter_table_column(&table.name, column, &rejected)?;
+        match (&criterion.values, &criterion.custom) {
+            (Some(_), Some(_)) => {
+                return Err(rustsheet::EditError::Table(
+                    "a criterion takes values or custom, not both".to_string(),
+                ));
+            }
+            (Some(values), None) => tx.filter_table_column_values(&table.name, column, values)?,
+            (None, Some(custom)) => {
+                let conditions: Vec<(Option<String>, String)> = (custom.conditions.iter())
+                    .map(|c| (c.operator.clone(), c.val.clone()))
+                    .collect();
+                tx.filter_table_column_custom(&table.name, column, custom.and, &conditions)?;
+            }
+            (None, None) => tx.filter_table_column(&table.name, column, &rejected)?,
+        }
     }
     for (letter, formula) in &table.calculated {
         let (column, text) = calculated_column(&table.range, letter, formula)?;

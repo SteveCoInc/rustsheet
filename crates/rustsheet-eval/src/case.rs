@@ -223,6 +223,34 @@ pub struct CriterionSpec {
     pub column: u32,
     /// The 1-based sheet rows the filter rejects; each must be one of the sheet's `hidden_rows`.
     pub hides: Vec<u32>,
+    /// The values filter lists exactly this text (what the kept rows display, `"10.00"` for a
+    /// `0.00`-formatted cell) instead of the General text spec2xlsx derives (T-4973).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub values: Option<Vec<String>>,
+    /// A custom filter on the column instead of a values filter (T-4973); `hides` still names the
+    /// rows it rejects.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub custom: Option<CustomSpec>,
+}
+
+/// A `<customFilters>` criterion of a spec table's `criteria` (T-4973).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CustomSpec {
+    /// All conditions must hold (`and="1"`); else either.
+    #[serde(default)]
+    pub and: bool,
+    /// One or two conditions.
+    pub conditions: Vec<CustomConditionSpec>,
+}
+
+/// One `<customFilter>`: an `operator` (absent: Excel's `equal`) and its operand.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CustomConditionSpec {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub operator: Option<String>,
+    pub val: String,
 }
 
 /// The `<filterColumn>` of a filtered spec table (T-4003): Excel calls the hidden rows filtered

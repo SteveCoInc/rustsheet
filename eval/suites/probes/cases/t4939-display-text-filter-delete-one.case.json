@@ -1,0 +1,130 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Table Sales on S!A1:C7 (Cat a,b,a,c,a,b; Val 1-6; Ext 10-60); values filters on Cat keeping a and c (rows 3, 7) and on Ext rejecting 40 (row 5). F!A1:A4 SUBTOTAL 3, 103, 9, 109 over Sales[Val], A5 ROWS(Sales), A6 COLUMNS(Sales), B2:B7 SUBTOTAL(3,S!Bn) and C2:C7 SUBTOTAL(103,S!Bn) per data row. Ext is formatted 0.00 and its filter lists the displayed text 10.00 .. 60.00. The edit: delete_column at A deletes Cat; the Ext criterion stays. (T-4895)",
+  "tags": [
+    "M8",
+    "tables",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "A1": "Cat",
+        "B1": "Val",
+        "C1": "Ext",
+        "A2": "a",
+        "B2": 1,
+        "C2": 10,
+        "A3": "b",
+        "B3": 2,
+        "C3": 20,
+        "A4": "a",
+        "B4": 3,
+        "C4": 30,
+        "A5": "c",
+        "B5": 4,
+        "C5": 40,
+        "A6": "a",
+        "B6": 5,
+        "C6": 50,
+        "A7": "b",
+        "B7": 6,
+        "C7": 60
+      },
+      "hidden_rows": [
+        3,
+        5,
+        7
+      ],
+      "number_formats": {
+        "C2": "0.00",
+        "C3": "0.00",
+        "C4": "0.00",
+        "C5": "0.00",
+        "C6": "0.00",
+        "C7": "0.00"
+      },
+      "tables": [
+        {
+          "name": "Sales",
+          "ref": "A1:C7",
+          "filter": true,
+          "criteria": [
+            {
+              "column": 0,
+              "hides": [
+                3,
+                7
+              ]
+            },
+            {
+              "column": 2,
+              "hides": [
+                5
+              ],
+              "values": [
+                "10.00",
+                "20.00",
+                "30.00",
+                "50.00",
+                "60.00"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=SUBTOTAL(3,Sales[Val])",
+        "A2": "=SUBTOTAL(103,Sales[Val])",
+        "A3": "=SUBTOTAL(9,Sales[Val])",
+        "A4": "=SUBTOTAL(109,Sales[Val])",
+        "A5": "=ROWS(Sales)",
+        "A6": "=COLUMNS(Sales)",
+        "B2": "=SUBTOTAL(3,S!B2)",
+        "C2": "=SUBTOTAL(103,S!B2)",
+        "B3": "=SUBTOTAL(3,S!B3)",
+        "C3": "=SUBTOTAL(103,S!B3)",
+        "B4": "=SUBTOTAL(3,S!B4)",
+        "C4": "=SUBTOTAL(103,S!B4)",
+        "B5": "=SUBTOTAL(3,S!B5)",
+        "C5": "=SUBTOTAL(103,S!B5)",
+        "B6": "=SUBTOTAL(3,S!B6)",
+        "C6": "=SUBTOTAL(103,S!B6)",
+        "B7": "=SUBTOTAL(3,S!B7)",
+        "C7": "=SUBTOTAL(103,S!B7)"
+      }
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!A2",
+    "F!A3",
+    "F!A4",
+    "F!A5",
+    "F!A6",
+    "F!B2",
+    "F!C2",
+    "F!B3",
+    "F!C3",
+    "F!B4",
+    "F!C4",
+    "F!B5",
+    "F!C5",
+    "F!B6",
+    "F!C6",
+    "F!B7",
+    "F!C7"
+  ],
+  "sheet_ops": [
+    {
+      "op": "delete_column",
+      "sheet": "S",
+      "column": "A"
+    }
+  ]
+}

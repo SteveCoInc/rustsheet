@@ -2780,6 +2780,7 @@ C	probes/t4872-r2-order-and-lift.case.json	14
 C	probes/t4873-empty-arg-let-lambda.case.json	11
 C	probes/t4873-empty-arg-quotient-ceiling.case.json	55
 C	probes/t4874-numbervalue-empty-separator.case.json	69
+C	probes/t4895-custom-filter-delete-one.case.json	18
 C	probes/t4895-two-criteria-hand-hidden-control.case.json	18
 C	probes/t4895-two-criteria-hand-hidden-delete-one.case.json	18
 C	probes/t4895-two-criteria-number-format-control.case.json	18
@@ -2789,6 +2790,8 @@ C	probes/t4903-empty-arg-quotient-seriessum-lift.case.json	8
 C	probes/t4912-written-empty-branch-readers.case.json	28
 C	probes/t4923-sqrtpi-factdouble-omitted.case.json	13
 C	probes/t4928-iseven-isodd-omitted.case.json	12
+C	probes/t4939-display-text-filter-control.case.json	18
+C	probes/t4939-display-text-filter-delete-one.case.json	18
 C	probes/t4974-beta-f-inv-endpoint-saturation.case.json	280
 C	probes/t4974-beta-inv-as109-accuracy-exponent.case.json	624
 C	probes/t4974-beta-inv-dbl-min-residual.case.json	132

@@ -5,6 +5,7 @@ use crate::WorkbookOptions;
 mod calculated_column;
 mod data_table;
 mod name_binding;
+mod table_criterion;
 mod typed_entry;
 
 fn book() -> Workbook {
