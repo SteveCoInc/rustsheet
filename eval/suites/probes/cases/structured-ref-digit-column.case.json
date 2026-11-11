@@ -1,0 +1,49 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "A table column headed by digits (2020, 2021). Does Excel read SUM(Years[2020]) as that column, and which text does FORMULATEXT give back for it and its double-bracket and range forms? The corpus tagger reads a bracket group right after a name as a table column (docs/excel-semantics/xlsx-storage.md, UNVERIFIED).",
+  "tags": [
+    "M8",
+    "probe"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "S",
+      "tables": [
+        {
+          "name": "Years",
+          "ref": "A1:C4"
+        }
+      ],
+      "cells": {
+        "A1": "Region",
+        "B1": "2020",
+        "C1": "2021",
+        "A2": "N",
+        "B2": 1,
+        "C2": 10,
+        "A3": "S",
+        "B3": 2,
+        "C3": 20,
+        "A4": "E",
+        "B4": 4,
+        "C4": 40
+      }
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=SUM(Years[2020])",
+        "B1": "=FORMULATEXT(A1)",
+        "A2": "=SUM(Years[[2020]])",
+        "B2": "=FORMULATEXT(A2)",
+        "A3": "=SUM(Years[[2020]:[2021]])",
+        "B3": "=FORMULATEXT(A3)",
+        "A4": "=SUM(Years[[#Data],[2021]])",
+        "B4": "=FORMULATEXT(A4)",
+        "A5": "=ROWS(Years[2020])",
+        "B5": "=FORMULATEXT(A5)"
+      }
+    }
+  ]
+}

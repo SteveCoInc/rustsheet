@@ -1,0 +1,72 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-5292 review follow-up: AGGREGATE's array form (14-19) and a 9/5 and SUBTOTAL(109) control over a 3-D span whose sheets hide different rows (First row 9, Last row 1). Whether Excel takes the span at all, and if it does whether each sheet's hidden rows apply to its own cells; the engine walks the span sheet by sheet with each sheet's rows.",
+ "tags": [
+  "M8",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "=AGGREGATE(14,5,First:Last!A1:A9,1)",
+    "A2": "=AGGREGATE(15,5,Mid:Last!A1:A9,10)",
+    "A3": "=AGGREGATE(16,5,Mid:Last!A1:A9,0.5)",
+    "A4": "=AGGREGATE(14,4,First:Last!A1:A9,1)",
+    "A5": "=AGGREGATE(14,5,LET(x,First:Last!A1:A9,x),1)",
+    "A6": "=AGGREGATE(9,5,First:Last!A1:A9)",
+    "A7": "=AGGREGATE(19,5,First:Last!A1:A9,1)",
+    "A8": "=SUBTOTAL(109,First:Last!A1:A9)"
+   }
+  },
+  {
+   "name": "First",
+   "cells": {
+    "A1": 1,
+    "A2": 2,
+    "A3": 3,
+    "A4": 4,
+    "A5": 5,
+    "A6": 6,
+    "A7": 7,
+    "A8": 8,
+    "A9": 9
+   },
+   "hidden_rows": [
+    9
+   ]
+  },
+  {
+   "name": "Mid",
+   "cells": {
+    "A1": 11,
+    "A2": 12,
+    "A3": 13,
+    "A4": 14,
+    "A5": 15,
+    "A6": 16,
+    "A7": 17,
+    "A8": 18,
+    "A9": 19
+   }
+  },
+  {
+   "name": "Last",
+   "cells": {
+    "A1": 21,
+    "A2": 22,
+    "A3": 23,
+    "A4": 24,
+    "A5": 25,
+    "A6": 26,
+    "A7": 27,
+    "A8": 28,
+    "A9": 29
+   },
+   "hidden_rows": [
+    1
+   ]
+  }
+ ],
+ "expected": {}
+}

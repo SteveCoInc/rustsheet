@@ -1,0 +1,67 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "Calc": {
+   "A1": {
+    "t": "n",
+    "v": 60.0
+   },
+   "A2": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "A3": {
+    "t": "n",
+    "v": 60.0
+   },
+   "A4": {
+    "t": "n",
+    "v": 5.0
+   },
+   "A5": {
+    "t": "n",
+    "v": 100.0
+   },
+   "A6": {
+    "t": "n",
+    "v": 30.0
+   },
+   "B1": {
+    "t": "s",
+    "v": "=SUM('Sales:T3'!C2)"
+   },
+   "B2": {
+    "t": "s",
+    "v": "=SUM(T2:'T3'!A1)"
+   },
+   "B3": {
+    "t": "s",
+    "v": "=SUM('Sales:T3'!C2)"
+   },
+   "B4": {
+    "t": "s",
+    "v": "=SUM('T2:T3'!A1)"
+   },
+   "B5": {
+    "t": "s",
+    "v": "=SUM(Sales:Other!C2)"
+   },
+   "B6": {
+    "t": "s",
+    "v": "='T3'!C2"
+   }
+  },
+  "Other": {},
+  "Sales": {},
+  "T2": {},
+  "T3": {}
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "8e41a7584b9ce89f43af28bb4207a816c996938ea0ff22268f34999e56b57f63",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-11T08:38:30+00:00",
+  "version": null,
+  "workbook_name": "c29d1c2999e929a9f42f9831b1d8d31057b818bd6b7e59e2624f2973ac782999.xlsx"
+ }
+}
