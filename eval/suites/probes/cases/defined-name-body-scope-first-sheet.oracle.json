@@ -1,0 +1,93 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "Data": {
+   "A1": {
+    "t": "n",
+    "v": 2.0
+   },
+   "A10": {
+    "t": "n",
+    "v": 21.0
+   },
+   "A2": {
+    "t": "n",
+    "v": 3.0
+   },
+   "A3": {
+    "t": "n",
+    "v": 10.0
+   },
+   "A4": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A5": {
+    "t": "n",
+    "v": 30.0
+   },
+   "A6": {
+    "t": "b",
+    "v": true
+   },
+   "A7": {
+    "t": "b",
+    "v": false
+   },
+   "A8": {
+    "t": "n",
+    "v": 14.0
+   },
+   "A9": {
+    "t": "n",
+    "v": 14.0
+   }
+  },
+  "Sheet1": {
+   "A1": {
+    "t": "n",
+    "v": 2.0
+   },
+   "A2": {
+    "t": "n",
+    "v": 3.0
+   },
+   "A3": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A4": {
+    "t": "n",
+    "v": 30.0
+   },
+   "A5": {
+    "t": "b",
+    "v": true
+   },
+   "A6": {
+    "t": "b",
+    "v": false
+   },
+   "A7": {
+    "t": "n",
+    "v": 14.0
+   },
+   "A8": {
+    "t": "n",
+    "v": 14.0
+   },
+   "A9": {
+    "t": "n",
+    "v": 14.0
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "337ff9f10cdc306a29f5e1954bdcd155e413045ee6ac270fc82bc48ba11a9a1b",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-11T08:37:49+00:00",
+  "version": null,
+  "workbook_name": "4f62d2c0c7b8d4619e7a8d9c83e7abe4a6f4b46a1309758d5e3e2a4bd87a19ed.xlsx"
+ }
+}

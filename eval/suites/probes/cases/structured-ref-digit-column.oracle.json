@@ -1,0 +1,56 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "F": {
+   "A1": {
+    "t": "n",
+    "v": 7.0
+   },
+   "A2": {
+    "t": "n",
+    "v": 7.0
+   },
+   "A3": {
+    "t": "n",
+    "v": 77.0
+   },
+   "A4": {
+    "t": "n",
+    "v": 70.0
+   },
+   "A5": {
+    "t": "n",
+    "v": 3.0
+   },
+   "B1": {
+    "t": "s",
+    "v": "=SUM(Years[2020])"
+   },
+   "B2": {
+    "t": "s",
+    "v": "=SUM(Years[2020])"
+   },
+   "B3": {
+    "t": "s",
+    "v": "=SUM(Years[[2020]:[2021]])"
+   },
+   "B4": {
+    "t": "s",
+    "v": "=SUM(Years[[#Data],[2021]])"
+   },
+   "B5": {
+    "t": "s",
+    "v": "=ROWS(Years[2020])"
+   }
+  },
+  "S": {}
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "22a8fe3f2990f8388e682230c97611c5967448addc9db5fc519b0fd0e35d75bf",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-11T08:38:39+00:00",
+  "version": null,
+  "workbook_name": "f9dc4917d2b239ada2c92a3b7241c476b68669ecfb83fef756b1c1d954176b7d.xlsx"
+ }
+}

@@ -1,0 +1,87 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "Sheet1": {
+   "B10": {
+    "t": "n",
+    "v": 1100.0
+   },
+   "B11": {
+    "t": "n",
+    "v": 110.0
+   },
+   "B12": {
+    "t": "n",
+    "v": 11000.0
+   },
+   "B13": {
+    "t": "n",
+    "v": 110.0
+   },
+   "B14": {
+    "t": "n",
+    "v": 110.0
+   },
+   "B15": {
+    "t": "n",
+    "v": 110.0
+   },
+   "B16": {
+    "t": "n",
+    "v": 1100.0
+   },
+   "B17": {
+    "t": "n",
+    "v": 110.0
+   },
+   "B9": {
+    "t": "n",
+    "v": 110.0
+   },
+   "C10": {
+    "t": "s",
+    "v": "=INDEX($D$65:$O$65,MATCH($B$4,$D$7:$O$7,0))"
+   },
+   "C11": {
+    "t": "s",
+    "v": "=INDEX($D$64:$O$64,MATCH($B$4,$D$7:$O$7))"
+   },
+   "C12": {
+    "t": "s",
+    "v": "=INDEX($A$20:$A$31,MATCH($B$4,$D$7:$O$7,0))"
+   },
+   "C13": {
+    "t": "s",
+    "v": "=INDEX($D$64:$O$64,1,MATCH($B$4,$D$7:$O$7,0))"
+   },
+   "C14": {
+    "t": "s",
+    "v": "=INDEX($D$64:$O$64,11)"
+   },
+   "C15": {
+    "t": "s",
+    "v": "=@INDEX($D$64:$O$64,$B$4)"
+   },
+   "C16": {
+    "t": "s",
+    "v": "=INDEX($D$64:$O$65,2,MATCH($B$4,$D$7:$O$7,0))"
+   },
+   "C17": {
+    "t": "s",
+    "v": "=ROUND(INDEX($D$64:$O$64,MATCH($B$4,$D$7:$O$7,0)),2)"
+   },
+   "C9": {
+    "t": "s",
+    "v": "=INDEX($D$64:$O$64,MATCH($B$4,$D$7:$O$7,0))"
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "5e7d7830dbf65d300a43d26ee92a293a9cc99c6cab7b9676d33043d5fbec3cf5",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-11T08:38:06+00:00",
+  "version": null,
+  "workbook_name": "edb63a8ce555253dacc1c6327bfff4d9e5307e9881a1d98bd29a3335eee11da4.xlsx"
+ }
+}

@@ -48,9 +48,14 @@ Owns: probes/val2-hyp-01, probes/val2-hyp-02 and probes/val2-hyp-03 (every visib
   5 to 7, where J is flushed too, are the p = n/N product (statistics.md, "HYPGEOM.DIST of an empty population is 1, and
   a deep-tail pmf can be 0"). Following Excel's zero at a 2.8E-4 pmf needs the owner ruling of decision 0188 R3 / 0300.
   The J column's BINOM.DIST cells (P!J2:J4, J8:J10) sit just above DBL_MIN and are off in the low digits.
-- probes-numeric/t5109-fresh (#4123) is still pending. On 2026-11-10 the excel-graph fill failed twice (Graph's `calculate`, or
-  `createSession`, retries exhausted). That is the oracle limit statistics.md records for large HYPGEOM.DIST cdf
-  workbooks. To fill it, split the case into smaller workbooks.
+- probes-numeric/t5109-fresh was split into 18 parts (#4125). On 2026-11-11 excel-graph filled t5109-fresh-calc,
+  -cdf, -closed and -poisson. Owns: probes-numeric/t5109-fresh-closed and probes-numeric/t5109-fresh-poisson (every
+  visibly-off cell): Closed!G2, G3, G8 BINOM.DIST pmf is 0 in Excel where ours is subnormal (9.996E-311, 2.46E-318,
+  6.26E-311). These are k = n cells, and the excel-graph oracle reads a subnormal as 0 (decision 0042,
+  statistics.md "BINOM.DIST pmf: closed forms"), so they are an oracle artifact, not evidence against the rule. Poisson!C3, C7, C29, C34 differ from ours in the 8th to 9th digit.
+- Refused (Graph's `calculate`, retries exhausted): t5109-fresh-cdftie-03 (twice), -cdftie-01, -02 and -cdfwide-01
+  to -11 (once). They stay pending as an oracle limit, not as Excel values; score against the predictions only the
+  parts that filled.
 
 ## Acceptance criteria
 - [ ] Every hypothesis of the family in probe-requests-2026-11-08.md has a verdict (confirmed, refuted, undecided) citing
