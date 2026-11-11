@@ -11,3 +11,4 @@ All of these are excel-graph fills. They come from several lanes, and are batche
    `cd tools && uv run rustsheet-oracle recalc -b excel-graph ../docs/research/probe-request-val9/stress-t5447/t5447-typed-value-readers.case.json`
 
 Wanted back: the *.oracle.json sidecars for 1 and 2, and the printed JSON for 3.
+4. **F.INV / BETA.INV search fresh sweep (T-5107, P559210060, decision 0188 R4.2)**: one case, 526 cells, eval/suites/probes/cases/t5107-search-fresh.case.json; frozen values of both engines in docs/research/t5107-fin-val4/search-fresh-predictions.tsv; details in T5107-SEARCH-FRESH.md. The probes-suite fill picks it up.
