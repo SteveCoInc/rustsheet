@@ -3,7 +3,7 @@ id: T-4646
 title: "Point the stale T-1075 references at T-4373 and decision 0324"
 milestone: M9
 lane: functions-math
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -31,3 +31,10 @@ added poi EverythingTests!J1328. Some prose still names T-1075, which decision 0
 
 ## Out of scope
 - Any change to which cells are listed, or to their decisions.
+
+## Outcome
+The coercion.md entries (J1328, MODE G936/H936/K936, J136) now name T-4373 and decision 0324 instead of the dropped
+T-1075. The comment lines of eval/milestones/exit-exceptions.tsv and phase1-exceptions.tsv stay unchanged: the governance
+gate (scripts/check_governance.py) refuses any edit to eval/milestones/ without a new decision record, even a comment
+line, and the task says to skip them in that case. Follow-up: a decision record could repoint those comments. Eval delta
+none. Other T-1075 mentions in docs/excel-semantics (items about other cells) are out of scope and stay.
