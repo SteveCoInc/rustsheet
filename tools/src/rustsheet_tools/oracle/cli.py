@@ -119,11 +119,13 @@ def cmd_recalc(args: argparse.Namespace) -> int:
 
 
 def _skip_reason(case: dict[str, Any], include_cached: bool) -> str | None:
-    """Why an xlsx case needs no oracle run: unreadable, nothing to score, or cached values trusted."""
+    """Why an xlsx case needs no oracle run: unreadable, nothing to score (no formula cell and no
+    pivot), or cached values trusted."""
     if case.get("unreadable"):
         return f"rustsheet-eval cannot read it ({case['unreadable'][:120]})"
-    if case.get("formula_cells") == 0:
-        return "no formula cells"
+    if case.get("formula_cells") == 0 and not case.get("pivots"):
+        # A pivot's area is scored without a formula (T-4972), so a workbook with one is filled.
+        return "no formula cells or pivots"
     if case.get("trusts_cached_values") and not include_cached:
         return "cached values already trusted (Excel-authored); use --include-cached to override"
     return None

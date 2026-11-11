@@ -19,6 +19,9 @@ T-4151's grid writer (crates/rustsheet-engine/src/pivot/grid.rs) refuses a refre
 Also owner of these pivot-corpus render cells (T-4906, Excel-saved files: docs/excel-semantics/pivots.md "What the Excel-saved pivot corpus shows (T-4906)"), 59 render cells of 1 fresh pivot, which the engine refuses to lay out (`a merged range lies in the pivot's own area`), so every saved cell is scored against nothing; its `refreshOnLoad` refresh fails the same way (check (c)):
 - pivot-corpus-closedxml/Other/PivotTableReferenceFiles/PivotSubtotalsSource/input.xlsx Pivot1!B3:H14
 
+Also owner of the check (c) cells of the same pivot scored against Excel's on-open render (T-4972, decision 0349): 59 of its 84 area cells, every non-empty one, fail because the refresh is refused for the merge and writes nothing:
+- pivot-on-open/PivotSubtotalsSource.xlsx Pivot1!B3:H14
+
 ## Acceptance criteria
 - [ ] A `mergeItem` pivot refreshed on load or by `Txn::refresh_pivot_table` matches the T-4664 (k) sidecar, merges included.
 - [ ] `make check` green; reviewers approve.

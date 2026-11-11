@@ -21,7 +21,8 @@ pub struct FreshRenderSuite {
     /// The other classified pivots, listed and never scored for render.
     pub stale: usize,
     /// Fresh pivots whose render is reported and not scored: saved by a non-en-US Excel
-    /// (decision 0030). The render counts below leave them out.
+    /// (decision 0030), or scored by check (c) against Excel's on-open render instead (T-4972).
+    /// The render counts below leave them out.
     pub fresh_unscored: usize,
     /// Fresh pivots whose re-render gives every cell of Excel's saved area.
     pub fresh_rendered_exactly: usize,
@@ -42,6 +43,15 @@ pub struct FreshRenderSuite {
     pub refresh_not_comparable: usize,
     /// `refreshOnLoad` pivots the engine did not refresh.
     pub refresh_failed: usize,
+    /// `refreshOnLoad` pivots checked against Excel's render on open, an oracle sidecar's area
+    /// (T-4972; counted in `refresh_compared` or `refresh_failed` too), and their scored cells.
+    #[serde(default)]
+    pub refresh_on_open: usize,
+    #[serde(default)]
+    pub refresh_cells: usize,
+    /// Of those, the ones that pass.
+    #[serde(default)]
+    pub refresh_passed: usize,
 }
 
 /// Every classified pivot of `cases` with its case.
@@ -78,6 +88,11 @@ pub(crate) fn summarize(cases: &[CaseResult]) -> Vec<FreshRenderSuite> {
             (Freshness::Fresh, None) => s.fresh += 1,
             (Freshness::Stale, _) => s.stale += 1,
         }
+        if let Some(r) = p.refresh.as_ref().filter(|r| r.on_open) {
+            s.refresh_on_open += 1;
+            s.refresh_cells += r.compared;
+            s.refresh_passed += r.compared - r.differing;
+        }
         match p.refresh.as_ref().map(|r| (r.outcome, r.differing)) {
             Some((RefreshOutcome::Compared, differing)) => {
                 s.refresh_compared += 1;
@@ -110,19 +125,20 @@ pub(crate) fn write_markdown(cases: &[CaseResult], md: &mut String) {
          place them; the renderer plays no part (T-4906). A fresh pivot's re-render is scored, \
          every cell of its saved area against Excel's (check (b)); a stale one is listed here and \
          never scored for render. A `refreshOnLoad` pivot is also refreshed from its source and \
-         compared, where its saved cells are a render of the records the source still holds \
-         (check (c)).\n"
+         compared, where its saved cells are a render of the records the source still holds, or \
+         scored against Excel's render on open where an oracle sidecar captured it (check (c)).\n"
     );
     let _ = writeln!(
         md,
         "| suite | fresh | stale | fresh, render unscored | fresh rendered exactly | Excel's lines \
          | render cells | passed | visibly off | refresh compared | exact | not comparable | failed \
-         |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|"
+         | on open | refresh cells | passed |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\
+         ---|---|"
     );
     for s in summarize(cases) {
         let _ = writeln!(
             md,
-            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |",
+            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |",
             s.suite,
             s.fresh,
             s.stale,
@@ -135,7 +151,10 @@ pub(crate) fn write_markdown(cases: &[CaseResult], md: &mut String) {
             s.refresh_compared,
             s.refresh_exact,
             s.refresh_not_comparable,
-            s.refresh_failed
+            s.refresh_failed,
+            s.refresh_on_open,
+            s.refresh_cells,
+            s.refresh_passed
         );
     }
     let _ = writeln!(
@@ -187,8 +206,9 @@ pub(crate) fn write_markdown(cases: &[CaseResult], md: &mut String) {
     if !refreshed.is_empty() {
         let _ = writeln!(
             md,
-            "\nRefresh of `refreshOnLoad` pivots:\n\n| case | pivot | outcome | differing / \
-             compared cells | first |\n|---|---|---|---|---|"
+            "\nRefresh of `refreshOnLoad` pivots (against Excel's saved cells, or its render on \
+             open, scored):\n\n| case | pivot | outcome | evidence | differing / compared cells \
+             | first |\n|---|---|---|---|---|---|"
         );
         for (case, p) in refreshed {
             let Some(r) = &p.refresh else { continue };
@@ -199,10 +219,11 @@ pub(crate) fn write_markdown(cases: &[CaseResult], md: &mut String) {
             };
             let _ = writeln!(
                 md,
-                "| {} | {}!{} | {outcome} | {} / {} | {} |",
+                "| {} | {}!{} | {outcome} | {} | {} / {} | {} |",
                 case.id,
                 p.sheet,
                 p.name,
+                if r.on_open { "on open" } else { "saved" },
                 r.differing,
                 r.compared,
                 cell(r.first.as_deref())

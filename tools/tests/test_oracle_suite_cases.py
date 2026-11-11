@@ -32,6 +32,12 @@ def test_suite_cases_come_from_the_harness(monkeypatch: pytest.MonkeyPatch, tmp_
     ("entry", "include_cached", "skipped"),
     [
         ({"formula_cells": 0, "trusts_cached_values": False}, False, True),  # nothing to score
+        ({"formula_cells": 0, "pivots": 0, "trusts_cached_values": False}, False, True),  # nor here
+        (
+            {"formula_cells": 0, "pivots": 2, "trusts_cached_values": False},
+            False,
+            False,
+        ),  # pivot areas (T-4972)
         ({"formula_cells": 3, "trusts_cached_values": True}, False, True),  # cached values trusted
         ({"formula_cells": 3, "trusts_cached_values": True}, True, False),  # calibration run
         ({"formula_cells": 3, "trusts_cached_values": False}, False, False),  # what the oracle is for

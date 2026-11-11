@@ -16,6 +16,9 @@ struct CaseListing {
     sidecar: PathBuf,
     /// xlsx only: number of formula cells (0 = nothing to score).
     formula_cells: Option<usize>,
+    /// xlsx only: number of pivot tables the workbook saved; the oracle fill captures their areas
+    /// even when it holds no formula (T-4972).
+    pivots: Option<usize>,
     /// xlsx only: the suite scores this case against its own cached values when it has no sidecar.
     trusts_cached_values: Option<bool>,
     /// xlsx only: the suite's `use_cached_values`. When false its caches are no Excel evidence, so
@@ -42,6 +45,7 @@ pub fn list(root: &Path, name: &str) -> Result<String> {
             path: case.path,
             sidecar: case.sidecar,
             formula_cells: None,
+            pivots: None,
             trusts_cached_values: None,
             suite_uses_cached_values: xlsx.then_some(suite.manifest.use_cached_values),
             unreadable: None,
@@ -59,6 +63,7 @@ pub fn list(root: &Path, name: &str) -> Result<String> {
                             .filter(|c| c.formula.is_some())
                             .count(),
                     );
+                    listing.pivots = Some(snap.pivots.len());
                     listing.trusts_cached_values = Some(suite.manifest.trusts_cached_values(&snap));
                 }
                 Err(e) => listing.unreadable = Some(e.to_string()),

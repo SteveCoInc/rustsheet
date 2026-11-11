@@ -16,6 +16,8 @@ Several pivots share a cache; sources given as defined names (including dynamic 
 ## Context
 SPEC-0032. Program: docs/research/pivot-tables-2026-11-04/plan.md; decision 0274.
 
+Its refresh of these Table sources made 199 of check (c)'s cells in pivot-on-open pass (T-4972, decision 0349); the rest are owned by T-5075 (`""` for a blank value cell, 52 cells) and T-5076 (a `Values` caption, 1 cell).
+
 ## Acceptance criteria
 - [x] Probes pass.
 - [x] `make check` green; reviewers approve.

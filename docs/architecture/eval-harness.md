@@ -319,10 +319,23 @@ the importer's model without a recalculation, so every pivot holds the definitio
   re-renders such a pivot on open, so its saved cells predate that refresh; they are compared (`compared`) only when
   the pivot is fresh and the refreshed cache holds the saved cache's records, and are otherwise `not_comparable`;
   `failed` when the engine does not refresh it. Reported, not scored: where comparable its cells are check (b)'s.
+- **Check (c) against Excel's on-open render** (T-4972, decision 0349): where the case's oracle sidecar is Excel
+  evidence and captured the pivot's area (`rustsheet-oracle fill`, which reads Excel's render of the workbook it
+  opened), the refresh is compared with that area instead, whatever the pivot's freshness, and the cells are
+  **scored** cells of the case, ratcheted by the cell baseline. A refresh that fails scores the area against nothing
+  (`failed`, with every cell compared), and so does a pivot the importer does not load. The same pivot's check (b) cells are reported with `render_unscored` and not
+  scored. The fetched corpus cannot hold sidecars beside its files, so the vendored gated suite `pivot-on-open`
+  holds byte-for-byte copies of the four pivot-corpus-closedxml workbooks with a `refreshOnLoad` cache, with their
+  excel-graph sidecars. pivot-corpus-lo has none. On 2026-11-07 its 20 `refreshOnLoad` pivots score 597 cells,
+  and 371 pass. The engine refreshes the 7 that read a Table (T-4506); it writes `""` where Excel leaves a value
+  cell blank (T-5075) and misses one `Values` caption (T-5076). 1 meets its own merged cells (T-4677), and the
+  importer does not load 12, whose caches were saved without records (T-5065). The other 225 are known failures. In the two corpus suites themselves
+  check (c) is still reported as above.
 
 report.json lists each pivot per case (`pivot_freshness`) and the counts per suite in `fresh_pivot_render`
 (`fresh`, `stale`, `fresh_unscored`, `fresh_rendered_exactly`, `render_cells`, `render_passed`,
-`render_visibly_off`, `refresh_compared`, `refresh_exact`, `refresh_not_comparable`, `refresh_failed`). The M16
+`render_visibly_off`, `refresh_compared`, `refresh_exact`, `refresh_not_comparable`, `refresh_failed`, and
+`refresh_on_open`, `refresh_cells` and `refresh_passed` for the pivots checked against Excel's on-open render). The M16
 exit row's corpus render measure reads the `pivot-corpus-*` rows: met when both have `render_cells > 0` and
 `render_visibly_off == 0`, not measured when either is absent (T-4971). report.md's "Pivot freshness" section has the same counts, every stale
 pivot, every fresh pivot whose render is off or unscored, and every refresh check. The pivot files of calipers and

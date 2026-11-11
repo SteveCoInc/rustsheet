@@ -110,15 +110,19 @@ fn prepare_xlsx_bytes(
         ReferenceFormCells::default()
     };
     // Only cells the suite trusts as Excel's say whether a pivot's cache reproduces them (T-4131).
-    let saved_pivots = if suite.manifest.trusts_cached_values(&snapshot) {
+    let mut saved_pivots = if suite.manifest.trusts_cached_values(&snapshot) {
         pivot_freshness::saved_pivots(&snapshot)
     } else {
         Vec::new()
     };
     let oracle = load_oracle(case)?;
     let workbook_name = oracle.as_ref().and_then(|o| o.source.workbook_name.clone());
-    let (source, from_excel, lookup): (String, bool, Lookup) = if let Some(o) = oracle {
+    let (source, from_excel, lookup): (String, bool, Lookup) = if let Some(mut o) = oracle {
         let kind = o.source.kind.clone();
+        // The areas Excel renders on open are check (c)'s evidence (T-4972).
+        if is_excel_evidence(&kind) {
+            pivot_freshness::attach_on_open(&mut saved_pivots, &std::mem::take(&mut o.pivots));
+        }
         (
             kind.clone(),
             is_excel_evidence(&kind),

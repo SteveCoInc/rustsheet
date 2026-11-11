@@ -2886,3 +2886,34 @@ UNVERIFIED until its owner task probes it, and each task owns the corpus cells i
   (`PivotSubtotalsSource/input.xlsx` Pivot1, which the engine refuses to lay out), T-4677.
 
 Status: UNVERIFIED (Excel-saved corpus files; probe pending: T-4966, T-4967, T-4968, T-4969, T-4970).
+
+## Excel's on-open render of the corpus refreshOnLoad pivots is their saved render (T-4972)
+Rule: for the 21 pivots of the four pivot-corpus workbooks with a `refreshOnLoad` cache, Excel for the web's render on
+open is the saved render. 20 of the pivots are over a `refreshOnLoad` cache; StressedHedgesPvt!PivotTable5 is not. For
+each, every cell of the area (its location and the page rows above it) holds the value the file saved, and the
+`location` is the saved one. Check (c) scores all 20, and the
+reading needs the file to be unchanged since Excel saved it. So for these files the saved cells and the on-open render
+are the same evidence. A source edited after the save would differ ("Excel for the web re-renders a refreshOnLoad
+pivot when it opens the file").
+- The refresh is real, though the cells do not show it. Excel saved the caches of four of the pivots again, rebuilt
+  from their one-row Table sources: StressedLiabilityPivot, ShockedCurvePivot!GeneratedYieldCurvePivotTable and the
+  two pivots of the StressedYieldCurveEntries cache. Some fields' shared items shrank to the one item that the source's
+  only record holds (`<m/>`). In StressedLiabilityPivot's cache, SchemeId went from 55 items to 1,
+  SchemeName from 53 to 1, Step from 5 to 1, CurveType from 3 to 1 and StressType from 2 to 1. In the
+  GeneratedYieldCurveEntries cache of GeneratedYieldCurvePivotTable, CurveDate went from 1543 to 1, while CurveType
+  kept its 3 items and ShockBond its 22. The `rowItems`/`colItems` were renumbered to match
+  (StressedLiabilityPivot's first row line goes from
+  x = 52, 54 to 0, 0, and its column line from 4 to 0). Only the first of these caches has `missingItemsLimit="0"`.
+  Which items such a refresh drops is UNVERIFIED (T-5057). "Item casing when cache and source disagree" (Saved order)
+  saw a refresh after a source edit keep the stale items. The importer loads none of these four pivots ("cacheId ...
+  has no loaded cache"), so no code reads this.
+
+Evidence: eval/suites/pivot-on-open (excel-graph, 2026-11-07, T-4972), which holds byte-for-byte copies of
+pivot-corpus-closedxml's `TryToLoad/TemplateWithTableSourcePivotTables.xlsx`,
+`PivotMixedDataTypesInTableColumn/input.xlsx`, `PivotSubtotalsSource/input.xlsx` and
+`PivotTableWithNoneTheme/inputfile.xlsx`. In each sidecar's `pivots`, every area cell equals the copy's own cached
+cell. The rebuilt caches are TemplateWithTableSourcePivotTables's sidecar `cache_fields` against the copy's.
+Status: VERIFIED (excel-graph), for these files. Which items are dropped is UNVERIFIED.
+Implemented in: crates/rustsheet-eval/src/pivot_freshness.rs (check (c) scores each refresh against the sidecar's
+area; T-4972). The engine refreshes the 7 over a Table (T-4506), with gaps owned by T-5075 and T-5076; T-4677 and T-5065 own the
+others.

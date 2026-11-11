@@ -104,6 +104,10 @@ pivot-export/t4177-date-flags-needed.export.json	133
 pivot-export/t4177-date-levels.export.json	11
 pivot-export/t4177-grouped-cache.export.json	6
 pivot-export/t4177-manual-groups.export.json	10
+pivot-on-open/PivotMixedDataTypesInTableColumn.xlsx	50
+pivot-on-open/PivotSubtotalsSource.xlsx	59
+pivot-on-open/PivotTableWithNoneTheme.xlsx	2
+pivot-on-open/TemplateWithTableSourcePivotTables.xlsx	114
 probes/accrint-zero-results.case.json	15
 probes/amordegrc-fraction-state-ai.case.json	1
 probes/forecast-ets-longer-series.case.json	40

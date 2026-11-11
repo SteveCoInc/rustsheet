@@ -1,0 +1,10175 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "pivots": [
+  {
+   "cache_fields": [
+    {
+     "name": "ValuationDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "PortfolioName",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "SchemeGroup",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Scheme",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "IncludeInLiabilityReporting",
+     "shared_flags": {
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "b",
+       "v": "1"
+      }
+     ]
+    },
+    {
+     "name": "BuildupStep",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Liability",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "ChangeInLiability",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "AdditionalPreliminaryLiability",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "DateCalculated",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Description",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Calculation_Id",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Username",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "IncludeInLiabilityReporting"
+    },
+    "A2": {
+     "t": "s",
+     "v": "BuildupStep"
+    },
+    "A3": {
+     "t": "empty"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A5": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "TRUE"
+    },
+    "B2": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B3": {
+     "t": "empty"
+    },
+    "B4": {
+     "t": "s",
+     "v": "Main liability"
+    },
+    "B5": {
+     "t": "empty"
+    },
+    "B6": {
+     "t": "empty"
+    },
+    "C1": {
+     "t": "empty"
+    },
+    "C2": {
+     "t": "empty"
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "s",
+     "v": "Additional preliminary liability"
+    },
+    "C5": {
+     "t": "empty"
+    },
+    "C6": {
+     "t": "empty"
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "x": [
+      1
+     ]
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 0,
+   "location": "A4:C6",
+   "name": "FinalLiabilityPivotTable",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 2,
+   "sheet": "Final liability",
+   "text": {
+    "A1": "IncludeInLiabilityReporting",
+    "A2": "BuildupStep",
+    "A4": "Row Labels",
+    "A5": "(blank)",
+    "A6": "Grand Total",
+    "B1": "TRUE",
+    "B2": "(blank)",
+    "B4": "Main liability",
+    "C4": "Additional preliminary liability"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "ValuationDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "PortfolioName",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "SchemeGroup",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Scheme",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "IncludeInLiabilityReporting",
+     "shared_flags": {
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "b",
+       "v": "1"
+      }
+     ]
+    },
+    {
+     "name": "BuildupStep",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Liability",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "ChangeInLiability",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "AdditionalPreliminaryLiability",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "DateCalculated",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Description",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Calculation_Id",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Username",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "IncludeInLiabilityReporting"
+    },
+    "A2": {
+     "t": "empty"
+    },
+    "A3": {
+     "t": "s",
+     "v": "Sum of Liability"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A5": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "TRUE"
+    },
+    "B2": {
+     "t": "empty"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Column Labels"
+    },
+    "B4": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B5": {
+     "t": "empty"
+    },
+    "B6": {
+     "t": "empty"
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 2,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "FinalLiabilityPivotTable",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "Liability Detail",
+   "text": {
+    "A1": "IncludeInLiabilityReporting",
+    "A3": "Sum of Liability",
+    "A4": "Row Labels",
+    "A5": "(blank)",
+    "A6": "Grand Total",
+    "B1": "TRUE",
+    "B3": "Column Labels",
+    "B4": "(blank)"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "ValuationDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "PortfolioName",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "SchemeGroup",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Scheme",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "IncludeInLiabilityReporting",
+     "shared_flags": {
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "b",
+       "v": "1"
+      }
+     ]
+    },
+    {
+     "name": "BuildupStep",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Liability",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "ChangeInLiability",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "AdditionalPreliminaryLiability",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "DateCalculated",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Description",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Calculation_Id",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Username",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "IncludeInLiabilityReporting"
+    },
+    "A2": {
+     "t": "s",
+     "v": "Scheme"
+    },
+    "A3": {
+     "t": "empty"
+    },
+    "A4": {
+     "t": "empty"
+    },
+    "A5": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "TRUE"
+    },
+    "B2": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B3": {
+     "t": "empty"
+    },
+    "B4": {
+     "t": "empty"
+    },
+    "B5": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B6": {
+     "t": "empty"
+    },
+    "C1": {
+     "t": "empty"
+    },
+    "C2": {
+     "t": "empty"
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "s",
+     "v": "Number of schemes"
+    },
+    "C5": {
+     "t": "empty"
+    },
+    "C6": {
+     "t": "empty"
+    },
+    "D1": {
+     "t": "empty"
+    },
+    "D2": {
+     "t": "empty"
+    },
+    "D3": {
+     "t": "empty"
+    },
+    "D4": {
+     "t": "s",
+     "v": "Main liability"
+    },
+    "D5": {
+     "t": "empty"
+    },
+    "D6": {
+     "t": "empty"
+    },
+    "E1": {
+     "t": "empty"
+    },
+    "E2": {
+     "t": "empty"
+    },
+    "E3": {
+     "t": "empty"
+    },
+    "E4": {
+     "t": "s",
+     "v": "Change in main liability"
+    },
+    "E5": {
+     "t": "empty"
+    },
+    "E6": {
+     "t": "empty"
+    },
+    "F1": {
+     "t": "empty"
+    },
+    "F2": {
+     "t": "empty"
+    },
+    "F3": {
+     "t": "empty"
+    },
+    "F4": {
+     "t": "s",
+     "v": "Additional preliminary liability"
+    },
+    "F5": {
+     "t": "empty"
+    },
+    "F6": {
+     "t": "empty"
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 2,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 3,
+     "r": 0,
+     "x": [
+      3
+     ]
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 2,
+   "first_data_row": 1,
+   "first_header_row": 0,
+   "location": "A4:F6",
+   "name": "ChangesPivotTable",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 2,
+   "sheet": "LiabilityChanges",
+   "text": {
+    "A1": "IncludeInLiabilityReporting",
+    "A2": "Scheme",
+    "A5": "(blank)",
+    "A6": "Grand Total",
+    "B1": "TRUE",
+    "B2": "(blank)",
+    "B5": "(blank)",
+    "C4": "Number of schemes",
+    "D4": "Main liability",
+    "E4": "Change in main liability",
+    "F4": "Additional preliminary liability"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "SchemeId",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "SchemeName",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "StressType",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "LowerBound",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "UpperBound",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Increment",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "CurveType",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Step",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Liability",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "StressType"
+    },
+    "A2": {
+     "t": "s",
+     "v": "CurveType"
+    },
+    "A3": {
+     "t": "empty"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Sum of Liability"
+    },
+    "A5": {
+     "t": "s",
+     "v": "SchemeName"
+    },
+    "A6": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "A7": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B2": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B3": {
+     "t": "empty"
+    },
+    "B4": {
+     "t": "empty"
+    },
+    "B5": {
+     "t": "s",
+     "v": "SchemeId"
+    },
+    "B6": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B7": {
+     "t": "empty"
+    },
+    "C1": {
+     "t": "empty"
+    },
+    "C2": {
+     "t": "empty"
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "s",
+     "v": "Step"
+    },
+    "C5": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "C6": {
+     "t": "empty"
+    },
+    "C7": {
+     "t": "empty"
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 2,
+   "first_data_row": 2,
+   "first_header_row": 1,
+   "location": "A4:C7",
+   "name": "StressedLiabilityPivot",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 2,
+   "sheet": "StressedLiabilityPivot",
+   "text": {
+    "A1": "StressType",
+    "A2": "CurveType",
+    "A4": "Sum of Liability",
+    "A5": "SchemeName",
+    "A6": "(blank)",
+    "A7": "Grand Total",
+    "B1": "(blank)",
+    "B2": "(blank)",
+    "B5": "SchemeId",
+    "B6": "(blank)",
+    "C4": "Step",
+    "C5": "(blank)"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "Calculation_Id",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Code",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "MaturityDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "StressType",
+     "shared_flags": {
+      "containsBlank": "1",
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "P"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "LowerBound",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "UpperBound",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Increment",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "CurveType",
+     "shared_flags": {
+      "containsBlank": "1",
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "N"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Step",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Stress",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "StressedDifference",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "SecurityValue",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "NominalValue",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "FictionalTradeNominalValue",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "StressedMarketValue",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "0",
+      "minValue": "0"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "StressType"
+    },
+    "A2": {
+     "t": "s",
+     "v": "CurveType"
+    },
+    "A3": {
+     "t": "empty"
+    },
+    "A4": {
+     "t": "empty"
+    },
+    "A5": {
+     "t": "empty"
+    },
+    "A6": {
+     "t": "s",
+     "v": "MaturityDate"
+    },
+    "A7": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "A8": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "P"
+    },
+    "B2": {
+     "t": "s",
+     "v": "N"
+    },
+    "B3": {
+     "t": "empty"
+    },
+    "B4": {
+     "t": "empty"
+    },
+    "B5": {
+     "t": "empty"
+    },
+    "B6": {
+     "t": "s",
+     "v": "Code"
+    },
+    "B7": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B8": {
+     "t": "empty"
+    },
+    "C1": {
+     "t": "empty"
+    },
+    "C2": {
+     "t": "empty"
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "s",
+     "v": "Step"
+    },
+    "C5": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "C6": {
+     "t": "s",
+     "v": "Sum of Stress"
+    },
+    "C7": {
+     "t": "empty"
+    },
+    "C8": {
+     "t": "empty"
+    },
+    "D1": {
+     "t": "empty"
+    },
+    "D2": {
+     "t": "empty"
+    },
+    "D3": {
+     "t": "empty"
+    },
+    "D4": {
+     "t": "s",
+     "v": "Values"
+    },
+    "D5": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "D6": {
+     "t": "s",
+     "v": "Sum of StressedMarketValue"
+    },
+    "D7": {
+     "t": "n",
+     "v": 0.0
+    },
+    "D8": {
+     "t": "n",
+     "v": 0.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 1,
+     "x": [
+      1
+     ]
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 2,
+   "first_data_row": 3,
+   "first_header_row": 1,
+   "location": "A4:D8",
+   "name": "PivotTable3",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 2,
+   "sheet": "StressedAssetsPivot",
+   "text": {
+    "A1": "StressType",
+    "A2": "CurveType",
+    "A6": "MaturityDate",
+    "A7": "(blank)",
+    "A8": "Grand Total",
+    "B1": "P",
+    "B2": "N",
+    "B6": "Code",
+    "B7": "(blank)",
+    "C4": "Step",
+    "C5": "(blank)",
+    "C6": "Sum of Stress",
+    "D4": "Values",
+    "D5": "(blank)",
+    "D6": "Sum of StressedMarketValue",
+    "D7": "0",
+    "D8": "0"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "EffectiveDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "AssetsEffectiveDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Portfolio_Id",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "PortfolioName",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Code",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "CurveType",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "ShockDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "LiabilityRandsPerPoint",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "BaseRandsPerPoint",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "CurrentHoldings",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "CurrentHoldingsRandsPerPoint",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "FictionalTradeNominalValue",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "FictionalTradeRandsPerPoint",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "NetRandsPerPointRequired",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "NotionalsPerR100",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "HedgeDV01",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "NotionalsPerR1",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "LatestClosePrice",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Price",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "ShockMethod",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Calculation_Id",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Username",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "CurveType"
+    },
+    "A2": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "A3": {
+     "t": "s",
+     "v": "(blank) Total"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "ShockDate"
+    },
+    "B2": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B3": {
+     "t": "empty"
+    },
+    "B4": {
+     "t": "empty"
+    },
+    "C1": {
+     "t": "s",
+     "v": "Code"
+    },
+    "C2": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "empty"
+    },
+    "D1": {
+     "t": "s",
+     "v": "Sum of NotionalsPerR1"
+    },
+    "D2": {
+     "t": "empty"
+    },
+    "D3": {
+     "t": "empty"
+    },
+    "D4": {
+     "t": "empty"
+    },
+    "E1": {
+     "t": "s",
+     "v": "Sum of Price"
+    },
+    "E2": {
+     "t": "empty"
+    },
+    "E3": {
+     "t": "empty"
+    },
+    "E4": {
+     "t": "empty"
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "x": [
+      1
+     ]
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 3,
+   "first_data_row": 1,
+   "first_header_row": 0,
+   "location": "A1:E4",
+   "name": "HedgeSummary",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "default",
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "HedgeSummary",
+   "text": {
+    "A1": "CurveType",
+    "A2": "(blank)",
+    "A3": "(blank) Total",
+    "A4": "Grand Total",
+    "B1": "ShockDate",
+    "B2": "(blank)",
+    "C1": "Code",
+    "C2": "(blank)",
+    "D1": "Sum of NotionalsPerR1",
+    "E1": "Sum of Price"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "EffectiveDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "AssetsEffectiveDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Portfolio_Id",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "PortfolioName",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "AssetCode",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "MaturityDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "NominalValue",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "FictionalTradeNominalValue",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "BucketDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "RandsPerPoint",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "ShockMethod",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "RecommendedTrade",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "BondType",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Nominal"
+      },
+      {
+       "t": "s",
+       "v": "Real"
+      }
+     ]
+    },
+    {
+     "name": "Calculation_Id",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Username",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    }
+   ],
+   "cells": {
+    "A50": {
+     "t": "s",
+     "v": "BondType"
+    },
+    "A51": {
+     "t": "empty"
+    },
+    "A52": {
+     "t": "s",
+     "v": "Rands per point"
+    },
+    "A53": {
+     "t": "s",
+     "v": "MaturityDate"
+    },
+    "A54": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B50": {
+     "t": "s",
+     "v": "Nominal"
+    },
+    "B51": {
+     "t": "empty"
+    },
+    "B52": {
+     "t": "empty"
+    },
+    "B53": {
+     "t": "s",
+     "v": "AssetCode"
+    },
+    "B54": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "C50": {
+     "t": "empty"
+    },
+    "C51": {
+     "t": "empty"
+    },
+    "C52": {
+     "t": "s",
+     "v": "BucketDate"
+    },
+    "C53": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "C54": {
+     "t": "empty"
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 2,
+   "first_data_row": 2,
+   "first_header_row": 1,
+   "location": "A52:C54",
+   "name": "PivotTable1",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "Hedge detail - Nominal",
+   "text": {
+    "A50": "BondType",
+    "A52": "Rands per point",
+    "A53": "MaturityDate",
+    "A54": "(blank)",
+    "B50": "Nominal",
+    "B53": "AssetCode",
+    "B54": "(blank)",
+    "C52": "BucketDate",
+    "C53": "(blank)"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "EffectiveDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "AssetsEffectiveDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Portfolio_Id",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "PortfolioName",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "AssetCode",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "MaturityDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "NominalValue",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "FictionalTradeNominalValue",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "BucketDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "RandsPerPoint",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "ShockMethod",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "RecommendedTrade",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "BondType",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Nominal"
+      },
+      {
+       "t": "s",
+       "v": "Real"
+      }
+     ]
+    },
+    {
+     "name": "Calculation_Id",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Username",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    }
+   ],
+   "cells": {
+    "A5": {
+     "t": "s",
+     "v": "BondType"
+    },
+    "A6": {
+     "t": "empty"
+    },
+    "A7": {
+     "t": "s",
+     "v": "MaturityDate"
+    },
+    "A8": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B5": {
+     "t": "s",
+     "v": "Nominal"
+    },
+    "B6": {
+     "t": "empty"
+    },
+    "B7": {
+     "t": "s",
+     "v": "AssetCode"
+    },
+    "B8": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "C5": {
+     "t": "empty"
+    },
+    "C6": {
+     "t": "empty"
+    },
+    "C7": {
+     "t": "s",
+     "v": "Current holdings"
+    },
+    "C8": {
+     "t": "empty"
+    },
+    "D5": {
+     "t": "empty"
+    },
+    "D6": {
+     "t": "empty"
+    },
+    "D7": {
+     "t": "s",
+     "v": "Fictional trade"
+    },
+    "D8": {
+     "t": "empty"
+    },
+    "E5": {
+     "t": "empty"
+    },
+    "E6": {
+     "t": "empty"
+    },
+    "E7": {
+     "t": "s",
+     "v": "Recommended trade"
+    },
+    "E8": {
+     "t": "empty"
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 2,
+     "r": 0,
+     "x": [
+      2
+     ]
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 2,
+   "first_data_row": 1,
+   "first_header_row": 0,
+   "location": "A7:E8",
+   "name": "PivotTable3",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "Hedge detail - Nominal",
+   "text": {
+    "A5": "BondType",
+    "A7": "MaturityDate",
+    "A8": "(blank)",
+    "B5": "Nominal",
+    "B7": "AssetCode",
+    "B8": "(blank)",
+    "C7": "Current holdings",
+    "D7": "Fictional trade",
+    "E7": "Recommended trade"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "EffectiveDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "AssetsEffectiveDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Portfolio_Id",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "PortfolioName",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "AssetCode",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "MaturityDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "NominalValue",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "FictionalTradeNominalValue",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "BucketDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "RandsPerPoint",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "ShockMethod",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "RecommendedTrade",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "BondType",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Nominal"
+      },
+      {
+       "t": "s",
+       "v": "Real"
+      }
+     ]
+    },
+    {
+     "name": "Calculation_Id",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Username",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    }
+   ],
+   "cells": {
+    "A34": {
+     "t": "s",
+     "v": "BondType"
+    },
+    "A35": {
+     "t": "empty"
+    },
+    "A36": {
+     "t": "s",
+     "v": "Rands per point"
+    },
+    "A37": {
+     "t": "s",
+     "v": "MaturityDate"
+    },
+    "A38": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B34": {
+     "t": "s",
+     "v": "Real"
+    },
+    "B35": {
+     "t": "empty"
+    },
+    "B36": {
+     "t": "empty"
+    },
+    "B37": {
+     "t": "s",
+     "v": "AssetCode"
+    },
+    "B38": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "C34": {
+     "t": "empty"
+    },
+    "C35": {
+     "t": "empty"
+    },
+    "C36": {
+     "t": "s",
+     "v": "BucketDate"
+    },
+    "C37": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "C38": {
+     "t": "empty"
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 2,
+   "first_data_row": 2,
+   "first_header_row": 1,
+   "location": "A36:C38",
+   "name": "PivotTable1",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "Hedge detail - ILB",
+   "text": {
+    "A34": "BondType",
+    "A36": "Rands per point",
+    "A37": "MaturityDate",
+    "A38": "(blank)",
+    "B34": "Real",
+    "B37": "AssetCode",
+    "B38": "(blank)",
+    "C36": "BucketDate",
+    "C37": "(blank)"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "EffectiveDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "AssetsEffectiveDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Portfolio_Id",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "PortfolioName",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "AssetCode",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "MaturityDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "NominalValue",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "FictionalTradeNominalValue",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "BucketDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "RandsPerPoint",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "ShockMethod",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "RecommendedTrade",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "BondType",
+     "shared_flags": {
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "Nominal"
+      },
+      {
+       "t": "s",
+       "v": "Real"
+      }
+     ]
+    },
+    {
+     "name": "Calculation_Id",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Username",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    }
+   ],
+   "cells": {
+    "A5": {
+     "t": "s",
+     "v": "BondType"
+    },
+    "A6": {
+     "t": "empty"
+    },
+    "A7": {
+     "t": "s",
+     "v": "MaturityDate"
+    },
+    "A8": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B5": {
+     "t": "s",
+     "v": "Real"
+    },
+    "B6": {
+     "t": "empty"
+    },
+    "B7": {
+     "t": "s",
+     "v": "AssetCode"
+    },
+    "B8": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "C5": {
+     "t": "empty"
+    },
+    "C6": {
+     "t": "empty"
+    },
+    "C7": {
+     "t": "s",
+     "v": "Current holdings"
+    },
+    "C8": {
+     "t": "empty"
+    },
+    "D5": {
+     "t": "empty"
+    },
+    "D6": {
+     "t": "empty"
+    },
+    "D7": {
+     "t": "s",
+     "v": "Fictional trade"
+    },
+    "D8": {
+     "t": "empty"
+    },
+    "E5": {
+     "t": "empty"
+    },
+    "E6": {
+     "t": "empty"
+    },
+    "E7": {
+     "t": "s",
+     "v": "Recommended trade"
+    },
+    "E8": {
+     "t": "empty"
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 1,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 2,
+     "r": 0,
+     "x": [
+      2
+     ]
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 2,
+   "first_data_row": 1,
+   "first_header_row": 0,
+   "location": "A7:E8",
+   "name": "PivotTable3",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    }
+   ],
+   "row_page_count": 1,
+   "sheet": "Hedge detail - ILB",
+   "text": {
+    "A5": "BondType",
+    "A7": "MaturityDate",
+    "A8": "(blank)",
+    "B5": "Real",
+    "B7": "AssetCode",
+    "B8": "(blank)",
+    "C7": "Current holdings",
+    "D7": "Fictional trade",
+    "E7": "Recommended trade"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "CalculationId",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "StressType",
+     "shared_flags": {
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "T"
+      }
+     ]
+    },
+    {
+     "name": "CurveType",
+     "shared_flags": {
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "N"
+      }
+     ]
+    },
+    {
+     "name": "Step",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "ShockDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "Code",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "LiabilityRPP",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "PillarRandsPerPoint",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "RequiredHoldings",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "StressedAssetsRPP",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Trade",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "StressApplied",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "StressedPrice",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "CashValue",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "ZeroStressCashValue",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "ChangeInCashValue",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "CurveType"
+    },
+    "A2": {
+     "t": "s",
+     "v": "StressType"
+    },
+    "A3": {
+     "t": "empty"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Sum of ChangeInCashValue"
+    },
+    "A5": {
+     "t": "s",
+     "v": "ShockDate"
+    },
+    "A6": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "A7": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B1": {
+     "t": "s",
+     "v": "N"
+    },
+    "B2": {
+     "t": "s",
+     "v": "T"
+    },
+    "B3": {
+     "t": "empty"
+    },
+    "B4": {
+     "t": "empty"
+    },
+    "B5": {
+     "t": "s",
+     "v": "Code"
+    },
+    "B6": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B7": {
+     "t": "empty"
+    },
+    "C1": {
+     "t": "empty"
+    },
+    "C2": {
+     "t": "empty"
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "s",
+     "v": "Step"
+    },
+    "C5": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "C6": {
+     "t": "empty"
+    },
+    "C7": {
+     "t": "empty"
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 2,
+   "first_data_row": 2,
+   "first_header_row": 1,
+   "location": "A4:C7",
+   "name": "PivotTable5",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 2,
+   "sheet": "StressedHedgesPvt",
+   "text": {
+    "A1": "CurveType",
+    "A2": "StressType",
+    "A4": "Sum of ChangeInCashValue",
+    "A5": "ShockDate",
+    "A6": "(blank)",
+    "A7": "Grand Total",
+    "B1": "N",
+    "B2": "T",
+    "B5": "Code",
+    "B6": "(blank)",
+    "C4": "Step",
+    "C5": "(blank)"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "EffectiveDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "CurveType",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      },
+      {
+       "t": "s",
+       "v": "R"
+      },
+      {
+       "t": "s",
+       "v": "N"
+      }
+     ]
+    },
+    {
+     "name": "ShockBond",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "count": "22"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      },
+      {
+       "t": "s",
+       "v": "R214"
+      },
+      {
+       "t": "s",
+       "v": "R203"
+      },
+      {
+       "t": "s",
+       "v": "R213"
+      },
+      {
+       "t": "s",
+       "v": "R202"
+      },
+      {
+       "t": "s",
+       "v": "I2025"
+      },
+      {
+       "t": "s",
+       "v": "R212"
+      },
+      {
+       "t": "s",
+       "v": "R2023"
+      },
+      {
+       "t": "s",
+       "v": "R211"
+      },
+      {
+       "t": "s",
+       "v": "R2048"
+      },
+      {
+       "t": "s",
+       "v": "Base"
+      },
+      {
+       "t": "s",
+       "v": "R210"
+      },
+      {
+       "t": "s",
+       "v": "R197"
+      },
+      {
+       "t": "s",
+       "v": "R186"
+      },
+      {
+       "t": "s",
+       "v": "R209"
+      },
+      {
+       "t": "s",
+       "v": "R208"
+      },
+      {
+       "t": "s",
+       "v": "I2038"
+      },
+      {
+       "t": "s",
+       "v": "I2050"
+      },
+      {
+       "t": "s",
+       "v": "R2030"
+      },
+      {
+       "t": "s",
+       "v": "R207"
+      },
+      {
+       "t": "s",
+       "v": "I2046"
+      },
+      {
+       "t": "s",
+       "v": "R204"
+      }
+     ]
+    },
+    {
+     "name": "MaturityDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "CurveDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "ZeroRate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "EffectiveDate"
+    },
+    "A2": {
+     "t": "s",
+     "v": "CurveType"
+    },
+    "A3": {
+     "t": "empty"
+    },
+    "A4": {
+     "t": "s",
+     "v": "Sum of ZeroRate"
+    },
+    "A5": {
+     "t": "empty"
+    },
+    "A6": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A7": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B1": {
+     "t": "s",
+     "v": "(All)"
+    },
+    "B2": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B3": {
+     "t": "empty"
+    },
+    "B4": {
+     "t": "s",
+     "v": "Column Labels"
+    },
+    "B5": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B6": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B7": {
+     "t": "empty"
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      21
+     ]
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 1,
+   "first_data_row": 3,
+   "first_header_row": 1,
+   "location": "A4:B7",
+   "name": "GeneratedYieldCurvePivotTable",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 2,
+   "sheet": "ShockedCurvePivot",
+   "text": {
+    "A1": "EffectiveDate",
+    "A2": "CurveType",
+    "A4": "Sum of ZeroRate",
+    "A6": "Row Labels",
+    "A7": "(blank)",
+    "B1": "(All)",
+    "B2": "(blank)",
+    "B4": "Column Labels",
+    "B5": "(blank)",
+    "B6": "(blank)"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "EffectiveDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "CurveType",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      },
+      {
+       "t": "s",
+       "v": "R"
+      },
+      {
+       "t": "s",
+       "v": "N"
+      }
+     ]
+    },
+    {
+     "name": "StressType",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      },
+      {
+       "t": "s",
+       "v": "T"
+      },
+      {
+       "t": "s",
+       "v": "P"
+      }
+     ]
+    },
+    {
+     "name": "LowerBound",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "UpperBound",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Step",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsNumber": "1",
+      "containsString": "0",
+      "count": "51",
+      "maxValue": "6.25E-2",
+      "minValue": "-6.25E-2"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      },
+      {
+       "t": "n",
+       "v": "4.2500000000000003E-2"
+      },
+      {
+       "t": "n",
+       "v": "4.7500000000000001E-2"
+      },
+      {
+       "t": "n",
+       "v": "5.2499999999999998E-2"
+      },
+      {
+       "t": "n",
+       "v": "-5.0000000000000001E-3"
+      },
+      {
+       "t": "n",
+       "v": "-1.7500000000000002E-2"
+      },
+      {
+       "t": "n",
+       "v": "0.01"
+      },
+      {
+       "t": "n",
+       "v": "1.2500000000000001E-2"
+      },
+      {
+       "t": "n",
+       "v": "-7.4999999999999997E-3"
+      },
+      {
+       "t": "n",
+       "v": "-4.2500000000000003E-2"
+      },
+      {
+       "t": "n",
+       "v": "-4.7500000000000001E-2"
+      },
+      {
+       "t": "n",
+       "v": "-5.2499999999999998E-2"
+      },
+      {
+       "t": "n",
+       "v": "-5.7500000000000002E-2"
+      },
+      {
+       "t": "n",
+       "v": "-6.25E-2"
+      },
+      {
+       "t": "n",
+       "v": "-0.01"
+      },
+      {
+       "t": "n",
+       "v": "1.7500000000000002E-2"
+      },
+      {
+       "t": "n",
+       "v": "-3.5000000000000003E-2"
+      },
+      {
+       "t": "n",
+       "v": "0.02"
+      },
+      {
+       "t": "n",
+       "v": "2.2499999999999999E-2"
+      },
+      {
+       "t": "n",
+       "v": "-1.2500000000000001E-2"
+      },
+      {
+       "t": "n",
+       "v": "7.4999999999999997E-3"
+      },
+      {
+       "t": "n",
+       "v": "2.5000000000000001E-2"
+      },
+      {
+       "t": "n",
+       "v": "-1.4999999999999999E-2"
+      },
+      {
+       "t": "n",
+       "v": "5.7500000000000002E-2"
+      },
+      {
+       "t": "n",
+       "v": "6.25E-2"
+      },
+      {
+       "t": "n",
+       "v": "-0.02"
+      },
+      {
+       "t": "n",
+       "v": "3.5000000000000003E-2"
+      },
+      {
+       "t": "n",
+       "v": "-2.2499999999999999E-2"
+      },
+      {
+       "t": "n",
+       "v": "0.04"
+      },
+      {
+       "t": "n",
+       "v": "4.4999999999999998E-2"
+      },
+      {
+       "t": "n",
+       "v": "-2.5000000000000001E-2"
+      },
+      {
+       "t": "n",
+       "v": "-2.75E-2"
+      },
+      {
+       "t": "n",
+       "v": "1.4999999999999999E-2"
+      },
+      {
+       "t": "n",
+       "v": "0.05"
+      },
+      {
+       "t": "n",
+       "v": "-0.03"
+      },
+      {
+       "t": "n",
+       "v": "-0.04"
+      },
+      {
+       "t": "n",
+       "v": "-4.4999999999999998E-2"
+      },
+      {
+       "t": "n",
+       "v": "-0.05"
+      },
+      {
+       "t": "n",
+       "v": "2.75E-2"
+      },
+      {
+       "t": "n",
+       "v": "2.5000000000000001E-3"
+      },
+      {
+       "t": "n",
+       "v": "-5.5E-2"
+      },
+      {
+       "t": "n",
+       "v": "0.03"
+      },
+      {
+       "t": "n",
+       "v": "-0.06"
+      },
+      {
+       "t": "n",
+       "v": "-3.2500000000000001E-2"
+      },
+      {
+       "t": "n",
+       "v": "-3.7499999999999999E-2"
+      },
+      {
+       "t": "n",
+       "v": "-2.5000000000000001E-3"
+      },
+      {
+       "t": "n",
+       "v": "5.5E-2"
+      },
+      {
+       "t": "n",
+       "v": "5.0000000000000001E-3"
+      },
+      {
+       "t": "n",
+       "v": "0.06"
+      },
+      {
+       "t": "n",
+       "v": "3.2500000000000001E-2"
+      },
+      {
+       "t": "n",
+       "v": "3.7499999999999999E-2"
+      }
+     ]
+    },
+    {
+     "name": "CurveDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "ZeroRate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Days",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsInteger": "1",
+      "containsNonDate": "0",
+      "containsNumber": "1",
+      "containsString": "0",
+      "count": "29",
+      "maxValue": "45961",
+      "minValue": "0"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      },
+      {
+       "t": "n",
+       "v": "0"
+      },
+      {
+       "t": "n",
+       "v": "1416"
+      },
+      {
+       "t": "n",
+       "v": "275"
+      },
+      {
+       "t": "n",
+       "v": "1026"
+      },
+      {
+       "t": "n",
+       "v": "6491"
+      },
+      {
+       "t": "n",
+       "v": "365"
+      },
+      {
+       "t": "n",
+       "v": "9131"
+      },
+      {
+       "t": "n",
+       "v": "11687"
+      },
+      {
+       "t": "n",
+       "v": "4414"
+      },
+      {
+       "t": "n",
+       "v": "1857"
+      },
+      {
+       "t": "n",
+       "v": "2163"
+      },
+      {
+       "t": "n",
+       "v": "2556"
+      },
+      {
+       "t": "n",
+       "v": "12726"
+      },
+      {
+       "t": "n",
+       "v": "3948"
+      },
+      {
+       "t": "n",
+       "v": "1"
+      },
+      {
+       "t": "n",
+       "v": "184"
+      },
+      {
+       "t": "n",
+       "v": "564"
+      },
+      {
+       "t": "n",
+       "v": "10990"
+      },
+      {
+       "t": "n",
+       "v": "5085"
+      },
+      {
+       "t": "n",
+       "v": "5478"
+      },
+      {
+       "t": "n",
+       "v": "3259"
+      },
+      {
+       "t": "n",
+       "v": "45961"
+      },
+      {
+       "t": "n",
+       "v": "337"
+      },
+      {
+       "t": "n",
+       "v": "31"
+      },
+      {
+       "t": "n",
+       "v": "2838"
+      },
+      {
+       "t": "n",
+       "v": "92"
+      },
+      {
+       "t": "n",
+       "v": "8008"
+      },
+      {
+       "t": "n",
+       "v": "7336"
+      }
+     ]
+    }
+   ],
+   "cells": {
+    "A1": {
+     "t": "s",
+     "v": "EffectiveDate"
+    },
+    "A2": {
+     "t": "s",
+     "v": "CurveType"
+    },
+    "A3": {
+     "t": "s",
+     "v": "StressType"
+    },
+    "A4": {
+     "t": "empty"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Sum of ZeroRate"
+    },
+    "A6": {
+     "t": "s",
+     "v": "CurveDate"
+    },
+    "A7": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B1": {
+     "t": "s",
+     "v": "(All)"
+    },
+    "B2": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B3": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "B4": {
+     "t": "empty"
+    },
+    "B5": {
+     "t": "empty"
+    },
+    "B6": {
+     "t": "s",
+     "v": "Days"
+    },
+    "B7": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "C1": {
+     "t": "empty"
+    },
+    "C2": {
+     "t": "s",
+     "v": ""
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "empty"
+    },
+    "C5": {
+     "t": "s",
+     "v": "Step"
+    },
+    "C6": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "C7": {
+     "t": "empty"
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      50
+     ]
+    }
+   ],
+   "col_page_count": 1,
+   "first_data_col": 2,
+   "first_data_row": 2,
+   "first_header_row": 1,
+   "location": "A5:C7",
+   "name": "StressedYieldCurvePivot",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0,
+      0
+     ]
+    }
+   ],
+   "row_page_count": 3,
+   "sheet": "StressedYieldCurvePivot",
+   "text": {
+    "A1": "EffectiveDate",
+    "A2": "CurveType",
+    "A3": "StressType",
+    "A5": "Sum of ZeroRate",
+    "A6": "CurveDate",
+    "A7": "(blank)",
+    "B1": "(All)",
+    "B2": "(blank)",
+    "B3": "(blank)",
+    "B6": "Days",
+    "B7": "(blank)",
+    "C5": "Step",
+    "C6": "(blank)"
+   }
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "EffectiveDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "CurveType",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      },
+      {
+       "t": "s",
+       "v": "R"
+      },
+      {
+       "t": "s",
+       "v": "N"
+      }
+     ]
+    },
+    {
+     "name": "StressType",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "count": "3"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      },
+      {
+       "t": "s",
+       "v": "T"
+      },
+      {
+       "t": "s",
+       "v": "P"
+      }
+     ]
+    },
+    {
+     "name": "LowerBound",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "UpperBound",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Step",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsNumber": "1",
+      "containsString": "0",
+      "count": "51",
+      "maxValue": "6.25E-2",
+      "minValue": "-6.25E-2"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      },
+      {
+       "t": "n",
+       "v": "4.2500000000000003E-2"
+      },
+      {
+       "t": "n",
+       "v": "4.7500000000000001E-2"
+      },
+      {
+       "t": "n",
+       "v": "5.2499999999999998E-2"
+      },
+      {
+       "t": "n",
+       "v": "-5.0000000000000001E-3"
+      },
+      {
+       "t": "n",
+       "v": "-1.7500000000000002E-2"
+      },
+      {
+       "t": "n",
+       "v": "0.01"
+      },
+      {
+       "t": "n",
+       "v": "1.2500000000000001E-2"
+      },
+      {
+       "t": "n",
+       "v": "-7.4999999999999997E-3"
+      },
+      {
+       "t": "n",
+       "v": "-4.2500000000000003E-2"
+      },
+      {
+       "t": "n",
+       "v": "-4.7500000000000001E-2"
+      },
+      {
+       "t": "n",
+       "v": "-5.2499999999999998E-2"
+      },
+      {
+       "t": "n",
+       "v": "-5.7500000000000002E-2"
+      },
+      {
+       "t": "n",
+       "v": "-6.25E-2"
+      },
+      {
+       "t": "n",
+       "v": "-0.01"
+      },
+      {
+       "t": "n",
+       "v": "1.7500000000000002E-2"
+      },
+      {
+       "t": "n",
+       "v": "-3.5000000000000003E-2"
+      },
+      {
+       "t": "n",
+       "v": "0.02"
+      },
+      {
+       "t": "n",
+       "v": "2.2499999999999999E-2"
+      },
+      {
+       "t": "n",
+       "v": "-1.2500000000000001E-2"
+      },
+      {
+       "t": "n",
+       "v": "7.4999999999999997E-3"
+      },
+      {
+       "t": "n",
+       "v": "2.5000000000000001E-2"
+      },
+      {
+       "t": "n",
+       "v": "-1.4999999999999999E-2"
+      },
+      {
+       "t": "n",
+       "v": "5.7500000000000002E-2"
+      },
+      {
+       "t": "n",
+       "v": "6.25E-2"
+      },
+      {
+       "t": "n",
+       "v": "-0.02"
+      },
+      {
+       "t": "n",
+       "v": "3.5000000000000003E-2"
+      },
+      {
+       "t": "n",
+       "v": "-2.2499999999999999E-2"
+      },
+      {
+       "t": "n",
+       "v": "0.04"
+      },
+      {
+       "t": "n",
+       "v": "4.4999999999999998E-2"
+      },
+      {
+       "t": "n",
+       "v": "-2.5000000000000001E-2"
+      },
+      {
+       "t": "n",
+       "v": "-2.75E-2"
+      },
+      {
+       "t": "n",
+       "v": "1.4999999999999999E-2"
+      },
+      {
+       "t": "n",
+       "v": "0.05"
+      },
+      {
+       "t": "n",
+       "v": "-0.03"
+      },
+      {
+       "t": "n",
+       "v": "-0.04"
+      },
+      {
+       "t": "n",
+       "v": "-4.4999999999999998E-2"
+      },
+      {
+       "t": "n",
+       "v": "-0.05"
+      },
+      {
+       "t": "n",
+       "v": "2.75E-2"
+      },
+      {
+       "t": "n",
+       "v": "2.5000000000000001E-3"
+      },
+      {
+       "t": "n",
+       "v": "-5.5E-2"
+      },
+      {
+       "t": "n",
+       "v": "0.03"
+      },
+      {
+       "t": "n",
+       "v": "-0.06"
+      },
+      {
+       "t": "n",
+       "v": "-3.2500000000000001E-2"
+      },
+      {
+       "t": "n",
+       "v": "-3.7499999999999999E-2"
+      },
+      {
+       "t": "n",
+       "v": "-2.5000000000000001E-3"
+      },
+      {
+       "t": "n",
+       "v": "5.5E-2"
+      },
+      {
+       "t": "n",
+       "v": "5.0000000000000001E-3"
+      },
+      {
+       "t": "n",
+       "v": "0.06"
+      },
+      {
+       "t": "n",
+       "v": "3.2500000000000001E-2"
+      },
+      {
+       "t": "n",
+       "v": "3.7499999999999999E-2"
+      }
+     ]
+    },
+    {
+     "name": "CurveDate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0",
+      "count": "1"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "ZeroRate",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsNonDate": "0",
+      "containsString": "0"
+     }
+    },
+    {
+     "name": "Days",
+     "shared_flags": {
+      "containsBlank": "1",
+      "containsInteger": "1",
+      "containsNonDate": "0",
+      "containsNumber": "1",
+      "containsString": "0",
+      "count": "29",
+      "maxValue": "45961",
+      "minValue": "0"
+     },
+     "shared_items": [
+      {
+       "t": "m"
+      },
+      {
+       "t": "n",
+       "v": "0"
+      },
+      {
+       "t": "n",
+       "v": "1416"
+      },
+      {
+       "t": "n",
+       "v": "275"
+      },
+      {
+       "t": "n",
+       "v": "1026"
+      },
+      {
+       "t": "n",
+       "v": "6491"
+      },
+      {
+       "t": "n",
+       "v": "365"
+      },
+      {
+       "t": "n",
+       "v": "9131"
+      },
+      {
+       "t": "n",
+       "v": "11687"
+      },
+      {
+       "t": "n",
+       "v": "4414"
+      },
+      {
+       "t": "n",
+       "v": "1857"
+      },
+      {
+       "t": "n",
+       "v": "2163"
+      },
+      {
+       "t": "n",
+       "v": "2556"
+      },
+      {
+       "t": "n",
+       "v": "12726"
+      },
+      {
+       "t": "n",
+       "v": "3948"
+      },
+      {
+       "t": "n",
+       "v": "1"
+      },
+      {
+       "t": "n",
+       "v": "184"
+      },
+      {
+       "t": "n",
+       "v": "564"
+      },
+      {
+       "t": "n",
+       "v": "10990"
+      },
+      {
+       "t": "n",
+       "v": "5085"
+      },
+      {
+       "t": "n",
+       "v": "5478"
+      },
+      {
+       "t": "n",
+       "v": "3259"
+      },
+      {
+       "t": "n",
+       "v": "45961"
+      },
+      {
+       "t": "n",
+       "v": "337"
+      },
+      {
+       "t": "n",
+       "v": "31"
+      },
+      {
+       "t": "n",
+       "v": "2838"
+      },
+      {
+       "t": "n",
+       "v": "92"
+      },
+      {
+       "t": "n",
+       "v": "8008"
+      },
+      {
+       "t": "n",
+       "v": "7336"
+      }
+     ]
+    }
+   ],
+   "cells": {
+    "C1": {
+     "t": "s",
+     "v": "EffectiveDate"
+    },
+    "C2": {
+     "t": "s",
+     "v": "CurveType"
+    },
+    "C3": {
+     "t": "empty"
+    },
+    "C4": {
+     "t": "empty"
+    },
+    "D1": {
+     "t": "s",
+     "v": "(All)"
+    },
+    "D2": {
+     "t": "s",
+     "v": "(blank)"
+    },
+    "D3": {
+     "t": "empty"
+    },
+    "D4": {
+     "t": "empty"
+    }
+   },
+   "col_items": [],
+   "col_page_count": 1,
+   "first_data_col": 0,
+   "first_data_row": 0,
+   "first_header_row": 0,
+   "location": "C4",
+   "name": "PivotTable2",
+   "row_items": [],
+   "row_page_count": 2,
+   "sheet": "StressedYieldCurvesFull",
+   "text": {
+    "C1": "EffectiveDate",
+    "C2": "CurveType",
+    "D1": "(All)",
+    "D2": "(blank)"
+   }
+  }
+ ],
+ "sheets": {
+  "AssetRandsPerPoint": {},
+  "AssetsDetail": {},
+  "BondsOverview": {},
+  "Checks": {
+   "B10": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B11": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B12": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B22": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B5": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B6": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B8": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B9": {
+    "t": "n",
+    "v": 0.0
+   }
+  },
+  "Final liability": {},
+  "GeneratedYieldCurveEntries": {},
+  "Hedge detail - ILB": {
+   "A60": {
+    "t": "s",
+    "v": "(blank)"
+   },
+   "A61": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A62": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A63": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A64": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A65": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A66": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A67": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A68": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A69": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A70": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A71": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A72": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A73": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A74": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A75": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A76": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A77": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B60": {
+    "t": "s",
+    "v": "(blank)"
+   },
+   "B61": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B62": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B63": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B64": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B65": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B66": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B67": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B68": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B69": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B70": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B71": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B72": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B73": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B74": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B75": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B76": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B77": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C30": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C59": {
+    "t": "s",
+    "v": "(blank)"
+   },
+   "C60": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C61": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C62": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C63": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C64": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C65": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C66": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C67": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C68": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C69": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C70": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C71": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C72": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C73": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C74": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C75": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C76": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C77": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C79": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C81": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C83": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D30": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D59": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D60": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D61": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D62": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D63": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D64": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D65": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D66": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D67": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D68": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D69": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D70": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D71": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D72": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D73": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D74": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D75": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D76": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D77": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D79": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D81": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D83": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E30": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E59": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E60": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E61": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E62": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E63": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E64": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E65": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E66": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E67": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E68": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E69": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E70": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E71": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E72": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E73": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E74": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E75": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E76": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E77": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E79": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E81": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E83": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F10": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F11": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F12": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F13": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F14": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F15": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F16": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F17": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F18": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F19": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F20": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F21": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F22": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F23": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F24": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F25": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F26": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F27": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F28": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F30": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F59": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F60": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F61": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F62": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F63": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F64": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F65": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F66": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F67": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F68": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F69": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F70": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F71": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F72": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F73": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F74": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F75": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F76": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F77": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F79": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F8": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F81": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F83": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F9": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G59": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G60": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G61": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G62": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G63": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G64": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G65": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G66": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G67": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G68": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G69": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G70": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G71": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G72": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G73": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G74": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G75": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G76": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G77": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G79": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G81": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G83": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H59": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H60": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H61": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H62": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H63": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H64": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H65": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H66": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H67": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H68": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H69": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H70": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H71": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H72": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H73": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H74": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H75": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H76": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H77": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H79": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H81": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H83": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I59": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I60": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I61": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I62": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I63": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I64": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I65": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I66": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I67": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I68": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I69": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I70": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I71": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I72": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I73": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I74": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I75": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I76": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I77": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I79": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I81": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I83": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J59": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J60": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J61": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J62": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J63": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J64": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J65": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J66": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J67": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J68": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J69": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J70": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J71": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J72": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J73": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J74": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J75": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J76": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J77": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J79": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J81": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J83": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K59": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K60": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K61": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K62": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K63": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K64": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K65": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K66": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K67": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K68": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K69": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K70": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K71": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K72": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K73": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K74": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K75": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K76": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K77": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K79": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K81": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K83": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M59": {
+    "t": "s",
+    "v": "(blank)"
+   },
+   "M60": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M61": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M62": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M63": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M64": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M65": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M66": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M67": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M68": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M69": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M70": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M71": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M72": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M73": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M74": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M75": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M76": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M77": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M79": {
+    "t": "n",
+    "v": 0.0
+   },
+   "N59": {
+    "t": "n",
+    "v": 0.0
+   },
+   "N60": {
+    "t": "n",
+    "v": 0.0
+   },
+   "N61": {
+    "t": "n",
+    "v": 0.0
+   },
+   "N62": {
+    "t": "n",
+    "v": 0.0
+   },
+   "N63": {
+    "t": "n",
+    "v": 0.0
+   },
+   "N64": {
+    "t": "n",
+    "v": 0.0
+   },
+   "N65": {
+    "t": "n",
+    "v": 0.0
+   },
+   "N66": {
+    "t": "n",
+    "v": 0.0
+   },
+   "N67": {
+    "t": "n",
+    "v": 0.0
+   },
+   "N68": {
+    "t": "n",
+    "v": 0.0
+   },
+   "N69": {
+    "t": "n",
+    "v": 0.0
+   },
+   "N70": {
+    "t": "n",
+    "v": 0.0
+   },
+   "N71": {
+    "t": "n",
+    "v": 0.0
+   },
+   "N72": {
+    "t": "n",
+    "v": 0.0
+   },
+   "N73": {
+    "t": "n",
+    "v": 0.0
+   },
+   "N74": {
+    "t": "n",
+    "v": 0.0
+   },
+   "N75": {
+    "t": "n",
+    "v": 0.0
+   },
+   "N76": {
+    "t": "n",
+    "v": 0.0
+   },
+   "N77": {
+    "t": "n",
+    "v": 0.0
+   },
+   "N79": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O59": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O60": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O61": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O62": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O63": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O64": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O65": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O66": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O67": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O68": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O69": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O70": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O71": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O72": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O73": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O74": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O75": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O76": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O77": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O79": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P59": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P60": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P61": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P62": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P63": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P64": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P65": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P66": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P67": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P68": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P69": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P70": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P71": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P72": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P73": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P74": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P75": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P76": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P77": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P79": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q59": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q60": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q61": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q62": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q63": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q64": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q65": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q66": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q67": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q68": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q69": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q70": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q71": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q72": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q73": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q74": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q75": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q76": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q77": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q79": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R59": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R60": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R61": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R62": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R63": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R64": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R65": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R66": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R67": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R68": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R69": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R70": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R71": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R72": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R73": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R74": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R75": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R76": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R77": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R79": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S59": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S60": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S61": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S62": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S63": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S64": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S65": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S66": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S67": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S68": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S69": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S70": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S71": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S72": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S73": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S74": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S75": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S76": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S77": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S79": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T59": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T60": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T61": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T62": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T63": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T64": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T65": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T66": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T67": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T68": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T69": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T70": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T71": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T72": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T73": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T74": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T75": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T76": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T77": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T79": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U59": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U60": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U61": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U62": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U63": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U64": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U65": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U66": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U67": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U68": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U69": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U70": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U71": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U72": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U73": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U74": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U75": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U76": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U77": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U79": {
+    "t": "n",
+    "v": 0.0
+   }
+  },
+  "Hedge detail - Nominal": {
+   "A100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A96": {
+    "t": "s",
+    "v": "(blank)"
+   },
+   "A97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "A99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B96": {
+    "t": "s",
+    "v": "(blank)"
+   },
+   "B97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C136": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C138": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C46": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C95": {
+    "t": "s",
+    "v": "(blank)"
+   },
+   "C96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "C99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D136": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D138": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D46": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D95": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "D99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E136": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E138": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E46": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E95": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "E99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F10": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F11": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F12": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F13": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F136": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F138": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F14": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F15": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F16": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F17": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F18": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F19": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F20": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F21": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F22": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F23": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F24": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F25": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F26": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F27": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F28": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F29": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F30": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F31": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F32": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F33": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F34": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F35": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F36": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F37": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F38": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F39": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F40": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F41": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F42": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F43": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F44": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F46": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F8": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F9": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F95": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "F99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G136": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G138": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G95": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "G99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H136": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H138": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H95": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "H99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I136": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I138": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I95": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "I99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J136": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J138": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J95": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K136": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K138": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K95": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "K99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L136": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L138": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L95": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "L99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M136": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M138": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M95": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "M99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O95": {
+    "t": "s",
+    "v": "(blank)"
+   },
+   "O96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "O99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P95": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "P99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q95": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Q99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R95": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "R99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S95": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "S99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T95": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "T99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U95": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "U99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V95": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "V99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W95": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "W99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X95": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "X99": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y100": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y101": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y102": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y103": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y104": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y105": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y106": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y107": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y108": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y109": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y110": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y111": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y112": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y113": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y114": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y115": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y116": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y117": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y118": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y119": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y120": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y121": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y122": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y123": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y124": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y125": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y126": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y127": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y128": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y129": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y130": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y131": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y132": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y134": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y95": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y96": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y97": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y98": {
+    "t": "n",
+    "v": 0.0
+   },
+   "Y99": {
+    "t": "n",
+    "v": 0.0
+   }
+  },
+  "HedgeResults": {},
+  "HedgeSummary": {},
+  "HedgingBonds": {},
+  "Input": {},
+  "Liability Detail": {},
+  "LiabilityChanges": {},
+  "LiabilityOutput": {},
+  "PerSchemeRequiredBonds": {},
+  "Portfolios": {},
+  "SchemeIncreases": {},
+  "ShockedCurvePivot": {},
+  "StressedAssets": {
+   "O2": {
+    "t": "n",
+    "v": 0.0
+   }
+  },
+  "StressedAssetsPivot": {},
+  "StressedHedges": {},
+  "StressedHedgesPvt": {},
+  "StressedLiabilities": {},
+  "StressedLiabilityPivot": {},
+  "StressedYieldCurveEntries": {},
+  "StressedYieldCurvePivot": {
+   "C2": {
+    "t": "s",
+    "v": ""
+   }
+  },
+  "StressedYieldCurvesFull": {
+   "A7": {
+    "t": "n",
+    "v": 42062.0
+   },
+   "A8": {
+    "t": "n",
+    "v": 42094.0
+   },
+   "B7": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B8": {
+    "t": "n",
+    "v": 32.0
+   },
+   "E2": {
+    "t": "s",
+    "v": ""
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "c61200baa55082139a1c9e5ccc159c100b708cd2bc5d5d1c2157fc018d629eaf",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-07T22:37:18+00:00",
+  "version": null,
+  "workbook_name": "ed7d8dd7021b8952473ec79335a0a2be817058b45084c4859fefc040da1bfa44.xlsx"
+ }
+}
