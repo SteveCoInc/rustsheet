@@ -3061,11 +3061,14 @@ it is valid: `AMORLINC(2400,1,1,300,1,0.15,1)` is 360). Only then the basis is r
 `#NUM!` for any basis but 0, 1, 3 or 4 (`AMORLINC(-1,39679,39813,300,1,0.15,NA())` is `#NUM!`). AMORDEGRC's asset-life check
 comes next (`AMORDEGRC(2400,39679,39813,300,1,0.5,NA())` is `#N/A`). Last, a salvage *equal* to a positive cost is 0 at
 every period, with no charge computed:
-- Both functions are 0 at periods 0, 0.0001, 0.5, 1 to 8 and 1.5, AMORDEGRC's half period and the rest periods after it
-  included (rates 0.15, 0.25 and 0.4, prorated and full first periods), and AMORLINC at rates 0.5, 1 and 2
-  (probes/amor-salvage-equal-cost A1-C18, E7-E9; also `AMORLINC(99977.707698474,42751,42993,99977.707698474,2,
+- AMORDEGRC is 0 at periods 0, 1 to 8 and 1.5 (A1-A10), AMORLINC at 0, 0.0001, 0.5, 1, 2, 3, 5, 7, 8 and 1.5 (B1-B10;
+  periods 4 and 6 are unprobed), with a full first period (AMORDEGRC C1-C7, AMORLINC C17-C18) and AMORDEGRC at rates 0.25 and 0.4 (C8-C16),
+  AMORDEGRC's half period and the rest periods after it included; AMORDEGRC at the fractional periods 0.0001 and 0.5 is
+  evidenced only through F1, F7 and F8 (the 485 + 0 sums), and AMORLINC at rates 0.5, 1 and 2 by E7-E9
+  (probes/amor-salvage-equal-cost; also `AMORLINC(99977.707698474,42751,42993,99977.707698474,2,
   0.213533204746625)`, accuracy/AMORDEGRC/s1 A114, A118, A128, A130, A131 and accuracy/AMORLINC/s1 A124, A125, T-4111).
-- Every check above still wins: AMORDEGRC at rates 0.5, 0.6, 1 and 2 is `#NUM!` (periods 0, 0.5 and 1), a basis of
+- Every check above still wins: AMORDEGRC at rate 0.5 is `#NUM!` at periods 0, 0.5 and 1 (E4, E5, E1) and at rates 0.6, 1
+  and 2 at period 1 only (E2, E3, E6), a basis of
   `NA()` is `#N/A` (rate 0.5 too), bases 2 and 5 `#NUM!`, and a purchase after the first period, a rate of 0 and a
   period of -1 `#NUM!` (E1-E6, E10-E20, E25).
 - It is an early 0, not the walk's salvage comparison turned to `<=`: a remain *equal* to a salvage below the cost
@@ -3075,6 +3078,18 @@ every period, with no charge computed:
 - It leaves the value an AMORDEGRC below period 1 reads as it was, at any period, AMORLINC included (which otherwise
   leaves its first charge): 485 + the call + a fraction is 970 for each (F2-F6), and an AMORDEGRC below period 1
   with a salvage equal to the cost is 0, not the 485 left before it (F1, F7, F8).
+- The boundary of the equality, probed in probes/amor-salvage-ulp (13 cells, excel-graph, 2026-11-07, T-4683; the
+  engine already matches all 13). Typed literals are cut to 15 significant digits ("Formula number literals are read at
+  15 significant digits", numbers.md), so with a cost of 2400 the salvage literals `2400.0000000000005` and
+  `2400.0000000000001` are exactly 2400 (plain salvage == cost: 0 for both functions, B1-B4), and `2399.9999999999995`
+  is 2399.99999999999, 22 ulp (1e-11) below the cost: not the early 0. AMORDEGRC period 1 is 900, AMORLINC period 1 is
+  0 and AMORLINC period 0 is `1.0004E-11` (that gap, A5); AMORDEGRC periods 0 and 5 are 0 (A1, A4, A5, A2, A3). Only
+  arithmetic reaches a true one-ulp gap, and only B7 and B8 settle anything: cost 0.3 with a salvage of `0.1+0.2`
+  (one ulp above) is `#NUM!`, so the "salvage above the cost" check compares exactly, with no 15-digit tolerance and no
+  rounding of the sum. B5 and B6 (cost `0.1+0.2`, salvage 0.3, one ulp below) are 0 for both functions, which fits the
+  early 0 and equally the ordinary walk (AMORDEGRC's charge rounds to 0; AMORLINC at period 1 is already 0 after its
+  period-0 charge, as A4), so whether a salvage one ulp below the cost gets the early 0 is unprobed. AMORLINC at rates
+  0.25 and 0.4 is unprobed (C8-C16 are AMORDEGRC), E7-E9 are period 1 only and C1-C7 skip period 2.
 Evidence: probes/amor-salvage-equal-cost (81 cells, excel-graph, 2026-11-06, T-4504; predictions committed before the
 fill: the early 0 was the alternative, `remain <= salvage` the pick). A purchase date below 1 is serial 0, the day before
 serial 1: `AMORDEGRC(2400,0,366,300,1,0.15,1)` is 562 (366 days), `AMORDEGRC(2400,0,1,..)` 899, `AMORDEGRC(2400,1,366,..)` 563,
