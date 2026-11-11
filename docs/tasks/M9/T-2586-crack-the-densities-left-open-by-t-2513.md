@@ -44,6 +44,9 @@ T-2585 and T-2146 then have targets for the cells they cannot reach.
 - Not here: algdiv's lnB for min < 1 < 8 < max (T-2512 owns it, with r3-m1-residual's pins), GAMMALN below 1 (T-2122).
 - Rules: positive controls before trusting a method; a real hold-out (a probe not used for any choice); record
   negatives (decision 0056); exact-piece literals (Excel truncates formula literals to 15 digits).
+- probes-numeric/t2586-negbinom-edge (#4125; excel-graph fill, 2026-11-11). Owns: probes-numeric/t2586-negbinom-edge
+  (every visibly-off cell): Large!D2, D12, D14 differ from ours in the 9th digit (Excel 1.5628052907262164E-9,
+  2.2254588330717764E-10, 1.0910285234527356E-10). Score the rest against docs/research/t2586-negbinom-edge-predictions.json.
 
 ## Acceptance criteria
 - [ ] Once the engine tasks that use the T-2464/T-2513/T-2586 data have landed, prune research outputs that only

@@ -24,9 +24,13 @@ so statrs' terms lose digits at that size), and `HYPGEOM.DIST(524288,1048576,2^5
 overflows). Probe first (excel-probe skill, one milestone tag): a few wide distributions at populations of 1E9 to
 1E15 and x around the mode, then pick a bounded formulation that matches (a normal or Edgeworth approximation for a
 large spread, or a cdf ratio recurrence from the mode, kept only where it is bit-identical inside the cap).
-- probes-numeric/t1896-hypgeom-cdf-wide (#4123) is still pending. On 2026-11-10 the excel-graph fill failed twice (Graph's `calculate`, or
-  `createSession`, retries exhausted). That is the oracle limit statistics.md records for large HYPGEOM.DIST cdf
-  workbooks. To fill it, split the case into smaller workbooks.
+- probes-numeric/t1896-hypgeom-cdf-wide was split into 5 parts (#4125). On 2026-11-11 excel-graph filled
+  t1896-hypgeom-cdf-wide-p-02 (P rows 8-13). Owns: probes-numeric/t1896-hypgeom-cdf-wide-p-02 (every visibly-off
+  cell): P!E8, E9, E10 and E13 are 0.97725.., 0.50002.., 0.022749.. and 1 in Excel, `#NUM!` in ours (past the cap).
+- Refused (Graph's `calculate`, retries exhausted): t1896-hypgeom-cdf-wide-p-01, -rare-light (twice each),
+  -rare-01 and -rare-02 (once). They stay pending as an oracle limit, not as Excel values. rare-light holds only two
+  cdf cells (Rare rows 9 and 12), so a single cdf there is past what Graph's calculate answers; narrow with
+  `split_cases.py --max-rows 1`.
 
 ## Acceptance criteria
 - [ ] A probe case holds Excel's values for HYPGEOM.DIST's cdf at large populations past the cap.
