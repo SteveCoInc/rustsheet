@@ -1,0 +1,70 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "ADDRESS with empty optional arguments. Desktop Excel's caches in the .xls corpus show ADDRESS(r,c,,,sheet) as Sheet!$A$9 (an empty abs_num reads 1, an empty a1 TRUE); these probes pin the forms the corpus does not show: an empty abs_num alone, an empty a1 alone, an empty sheet_text and its non-empty twin, every argument empty, the wrappers and variables that hand a written-empty argument on (IF, CHOOSE, IFERROR, IFNA, LET, LAMBDA), a lifted call with empty arguments, a blank cell in abs_num and in a1, an error beside an empty argument, and the forms that hand no omission on (IFS, SWITCH, an operator, a picked branch that is a blank cell), and a lifted abs_num with an empty a1.",
+ "tags": [
+  "probe",
+  "lookup",
+  "M6"
+ ],
+ "check": [
+  "Calc!A1",
+  "Calc!A2",
+  "Calc!A3",
+  "Calc!A4",
+  "Calc!A5",
+  "Calc!A6",
+  "Calc!A7",
+  "Calc!A8",
+  "Calc!A9",
+  "Calc!A10",
+  "Calc!A11",
+  "Calc!A12",
+  "Calc!A13",
+  "Calc!A14",
+  "Calc!A15",
+  "Calc!A16",
+  "Calc!A17",
+  "Calc!A18",
+  "Calc!A19",
+  "Calc!A20",
+  "Calc!A21",
+  "Calc!A22",
+  "Calc!A23",
+  "Calc!A24",
+  "Calc!A25"
+ ],
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "=ADDRESS(9,1,,,\"Data\")",
+    "A2": "=ADDRESS(2,3,,FALSE)",
+    "A3": "=ADDRESS(2,3,2,)",
+    "A4": "=ADDRESS(2,3,,)",
+    "A5": "=ADDRESS(2,3,4,TRUE,)",
+    "A6": "=ADDRESS(2,3,,,)",
+    "A7": "=ADDRESS(2,3,3,,\"S\")",
+    "A8": "=ADDRESS(2,3,4,TRUE,\"\")",
+    "A9": "=ADDRESS(2,3,IF(TRUE,))",
+    "A10": "=ADDRESS(2,3,CHOOSE(2,4,))",
+    "A11": "=ADDRESS(2,3,IFERROR(1/0,))",
+    "A12": "=ADDRESS(2,3,IFNA(NA(),))",
+    "A13": "=ADDRESS(2,3,2,IF(TRUE,))",
+    "A14": "=LET(e,,ADDRESS(2,3,e))",
+    "A15": "=LAMBDA(r,c,a,b,ADDRESS(r,c,a,b))(2,3,,)",
+    "A16": "=INDEX(ADDRESS({1;2},1,,,\"S\"),2)",
+    "A17": "=ADDRESS(2,3,D4)",
+    "A18": "=ADDRESS(2,3,1,D4)",
+    "A19": "=ADDRESS(2,3,,NA())",
+    "A20": "=ADDRESS(0,3,,)",
+    "A21": "=ADDRESS(2,3,IFS(TRUE,))",
+    "A22": "=ADDRESS(2,3,SWITCH(1,1,))",
+    "A23": "=ADDRESS(2,3,IF(TRUE,)+0)",
+    "A24": "=ADDRESS(2,3,IF(TRUE,D4,))",
+    "A25": "=INDEX(ADDRESS(2,3,{1;2},),2)"
+   }
+  }
+ ],
+ "expected": {},
+ "expected_source": null
+}

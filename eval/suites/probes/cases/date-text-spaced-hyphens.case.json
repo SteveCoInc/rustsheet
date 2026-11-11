@@ -1,0 +1,57 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "A date text with a space after each hyphen and a trailing space (day-hyphen-space-month abbreviation-hyphen-space-year-space, from a corpus file whose cached value of ref+0 is a number where ours is #VALUE!) read by arithmetic, VALUE and DATEVALUE, beside variants (no trailing space, spaces before the hyphens, a two-digit year, a leading space).",
+ "tags": [
+  "M2",
+  "coercion",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": "5- Mar- 1999 ",
+    "B1": "=A1+0",
+    "C1": "=VALUE(A1)",
+    "D1": "=DATEVALUE(A1)",
+    "E1": "=ISNUMBER(A1*1)",
+    "A2": "5- Mar- 1999",
+    "B2": "=A2+0",
+    "C2": "=VALUE(A2)",
+    "D2": "=DATEVALUE(A2)",
+    "E2": "=ISNUMBER(A2*1)",
+    "A3": "5-Mar-1999 ",
+    "B3": "=A3+0",
+    "C3": "=VALUE(A3)",
+    "D3": "=DATEVALUE(A3)",
+    "E3": "=ISNUMBER(A3*1)",
+    "A4": "5- Mar-1999",
+    "B4": "=A4+0",
+    "C4": "=VALUE(A4)",
+    "D4": "=DATEVALUE(A4)",
+    "E4": "=ISNUMBER(A4*1)",
+    "A5": "5 -Mar -1999",
+    "B5": "=A5+0",
+    "C5": "=VALUE(A5)",
+    "D5": "=DATEVALUE(A5)",
+    "E5": "=ISNUMBER(A5*1)",
+    "A6": "05- Mar- 99 ",
+    "B6": "=A6+0",
+    "C6": "=VALUE(A6)",
+    "D6": "=DATEVALUE(A6)",
+    "E6": "=ISNUMBER(A6*1)",
+    "A7": "15- Dec- 2003 ",
+    "B7": "=A7+0",
+    "C7": "=VALUE(A7)",
+    "D7": "=DATEVALUE(A7)",
+    "E7": "=ISNUMBER(A7*1)",
+    "A8": " 5- Mar- 1999",
+    "B8": "=A8+0",
+    "C8": "=VALUE(A8)",
+    "D8": "=DATEVALUE(A8)",
+    "E8": "=ISNUMBER(A8*1)"
+   }
+  }
+ ],
+ "expected": {}
+}
