@@ -1,8 +1,11 @@
 // Probe request `workbook-locale`: what a regional format and a display language change (SPEC-0046).
-// Office.js (Script Lab). Excel for the web is the set of record; a desktop run is a second set, labelled (README.md).
-// Run it once per setting of README.md's table, each time in a FRESH workbook: await run();
-// It logs one JSON line per group. Every line starts with the environment it was measured in.
-// Requirement sets: ExcelApi 1.7 (numberFormatLocal), 1.11 (cultureInfo, the separators), 1.12 (datetimeFormat).
+// Office.js (Script Lab), in Excel for the web, which is the set of record (README.md).
+// Run it once per setting of README.md's table, each time in a FRESH workbook, by its button in Script Lab (the
+// end of this file) or by await run();
+// It logs one JSON line per group, eight in all. Every line starts with the environment it was measured in.
+// A workbook whose active sheet holds anything is refused with one more line, and nothing is written to it.
+// Requirement sets: ExcelApi 1.7 (numberFormatLocal), 1.8 (data validation), 1.11 (cultureInfo, the separators),
+// 1.12 (datetimeFormat, the range an array spills to).
 // A call the host lacks, or a write the host refuses, is logged with its error code in place of its answer.
 
 const log = (group, env, data) => console.log(JSON.stringify({ probe: "workbook-locale", group, env, data }));
@@ -35,12 +38,16 @@ async function environment(context) {
 async function look(context, sheet, address) {
   const r = sheet.getRange(address);
   r.load("values,valueTypes,formulas,formulasLocal,numberFormat,numberFormatLocal,text");
+  const spill = r.getSpillingToRangeOrNullObject();
+  spill.load("address");
   await context.sync();
   return {
     value: r.values[0][0], type: r.valueTypes[0][0], formula: r.formulas[0][0], formulaLocal: r.formulasLocal[0][0],
     format: r.numberFormat[0][0], formatLocal: r.numberFormatLocal[0][0], text: r.text[0][0],
     // The displayed text's code points: a group separator can be U+0020, U+00A0 or U+202F (inventory C11).
     textCodes: Array.from(String(r.text[0][0]), (c) => c.codePointAt(0).toString(16)),
+    // The cells an array result fills, or null for one cell: how the setting read an array constant's separators.
+    spill: spill.isNullObject ? null : spill.address,
   };
 }
 
@@ -122,7 +129,8 @@ const T = [
 ];
 
 // ---- D: stored number formats on stored values (inventory group C) ----------------------------------------------
-// Each: [value or en-US formula, en-US format code].
+// Each: [value or en-US formula, en-US format code]. C3, C6 and C12 are the en-US codes of built-in formats,
+// written as codes: what a file's built-in id shows is not asked here (README.md).
 const D = {
   C1a: [1234.5, "General"], C1b: [0.000012345, "General"], C1c: [123456789012, "General"],
   C2a: [1234567.891, "#,##0.00"], C2b: [-1234.5, "#,##0.00_);(#,##0.00)"], C2c: [0.5, "0%"], C2d: [1234.5, "0.00E+00"],
@@ -137,36 +145,61 @@ const D = {
   C12a: [0.125, "0.00%"], C12b: [-0.5, "0%"],
 };
 
+// Where the items go: a column for each group and for each of T's three routes, five apart, and STEP rows from
+// one item to the next (see `run`).
+const STEP = 5;
+const AT = { V: "J", L: "O", formulasLocal: "T", values: "Y", formulas: "AD", D: "AI", E5: "AN", D12: "AS" };
+
 async function run() {
   await Excel.run(async (context) => {
     const s = context.workbook.worksheets.getActiveWorksheet();
     const env = await environment(context);
     log("ENV", env, {});
 
-    // Inputs, written as numbers and en-US formulas so that no setting can change them.
-    s.getRange("A1:A3").values = [[1.5], [2.5], ["WAHR"]];
-    s.getRange("B1").values = [[36953]]; // 2001-03-03, a Saturday
-    s.getRange("H1").formulas = [["=SUM(1.5,2)"]];
-    await context.sync();
+    // The script writes some 400 cells from A1 down to row 1,243 and adds a sheet: it runs in a fresh workbook only.
+    try {
+      const used = s.getUsedRangeOrNullObject(false);
+      used.load("isNullObject");
+      await context.sync();
+      if (!used.isNullObject) {
+        log("REFUSED", env, { error: "the active sheet is not empty: run in a fresh workbook" });
+        return;
+      }
+      // Inputs, written as numbers and en-US formulas so that no setting can change them.
+      s.getRange("A1:A3").values = [[1.5], [2.5], ["WAHR"]];
+      s.getRange("B1").values = [[36953]]; // 2001-03-03, a Saturday
+      s.getRange("H1").formulas = [["=SUM(1.5,2)"]];
+      await context.sync();
+    } catch (e) {
+      log("REFUSED", env, code(e));
+      return;
+    }
 
-    let row = 10;
+    // Every item has a block of its own, 4 rows by 4 columns and a gap: STEP rows down for the next item, and
+    // a column of AT for each group and for each of T's routes. An array result (a constant of up to four elements
+    // under any reading of its separators, SEQUENCE(2)) spills inside its block, and no write lands in another's.
+    let row = 10 - STEP;
+    const next = () => {
+      row += STEP;
+      return row;
+    };
     const out = { V: {}, L: {}, T: {}, D: {} };
-    for (const [id, formula] of Object.entries(V)) out.V[id] = { formula, ...(await put(context, s, `J${row++}`, "formulas", formula)) };
+    for (const [id, formula] of Object.entries(V)) out.V[id] = { formula, ...(await put(context, s, `${AT.V}${next()}`, "formulas", formula)) };
     log("V", env, out.V);
-    for (const [id, formula] of Object.entries(L)) out.L[id] = { formula, ...(await put(context, s, `L${row++}`, "formulas", formula)) };
+    for (const [id, formula] of Object.entries(L)) out.L[id] = { formula, ...(await put(context, s, `${AT.L}${next()}`, "formulas", formula)) };
     log("L", env, out.L);
     // T: the same string by the three write routes. `formulasLocal` is the one Microsoft says is locale-aware.
     for (const typed of T) {
+      next();
       out.T[typed] = {
-        formulasLocal: await put(context, s, `N${row}`, "formulasLocal", typed),
-        values: await put(context, s, `O${row}`, "values", typed),
-        formulas: await put(context, s, `P${row}`, "formulas", typed),
+        formulasLocal: await put(context, s, `${AT.formulasLocal}${row}`, "formulasLocal", typed),
+        values: await put(context, s, `${AT.values}${row}`, "values", typed),
+        formulas: await put(context, s, `${AT.formulas}${row}`, "formulas", typed),
       };
-      row++;
     }
     log("T", env, out.T);
     for (const [id, [content, format]] of Object.entries(D)) {
-      const a = `R${row++}`;
+      const a = `${AT.D}${next()}`;
       try {
         if (typeof content === "string") s.getRange(a).formulas = [[content]];
         else s.getRange(a).values = [[content]];
@@ -182,7 +215,7 @@ async function run() {
     // E5: a format code written in the locale, through numberFormatLocal, read back in its stored form.
     const local = {};
     for (const typedCode of ["TT.MM.JJJJ", "jj/mm/aaaa", "dd/mm/aaaa", "gg/mm/aaaa", "dd.mm.yyyy", "#.##0,00", "# ##0,00", "#,##0.00", "Standard", "General", "[Rot]0", "[Red]0"]) {
-      const a = `T${row++}`;
+      const a = `${AT.E5}${next()}`;
       try {
         s.getRange(a).values = [[36953.5]];
         s.getRange(a).numberFormatLocal = [[typedCode]];
@@ -194,19 +227,25 @@ async function run() {
     }
     log("E5", env, local);
 
-    // D12: the separator of an inline list in a data validation, written both ways and read back.
+    // D12: the separator of an inline list in a data validation, written both ways. The source read back does
+    // not say how many items Excel made of it, so each list is put on a cell that holds `a` and on one that holds
+    // the whole source, and `valid` says which of the two is an item of the list.
     const lists = {};
     for (const source of ["a,b,c", "a;b;c"]) {
-      const a = `V${row++}`;
-      try {
-        s.getRange(a).dataValidation.rule = { list: { inCellDropDown: true, source } };
-        await context.sync();
-        const validation = s.getRange(a).dataValidation;
-        validation.load("rule");
-        await context.sync();
-        lists[source] = validation.rule.list.source;
-      } catch (e) {
-        lists[source] = code(e);
+      lists[source] = {};
+      for (const [holds, content] of [["oneItem", "a"], ["wholeSource", source]]) {
+        const a = `${AT.D12}${next()}`;
+        try {
+          s.getRange(a).values = [[content]];
+          s.getRange(a).dataValidation.rule = { list: { inCellDropDown: true, source } };
+          await context.sync();
+          const validation = s.getRange(a).dataValidation;
+          validation.load("rule,valid");
+          await context.sync();
+          lists[source][holds] = { content, source: validation.rule.list.source, valid: validation.valid };
+        } catch (e) {
+          lists[source][holds] = { content, ...code(e) };
+        }
       }
     }
     log("D12", env, lists);
@@ -234,4 +273,22 @@ async function run() {
     log("F6", env, names);
   });
 }
-// await run();
+
+// ---- In Script Lab ---------------------------------------------------------------------------------------------
+// This file is the Script tab, and the HTML tab holds one line: <div id="cases"></div><pre id="out"></pre>
+// Press Run, then click RUN: the click turns the button off, since a run needs a fresh workbook. Its JSON lines
+// are logged, and shown under the button to copy from.
+if (typeof document !== "undefined" && document.getElementById("cases")) {
+  const print = console.log;
+  console.log = (line) => {
+    print(line);
+    document.getElementById("out").textContent += `${line}\n`;
+  };
+  const button = document.createElement("button");
+  button.textContent = "RUN";
+  button.onclick = () => {
+    button.disabled = true;
+    return run();
+  };
+  document.getElementById("cases").appendChild(button);
+}

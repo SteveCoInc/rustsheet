@@ -46,12 +46,12 @@ def sheet_xml(rows, extra=""):
     return f'<worksheet xmlns="{MAIN}" xmlns:r="{REL}"><sheetData>{body}</sheetData>{extra}</worksheet>'
 
 
-def package(path, sheets, wb_rels, parts, styles=True, overrides=()):
+def package(path, sheets, wb_rels, parts, styles=True, overrides=(), defined_names=""):
     """sheets: [(name, rid)]; wb_rels: [(rid, kind, target)]; parts: {name: xml}."""
     sheets_xml = "".join(
         f'<sheet name="{n}" sheetId="{i + 1}" r:id="{rid}"/>' for i, (n, rid) in enumerate(sheets)
     )
-    workbook = f'<workbook xmlns="{MAIN}" xmlns:r="{REL}"><sheets>{sheets_xml}</sheets></workbook>'
+    workbook = f'<workbook xmlns="{MAIN}" xmlns:r="{REL}"><sheets>{sheets_xml}</sheets>{defined_names}</workbook>'
     rels = list(wb_rels)
     if styles:
         rels.append(("rIdStyles", "styles", "styles.xml"))
@@ -181,5 +181,138 @@ def main(out):
     )
 
 
-if __name__ == "__main__":
+if __name__ == "__main__" and len(sys.argv) == 2:
     main(sys.argv[1])
+
+
+def name_scoped_to_no_sheet(out):
+    """A workbook of Data and Calc whose name `Lost` has localSheetId 5 (past the two sheets)."""
+    out = Path(out)
+    data = sheet_xml([(1, [cell("A1", 7)]), (2, [cell("A2", 8)]), (3, [cell("A3", 9)])])
+    calc = sheet_xml([
+        (1, [cell("A1", 0, "Lost")]),
+        (2, [cell("A2", 0, "ISREF(Lost)")]),
+        (3, [cell("A3", 0, "Global")]),
+        (4, [cell("A4", 0, "Data!Kept")]),
+        (5, [cell("A5", 0, "Data!A1*2")]),
+    ])
+    package(
+        out / "package-name-scoped-to-no-sheet.xlsx",
+        [("Data", "rId1"), ("Calc", "rId2")],
+        [("rId1", "worksheet", "worksheets/sheet1.xml"), ("rId2", "worksheet", "worksheets/sheet2.xml")],
+        {"xl/worksheets/sheet1.xml": data, "xl/worksheets/sheet2.xml": calc},
+        defined_names=(
+            '<definedNames><definedName name="Lost" localSheetId="5">Data!$A$1</definedName>'
+            '<definedName name="Kept" localSheetId="0">Data!$A$2</definedName>'
+            '<definedName name="Global">Data!$A$3</definedName></definedNames>'
+        ),
+    )
+
+
+if __name__ == "__main__" and len(sys.argv) > 2 and sys.argv[2] == "names":
+    name_scoped_to_no_sheet(sys.argv[1])
+
+
+STYLES_PERCENT = STYLES.replace(
+    '<cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs>',
+    '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+    '<xf numFmtId="9" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>',
+)
+
+
+def percent_sheet():
+    """A1 = 0.5 with style 1 (percent, if the styles part read is STYLES_PERCENT); B1 asks its format."""
+    return (
+        f'<worksheet xmlns="{MAIN}" xmlns:r="{REL}"><sheetData><row r="1">'
+        '<c r="A1" s="1"><v>0.5</v></c><c r="B1" t="str"><f>CELL("format",A1)</f><v>0</v></c>'
+        "</row></sheetData></worksheet>"
+    )
+
+
+def round2(out):
+    """The shapes the CRs of 2026-11-12 load or refuse after review (see README.md, 'Added 13h')."""
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    data = sheet_xml([(1, [cell("A1", 7), cell("B1", 1)])])
+    calc = sheet_xml(calc_rows())
+    # 6. A very hidden sheet listed with an empty r:id (the shape the importer loads empty).
+    workbook_sheets = [("Data", "rId1"), ("Gone", ""), ("Calc", "rId2")]
+    path = out / "package-sheet-empty-rid.xlsx"
+    package(
+        path,
+        workbook_sheets,
+        [("rId1", "worksheet", "worksheets/sheet1.xml"), ("rId2", "worksheet", "worksheets/sheet2.xml")],
+        {"xl/worksheets/sheet1.xml": data, "xl/worksheets/sheet2.xml": calc},
+    )
+    rewrite(path, "xl/workbook.xml", lambda x: x.replace('name="Gone" sheetId="2" r:id=""', 'name="Gone" sheetId="2" state="veryHidden" r:id=""'))
+    # 7. The styles part at another name, named by the workbook's relationship.
+    package(
+        out / "package-styles-relocated.xlsx",
+        [("Data", "rId1")],
+        [("rId1", "worksheet", "worksheets/sheet1.xml"), ("rId2", "styles", "formatting/custom.xml")],
+        {"xl/worksheets/sheet1.xml": percent_sheet(), "xl/formatting/custom.xml": STYLES_PERCENT},
+        styles=False,
+        overrides=[("/xl/formatting/custom.xml", CT_STYLES)],
+    )
+    # 8. A styles relationship to a part the package lacks, beside a valid xl/styles.xml it does not name.
+    package(
+        out / "package-styles-dangling-relationship.xlsx",
+        [("Data", "rId1")],
+        [("rId1", "worksheet", "worksheets/sheet1.xml"), ("rId2", "styles", "formatting/custom.xml")],
+        {"xl/worksheets/sheet1.xml": percent_sheet(), "xl/styles.xml": STYLES_PERCENT},
+        styles=False,
+        overrides=[("/xl/styles.xml", CT_STYLES)],
+    )
+    # 9. A row and a column whose style names no cell format (cellXfs has 1).
+    package(
+        out / "package-row-style-past-cellxfs.xlsx",
+        [("Data", "rId1")],
+        [("rId1", "worksheet", "worksheets/sheet1.xml")],
+        {
+            "xl/worksheets/sheet1.xml": (
+                f'<worksheet xmlns="{MAIN}" xmlns:r="{REL}"><cols><col min="3" max="3" width="9" style="7"/></cols>'
+                '<sheetData><row r="1" s="5" customFormat="1"><c r="A1"><v>0.5</v></c>'
+                '<c r="B1" t="str"><f>CELL("format",A1)</f><v>0</v></c></row>'
+                '<row r="2"><c r="C2"><v>0.25</v></c><c r="D2" t="str"><f>CELL("format",C2)</f><v>0</v></c></row>'
+                "</sheetData></worksheet>"
+            )
+        },
+    )
+
+
+def rewrite(path, name, edit):
+    """Rewrites one entry of a zip written by package(), keeping the others and their order."""
+    with zipfile.ZipFile(path) as z:
+        items = [(i, z.read(i.filename)) for i in z.infolist()]
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+        for info, data in items:
+            if info.filename == name:
+                data = edit(data.decode()).encode()
+            z.writestr(info, data)
+
+
+if __name__ == "__main__" and len(sys.argv) > 2 and sys.argv[2] == "round2":
+    round2(sys.argv[1])
+
+
+def round3(out):
+    """The row shape 9 of the 10 corpus files hold, in its own workbook (CR-322034747 round 2, reviewer 1 N3)."""
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    package(
+        out / "package-row-style-negative.xlsx",
+        [("Data", "rId1")],
+        [("rId1", "worksheet", "worksheets/sheet1.xml")],
+        {
+            "xl/worksheets/sheet1.xml": (
+                f'<worksheet xmlns="{MAIN}" xmlns:r="{REL}"><sheetData>'
+                '<row r="1" ht="30" customHeight="1" s="-2147483648" customFormat="1"><c r="A1"><v>0.5</v></c>'
+                '<c r="B1" t="str"><f>CELL("format",A1)</f><v>0</v></c></row>'
+                "</sheetData></worksheet>"
+            )
+        },
+    )
+
+
+if __name__ == "__main__" and len(sys.argv) > 2 and sys.argv[2] == "round3":
+    round3(sys.argv[1])

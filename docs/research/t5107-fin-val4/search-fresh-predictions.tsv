@@ -1,5 +1,7 @@
 # Frozen engine values for probes/t5107-search-fresh (hypotheses, NOT Excel values).
-# before: main with T-4894's first piece (CR-321681168); with: the same tree with the T-5107 search change.
+# before: main 4f6f5e19d with T-4894's first piece (CR-321681168, branch gateb/f-flipped-saturation de5229c50).
+# with the change: the same tree with the T-5107 search change (Taskei P559210060, branch gateb/f-search c37e26a76).
+# Values as `rustsheet-eval show` prints them, aarch64, 2026-11-11T13:04Z; the case was not filled then.
 cell	group	formula	before	with the change	the two differ
 W!B2	CS	=BETA.DIST(0.0726919792608405,1.16537418001131,1.06288593899982,TRUE)	0.05027097477485214	0.050270974774852144	yes
 W!B3	CS	=BETA.DIST(0.418645136009846,1.01318397180259,4.20855236835243,TRUE)	0.8959931696346891	0.8959931696346891	no

@@ -1,0 +1,189 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "A what-if data table whose formula reads the results of another data table (Taskei P561645177). The engine computes each table once in a recalculation, in the order of the first result cells, so a table that comes before the table it reads uses that table's results of the previous recalculation: its values depend on what the cells held before. This asks what Excel shows after the oracle's three calculations (load, FullRebuild and the scratch edit: recalc.md, \"How excel-graph calculates a probe workbook\"), so the chains are longer than three. Sheet After: the reader's results (E4:E5, formula E3 =SUM(B4:B6)+D1, column input D1, values 100 and 200) come after the table it reads (B4:B6, formula B3 =A1*10+B1, column input A1, values 1, 2, 3). Sheet Before: the same two tables with the reader first (B4:B5 reads E4:E6). Sheets ChainRight and ChainLeft: six tables, each reading the one to its right (ChainRight: B4:B5 reads E4:E5, and so on to Q4:Q6) or to its left (ChainLeft: Q4:Q5 reads N4:N5, and so on to B4:B6). Tables computed once per calculation, in either direction, show on one of the two sheets as a value that is behind: the first result of the last reader (ChainRight B4, ChainLeft Q4) is 1000000 after one such calculation, then 1300000, 1360000, 1372000 and 1374400, and 1375456 from the sixth on. If every table sees the other's final results: After E4:E5 and Before B4:B5 are 166 and 266, and ChainRight B4:B5 and ChainLeft Q4:Q5 are 1375456 and 2375456. Column H (After, Before) and column S (the chains) read the tables for scoring.",
+  "tags": [
+    "M11",
+    "data-table",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "After",
+      "cells": {
+        "A1": 1,
+        "B1": 2,
+        "B3": "=A1*10+B1",
+        "A4": 1,
+        "A5": 2,
+        "A6": 3,
+        "D1": 0,
+        "E3": "=SUM(B4:B6)+D1",
+        "D4": 100,
+        "D5": 200,
+        "H1": "=SUM(B4:B6)",
+        "H2": "=SUM(E4:E5)",
+        "H3": "=E4",
+        "H4": "=E5"
+      },
+      "data_tables": [
+        {
+          "ref": "B4:B6",
+          "column_input": "A1"
+        },
+        {
+          "ref": "E4:E5",
+          "column_input": "D1"
+        }
+      ]
+    },
+    {
+      "name": "Before",
+      "cells": {
+        "A1": 0,
+        "B3": "=SUM(E4:E6)+A1",
+        "A4": 100,
+        "A5": 200,
+        "D1": 1,
+        "E1": 2,
+        "E3": "=D1*10+E1",
+        "D4": 1,
+        "D5": 2,
+        "D6": 3,
+        "H1": "=SUM(E4:E6)",
+        "H2": "=SUM(B4:B5)",
+        "H3": "=B4",
+        "H4": "=B5"
+      },
+      "data_tables": [
+        {
+          "ref": "B4:B5",
+          "column_input": "A1"
+        },
+        {
+          "ref": "E4:E6",
+          "column_input": "D1"
+        }
+      ]
+    },
+    {
+      "name": "ChainRight",
+      "cells": {
+        "A1": 0,
+        "B3": "=SUM(E4:E5)+A1",
+        "A4": 1000000,
+        "A5": 2000000,
+        "D1": 0,
+        "E3": "=SUM(H4:H5)+D1",
+        "D4": 100000,
+        "D5": 200000,
+        "G1": 0,
+        "H3": "=SUM(K4:K5)+G1",
+        "G4": 10000,
+        "G5": 20000,
+        "J1": 0,
+        "K3": "=SUM(N4:N5)+J1",
+        "J4": 1000,
+        "J5": 2000,
+        "M1": 0,
+        "N3": "=SUM(Q4:Q6)+M1",
+        "M4": 100,
+        "M5": 200,
+        "P1": 1,
+        "Q1": 2,
+        "Q3": "=P1*10+Q1",
+        "P4": 1,
+        "P5": 2,
+        "P6": 3,
+        "S1": "=B4",
+        "S2": "=B5",
+        "S3": "=SUM(B4:B5)"
+      },
+      "data_tables": [
+        {
+          "ref": "B4:B5",
+          "column_input": "A1"
+        },
+        {
+          "ref": "E4:E5",
+          "column_input": "D1"
+        },
+        {
+          "ref": "H4:H5",
+          "column_input": "G1"
+        },
+        {
+          "ref": "K4:K5",
+          "column_input": "J1"
+        },
+        {
+          "ref": "N4:N5",
+          "column_input": "M1"
+        },
+        {
+          "ref": "Q4:Q6",
+          "column_input": "P1"
+        }
+      ]
+    },
+    {
+      "name": "ChainLeft",
+      "cells": {
+        "A1": 1,
+        "B1": 2,
+        "B3": "=A1*10+B1",
+        "A4": 1,
+        "A5": 2,
+        "A6": 3,
+        "D1": 0,
+        "E3": "=SUM(B4:B6)+D1",
+        "D4": 100,
+        "D5": 200,
+        "G1": 0,
+        "H3": "=SUM(E4:E5)+G1",
+        "G4": 1000,
+        "G5": 2000,
+        "J1": 0,
+        "K3": "=SUM(H4:H5)+J1",
+        "J4": 10000,
+        "J5": 20000,
+        "M1": 0,
+        "N3": "=SUM(K4:K5)+M1",
+        "M4": 100000,
+        "M5": 200000,
+        "P1": 0,
+        "Q3": "=SUM(N4:N5)+P1",
+        "P4": 1000000,
+        "P5": 2000000,
+        "S1": "=Q4",
+        "S2": "=Q5",
+        "S3": "=SUM(Q4:Q5)"
+      },
+      "data_tables": [
+        {
+          "ref": "B4:B6",
+          "column_input": "A1"
+        },
+        {
+          "ref": "E4:E5",
+          "column_input": "D1"
+        },
+        {
+          "ref": "H4:H5",
+          "column_input": "G1"
+        },
+        {
+          "ref": "K4:K5",
+          "column_input": "J1"
+        },
+        {
+          "ref": "N4:N5",
+          "column_input": "M1"
+        },
+        {
+          "ref": "Q4:Q5",
+          "column_input": "P1"
+        }
+      ]
+    }
+  ]
+}

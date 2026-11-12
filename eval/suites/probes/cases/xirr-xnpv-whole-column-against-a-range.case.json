@@ -1,0 +1,144 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "XIRR and XNPV sizes and pairs of whole columns and rows: a whole column against a bounded range of the used rows and against a range to the last row, two whole columns of sheets using different rows, with an error variant (A1-A9); whole rows: one row of each of two sheets, two rows deep over sheets of different used widths with its bounded control, and one count of different shapes with a bounded pair of the same row-major pairing (A10-A15, A18); whole columns of a sheet using one row and of an empty sheet (A16, A17) (Taskei P559567833, review of CR-321478391 round 1); and, from round 2: a large root that a date-0 flow decides, whole columns and their bounded controls on a sheet using two rows and on one using more (A19-A23), one whole row of each of two sheets with a numeric answer and its control (A24, A25), and an XNPV over whole rows two deep whose bounded control meets an empty cell before an error (A26, A27). The engine counts a whole column or row as all its cells and pairs values and dates by row-major index over all the columns.",
+ "tags": [
+  "M9",
+  "financial",
+  "xnpv",
+  "xirr",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "A1": "=XIRR(Data!A1:A2,Data!B:B)",
+    "A2": "=XNPV(0.1,Data!A1:A2,Data!B:B)",
+    "A3": "=XIRR(Data!A:A,Data!B1:B2)",
+    "A4": "=XIRR(Data!A1:A1048576,Data!B:B)",
+    "A5": "=XIRR(Data!A:A,Dates!A:A)",
+    "A6": "=XNPV(0.1,Data!A:A,Dates!A:A)",
+    "A7": "=XIRR(Errors!A:A,Dates!A:A)",
+    "A8": "=XNPV(0.1,Errors!A:A,Dates!A:A)",
+    "A9": "=XIRR(Data!A1:A3,Dates!A1:A3)",
+    "A10": "=XIRR(Data!1:1,Dates!1:1)",
+    "A11": "=XIRR(RowFlows!1:2,RowDates!1:2)",
+    "A12": "=XIRR(RowFlows!A1:B2,RowDates!A1:B2)",
+    "A13": "=XNPV(0.1,RowFlows!1:2,RowDates!1:2)",
+    "A14": "=XIRR(RowFlows!A:A,RowDates!1:64)",
+    "A15": "=XIRR(RowFlows!A1:A4,RowDates!A1:B2)",
+    "A16": "=XIRR(OneRow!A:A,OneRow!B:B)",
+    "A17": "=XIRR(Blank!A:A,Blank!B:B)",
+    "A18": "=XIRR(Data!1:2,Dates!1:2)",
+    "A19": "=XIRR(LargeRoot!A:A,LargeRoot!B:B)",
+    "A20": "=XIRR(LargeRoot!A1:A2,LargeRoot!B1:B2)",
+    "A21": "=XIRR(LargeRoot!A1:A3,LargeRoot!B1:B3)",
+    "A22": "=XIRR(LargeRootMore!A:A,LargeRootMore!B:B)",
+    "A23": "=XIRR(LargeRootMore!A1:A3,LargeRootMore!B1:B3)",
+    "A24": "=XIRR(OneRowFlows!1:1,OneRowDates!1:1)",
+    "A25": "=XIRR(OneRowFlows!A1:C1,OneRowDates!A1:C1)",
+    "A26": "=XNPV(0.1,XnpvRows!1:2,XnpvRows!3:4)",
+    "A27": "=XNPV(0.1,XnpvRows!A1:C2,XnpvRows!A3:C4)"
+   }
+  },
+  {
+   "name": "Data",
+   "cells": {
+    "A1": -1000,
+    "A2": 1100,
+    "B1": 45000,
+    "B2": 45365
+   }
+  },
+  {
+   "name": "Dates",
+   "cells": {
+    "A1": 45000,
+    "A2": 45365,
+    "A3": 45500
+   }
+  },
+  {
+   "name": "Errors",
+   "cells": {
+    "A1": -1000,
+    "A2": "=NA()"
+   }
+  },
+  {
+   "name": "RowFlows",
+   "cells": {
+    "A1": -1000,
+    "A2": 1100
+   }
+  },
+  {
+   "name": "RowDates",
+   "cells": {
+    "A1": 45000,
+    "B1": 45730,
+    "A2": 45365
+   }
+  },
+  {
+   "name": "OneRow",
+   "cells": {
+    "A1": -1000,
+    "B1": 45000
+   }
+  },
+  {
+   "name": "Blank",
+   "cells": {}
+  },
+  {
+   "name": "LargeRoot",
+   "cells": {
+    "A1": -1,
+    "A2": 1000,
+    "B1": 45000,
+    "B2": 45365
+   }
+  },
+  {
+   "name": "LargeRootMore",
+   "cells": {
+    "A1": -1,
+    "A2": 1000,
+    "B1": 45000,
+    "B2": 45365,
+    "D5": "text"
+   }
+  },
+  {
+   "name": "OneRowFlows",
+   "cells": {
+    "A1": -1000,
+    "B1": 1100
+   }
+  },
+  {
+   "name": "OneRowDates",
+   "cells": {
+    "A1": 45000,
+    "B1": 45365,
+    "C1": 45500,
+    "E7": 1
+   }
+  },
+  {
+   "name": "XnpvRows",
+   "cells": {
+    "A1": -1000,
+    "B1": 500,
+    "A2": 600,
+    "B2": "=NA()",
+    "A3": 45000,
+    "B3": 45100,
+    "A4": 45200,
+    "B4": 45300
+   }
+  }
+ ],
+ "expected": {}
+}

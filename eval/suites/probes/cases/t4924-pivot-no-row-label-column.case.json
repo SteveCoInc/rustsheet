@@ -1,0 +1,506 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4924: whether a pivot with no row field keeps a row-label column (`firstDataCol`). gen-pivot shows none for an outline or tabular pivot with a column field and the Values field on columns (640780d7b6f4ad53 P02, f9e7edbb5b74011a P07, 462f10551d480f9d P08: firstDataCol 0), one with `gridDropZones` (2251b0f5e5a256e1 P07, 640780d7b6f4ad53 P11, ec473260bb2065b3 P02) and one with a single data field (01865529b5a09c0b P03, P08, P11); every one of those sheets turns `compact` and `compactData` off together, and none is in compact form. Each sheet here is one builder-v2 pivot at B4 over Data!A1:E7 (Region, Product, Channel, Sales, Units; six records) with no row field and Sum of Sales and Sum of Units unless said; the sidecar's `pivots` section records Excel's location and firstDataCol. Controls, the evidenced shapes on small data: NO outline, columns Product then Values; NT tabular, columns Values then Product; NG outline with `gridDropZones`; N1 outline, columns Product, Sum of Sales alone. Not evidenced: NC compact form (every default), columns Product then Values; NCF compact, columns Values then Product; ND `compact` off on the table and its fields with `compactData` left on; NE `compactData` off with `compact` left on; NGC compact with `gridDropZones`; NV outline with no column field, the two data fields alone (t4138 G9 is its compact form).",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4924",
+  "M16"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Channel",
+    "D1": "Sales",
+    "E1": "Units",
+    "A2": "East",
+    "B2": "A",
+    "C2": "Web",
+    "D2": 10,
+    "E2": 1,
+    "A3": "West",
+    "B3": "A",
+    "C3": "Store",
+    "D3": 20,
+    "E3": 2,
+    "A4": "East",
+    "B4": "B",
+    "C4": "Web",
+    "D4": 5,
+    "E4": 3,
+    "A5": "West",
+    "B5": "B",
+    "C5": "Web",
+    "D5": 7,
+    "E5": 4,
+    "A6": "East",
+    "B6": "C",
+    "C6": "Store",
+    "D6": 3,
+    "E6": 5,
+    "A7": "East",
+    "B7": "A",
+    "C7": "Store",
+    "D7": 4,
+    "E7": 6
+   }
+  },
+  {
+   "name": "NO",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PNO",
+     "source": "Data!A1:E7",
+     "location": "B4",
+     "definition": {
+      "table": {
+       "compact": false,
+       "compactData": false
+      },
+      "rows": [],
+      "columns": [
+       "Product",
+       "Values"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       },
+       {
+        "field": "Units"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Channel": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "NT",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PNT",
+     "source": "Data!A1:E7",
+     "location": "B4",
+     "definition": {
+      "table": {
+       "compact": false,
+       "outline": false,
+       "compactData": false,
+       "outlineData": false
+      },
+      "rows": [],
+      "columns": [
+       "Values",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       },
+       {
+        "field": "Units"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Channel": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "NG",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PNG",
+     "source": "Data!A1:E7",
+     "location": "B4",
+     "definition": {
+      "table": {
+       "compact": false,
+       "compactData": false,
+       "gridDropZones": true
+      },
+      "rows": [],
+      "columns": [
+       "Product",
+       "Values"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       },
+       {
+        "field": "Units"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Channel": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "N1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PN1",
+     "source": "Data!A1:E7",
+     "location": "B4",
+     "definition": {
+      "table": {
+       "compact": false,
+       "compactData": false
+      },
+      "rows": [],
+      "columns": [
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Channel": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "NC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PNC",
+     "source": "Data!A1:E7",
+     "location": "B4",
+     "definition": {
+      "table": {},
+      "rows": [],
+      "columns": [
+       "Product",
+       "Values"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       },
+       {
+        "field": "Units"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "NCF",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PNCF",
+     "source": "Data!A1:E7",
+     "location": "B4",
+     "definition": {
+      "table": {},
+      "rows": [],
+      "columns": [
+       "Values",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       },
+       {
+        "field": "Units"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "ND",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PND",
+     "source": "Data!A1:E7",
+     "location": "B4",
+     "definition": {
+      "table": {
+       "compact": false
+      },
+      "rows": [],
+      "columns": [
+       "Product",
+       "Values"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       },
+       {
+        "field": "Units"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Channel": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "NE",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PNE",
+     "source": "Data!A1:E7",
+     "location": "B4",
+     "definition": {
+      "table": {
+       "compactData": false
+      },
+      "rows": [],
+      "columns": [
+       "Product",
+       "Values"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       },
+       {
+        "field": "Units"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "NGC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PNGC",
+     "source": "Data!A1:E7",
+     "location": "B4",
+     "definition": {
+      "table": {
+       "gridDropZones": true
+      },
+      "rows": [],
+      "columns": [
+       "Product",
+       "Values"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       },
+       {
+        "field": "Units"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "NV",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PNV",
+     "source": "Data!A1:E7",
+     "location": "B4",
+     "definition": {
+      "table": {
+       "compact": false,
+       "compactData": false
+      },
+      "rows": [],
+      "columns": [],
+      "data": [
+       {
+        "field": "Sales"
+       },
+       {
+        "field": "Units"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Channel": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false
+        }
+       }
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,57 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Taskei P559182944 (review of CR-321561773, round 1, reviewer 1 B4): a workbook name X, defined through the API (Graph names/add) over S!$A$1:$A$3 after load, binds formulas that read it unresolved. Does each one spill, or intersect? C1 and C5 are file formulas (legacy, no cm): C1 on the range's rows, C5 off them. E1 and E5 are the same formula typed before the add. G1:G4 show how each reads after the add (FORMULATEXT: an @ means it intersects). The engine spills all four (docs/excel-semantics/references.md, 'A plain formula cell whose formula became an array spills').",
+  "tags": [
+    "M8",
+    "names",
+    "arrays",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "A1": 1,
+        "A2": 2,
+        "A3": 3,
+        "C1": "=X",
+        "C5": "=X",
+        "E1": {
+          "entered": "=X"
+        },
+        "E5": {
+          "entered": "=X"
+        },
+        "G1": "=FORMULATEXT(C1)",
+        "G2": "=FORMULATEXT(C5)",
+        "G3": "=FORMULATEXT(E1)",
+        "G4": "=FORMULATEXT(E5)"
+      }
+    }
+  ],
+  "expected": {},
+  "check": [
+    "S!C1",
+    "S!C2",
+    "S!C3",
+    "S!C5",
+    "S!C6",
+    "S!C7",
+    "S!E1",
+    "S!E2",
+    "S!E3",
+    "S!E5",
+    "S!E6",
+    "S!E7",
+    "S!G1",
+    "S!G2",
+    "S!G3",
+    "S!G4"
+  ],
+  "api_names": [
+    {
+      "name": "X",
+      "formula": "=S!$A$1:$A$3"
+    }
+  ]
+}

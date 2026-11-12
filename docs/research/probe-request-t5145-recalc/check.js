@@ -7,20 +7,28 @@
 // - M20 (a loop closed in Manual mode) turns iterative calculation off before it closes the loop, keeps it off
 //   through F9, logs both settings and puts the first one back. It is run from a host with iteration on and from
 //   one with it off (review of CR-321738056, round 1: on the desktop the setting is the application's);
-// - M20 puts the iteration setting back when one of its syncs fails, whichever one, whether the failed sync had
-//   applied its writes or not (round 2 of the same review), and the mode is Automatic afterwards.
+// - M20 restores iteration after injected sync failures except when its restoration write is dropped; if
+//   run()'s cleanup sync succeeds, the mode is Automatic afterwards;
+// - PREC and DEP build their workbook with no refused group and make exactly the queries listed below: every
+//   cell and range the README names for them, with both calls or the direct one alone (review of CR-321841262,
+//   round 1: a list of some of them let 41 queries be removed unseen);
+// - a workbook that holds a value is refused: one line with WorkbookNotFresh, and nothing is set or calculated;
+// - in Script Lab the script puts one button a case on the page, the first and the last each run their own
+//   case, and a click turns every button off (../script_lab_page.js).
 const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
+const { fakePage, checkButtons } = require("../script_lab_page");
 
 const src = fs.readFileSync(path.join(__dirname, "cases.js"), "utf8");
 
 // A host whose application remembers the calculation mode and the iteration setting; every other property is a
 // permissive fake. A write of one of the two settings takes effect at the next sync, as in Office.js. Each set and
 // each call is recorded with the two settings as they were at that moment. `fail`, if given, makes the sync with
-// that number (from 1) reject once, after applying the queued writes (`applied`) or dropping them.
-function makeHost(iterationOn, fail) {
+// that number (from 1) reject once, after applying the queued writes (`applied`) or dropping them. With `used`
+// the workbook holds a value already: the second of its two sheets has a used range.
+function makeHost(iterationOn, fail, used) {
   const state = { iteration: iterationOn, mode: "Automatic" };
   const host = { syncs: 0 };
   let queued = [];
@@ -45,6 +53,10 @@ function makeHost(iterationOn, fail) {
         if (k === "toJSON") return () => `<${p}>`;
         if (k === Symbol.toPrimitive) return () => p;
         if (special(p, k)) return state[special(p, k)];
+        // Two sheets, and the value is on the second: a guard that looked at the active sheet alone would miss it.
+        if (p === "context.workbook.worksheets" && k === "items") return [fake(`${p}.items[0]`), fake(`${p}.items[1]`)];
+        if (p.endsWith(".getUsedRangeOrNullObject()") && k === "isNullObject") return !(used && p.includes("items[1]"));
+        if (p.endsWith(".getUsedRangeOrNullObject()") && k === "address") return "Sheet2!A1";
         if (k in store) return store[k];
         if (k === "sync") return sync;
         return fake(`${p}.${String(k)}`);
@@ -66,10 +78,10 @@ function makeHost(iterationOn, fail) {
   return Object.assign(host, { context: fake("context"), state, timeline });
 }
 
-async function runCase(id, iterationOn, fail) {
-  const host = makeHost(iterationOn, fail);
-  const lines = [];
+// The script loaded for `host`. With a `page` it finds Script Lab's page and puts its buttons on it.
+function load(host, lines, page) {
   const sandbox = {
+    document: page ? page.document : undefined,
     console: { log: (line) => lines.push(JSON.parse(line)) },
     Office: { context: { diagnostics: { version: "16.0.FAKE", platform: "OfficeOnline" } } },
     Excel: {
@@ -82,7 +94,15 @@ async function runCase(id, iterationOn, fail) {
     },
   };
   vm.createContext(sandbox);
-  vm.runInContext(`${src}\n;globalThis.__run = run; globalThis.__ids = Object.keys(M);`, sandbox);
+  const exports = "globalThis.__run = run; globalThis.__ids = Object.keys(M); globalThis.__p = Object.keys(P);";
+  vm.runInContext(`${src}\n;${exports}`, sandbox);
+  return sandbox;
+}
+
+async function runCase(id, iterationOn, fail) {
+  const host = makeHost(iterationOn, fail);
+  const lines = [];
+  const sandbox = load(host, lines);
   let rejected = null;
   await sandbox.__run(id).catch((e) => {
     rejected = e; // only the sync of run()'s own cleanup can make run() reject
@@ -92,6 +112,10 @@ async function runCase(id, iterationOn, fail) {
 
 (async () => {
   const { ids } = await runCase("M1", false);
+  // The cases the README's M table asks through the script (M9 and M10 are done by hand), written out: a case
+  // dropped from the script must fail here, not shorten the run.
+  const expected = "M1 M2 M3 M4 M6 M8 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 V1".split(" ");
+  assert.deepStrictEqual([...ids], expected, "the script holds exactly the README's cases");
   for (const id of ids) {
     for (const iterationOn of [false, true]) {
       const { host, lines } = await runCase(id, iterationOn);
@@ -115,8 +139,8 @@ async function runCase(id, iterationOn, fail) {
     }
   }
   // M20 under one failed sync. Its syncs are numbered in a clean run; the last is run()'s cleanup and the one
-  // before it M20's own restore. A failure of the restore itself that drops its write cannot be undone by the
-  // script, so that one combination is left out.
+  // before it M20's own restore. The script does not recover if the restore's own sync drops its write, so that
+  // combination is outside this check's restoration guarantee.
   let failures = 0;
   for (const iterationOn of [false, true]) {
     const total = (await runCase("M20", iterationOn)).host.syncs;
@@ -138,8 +162,64 @@ async function runCase(id, iterationOn, fail) {
       }
     }
   }
+  // The P cases: the builder refuses nothing on the fake, and the script asks exactly the queries listed here,
+  // no fewer and no more. The list is written out, not taken from the script: every cell and range of the
+  // README's P table and of its "Dependents asked for", and A1 and R10 in PREC, which the script also asks.
+  // "direct" marks a query for which only the direct call is made.
+  const h = Array.from({ length: 23 }, (_, i) => `H${i + 1}`);
+  const cells = (sheet, names) => names.split(" ").map((a) => `${sheet}${a}`);
+  const asked = {
+    PREC: { both: [...h, ...cells("", "J1 J2 K1 K2 K3 A1 R10 S10 V3 W2 W5 Y1 Y2 X4:X5")], direct: ["H1:H2"] },
+    DEP: {
+      both: [
+        ...cells("S!", "A1 A2 A3 A5 A9 B1 B2 B3 B5 C1 C2 C3 D1 J1 J2 J3 N2 H1"),
+        ...cells("S!", "R1 R10 R11 X1 X2 X4:X5"),
+      ],
+      direct: ["T!A1", "S!A1:A2"],
+    },
+  };
+  for (const [id, { both, direct }] of Object.entries(asked)) {
+    const { lines } = await runCase(id, false);
+    assert.strictEqual(lines.length, 1, `${id}: one line`);
+    assert.ok(!("error" in lines[0]), `${id}: ${lines[0].error} ${lines[0].message}`);
+    const { buildErrors, ...queries } = lines[0].data;
+    assert.deepStrictEqual(buildErrors, [], `${id}: no group refused`);
+    for (const key of [...both, ...direct]) assert.ok(key in queries, `${id} asks ${key}`);
+    for (const key of Object.keys(queries)) {
+      assert.ok(both.includes(key) || direct.includes(key), `${id}: ${key} is asked and not listed`);
+    }
+    for (const key of both) {
+      assert.deepStrictEqual(Object.keys(queries[key]), ["direct", "all"], `${id} ${key}: both calls`);
+    }
+    for (const key of direct) {
+      assert.deepStrictEqual(Object.keys(queries[key]), ["direct"], `${id} ${key}: the direct call only`);
+    }
+  }
+  // A workbook that holds a value is refused: one line with the error, and nothing is set or calculated in it.
+  for (const id of ["M1", "PREC"]) {
+    const host = makeHost(false, null, true);
+    const lines = [];
+    await load(host, lines).__run(id);
+    assert.strictEqual(lines.length, 1, `${id} in a used workbook: one line`);
+    assert.strictEqual(lines[0].error, "WorkbookNotFresh", `${id} in a used workbook is refused`);
+    assert.ok(lines[0].message.includes("Sheet2!A1"), "the refusal names what the workbook holds");
+    const touched = host.timeline.filter((e) => e.set || e.call === "context.application.calculate");
+    assert.deepStrictEqual(touched, [], `${id}: a refused workbook is left untouched`);
+  }
+  // In Script Lab: one button a case, the M cases and then the P cases. A click logs its case's line and shows
+  // it under the buttons, and turns the buttons off.
+  const open = () => {
+    const page = fakePage();
+    const shown = [];
+    const loaded = load(makeHost(false), shown, page);
+    return { page, logged: () => shown.map((line) => JSON.stringify(line)), loaded };
+  };
+  const { loaded } = open();
+  await checkButtons(open, [...ids, ...loaded.__p], (line) => line.id);
+  assert.deepStrictEqual([...loaded.__p].slice(-2), ["PREC", "DEP"]);
   const each = `${ids.length} cases, each from a host with iteration off and on`;
-  console.log(`ok: ${each}; M20 under ${failures} failed syncs`);
+  const rest = "PREC and DEP; a used workbook refused; a button a case";
+  console.log(`ok: ${each}; M20 under ${failures} failed syncs; ${rest}`);
 })().catch((e) => {
   console.error(e.message);
   process.exit(1);

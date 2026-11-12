@@ -15,6 +15,13 @@ mode, edit, read, calculate, read) or about an API that returns ranges, so they 
 
 ## How
 
+- **In Script Lab:** paste `cases.js` into the Script tab and this one line into the HTML tab:
+  `<div id="cases"></div><pre id="out"></pre>`. Press Run: the script puts one button a case on the page.
+  Click one button only: it runs that case in the workbook that is open, which must be a fresh one, and the
+  next case needs a new workbook with Script Lab opened in it again. The case's JSON line is logged, and
+  shown under the buttons to copy from. The click turns the buttons off, and the script refuses a workbook
+  that holds a value (its line then says `WorkbookNotFresh` and names the cells), so a case cannot run over
+  what another left.
 - **Office.js:** run `cases.js`, one case per fresh workbook: `run("M1")`, …, `run("PREC")`, `run("DEP")`. Each sets
   Automatic first and logs one JSON line with the build, the platform, the mode it started in (`modeAtStart`) and
   whether iterative calculation was on (`iterationAtStart`; M20 turns it off for its run and puts it back).
@@ -24,9 +31,16 @@ mode, edit, read, calculate, read) or about an API that returns ranges, so they 
 - The script enters formulas with `Range.formulas` and calculates with `application.calculate(recalculate)`. They
   stand in for typing and for F9. Where a case's answer differs when it is typed, say so in `RESULTS.md`: S3's
   sentence is about entering a formula in the UI.
-- `node check.js` runs every M case against a recording fake of Office.js and asserts the sequencing the cases
-  depend on (one line a case, Automatic mode on exit, iteration restored on successful runs and when a sync of
-  M20 fails, and M20 running with iteration off). It needs no Excel and says nothing about Excel's values.
+- `node check.js` runs every M case against a recording fake of Office.js and checks one JSON line per
+  successful case, Automatic mode after successful cleanup, restoration of the initial iteration setting on
+  successful runs, and M20 running with iteration off. It also injects sync failures into M20: iteration must be
+  restored except when its restoration write is dropped; Automatic mode is checked when `run()`'s cleanup sync
+  succeeds. And it runs `PREC` and `DEP`: no group of the workbook is refused, and the queries made are exactly
+  those of a list in `check.js`, every cell and range of the P table and of "Dependents asked for" (and A1 and
+  R10 in `PREC`), so a query removed or added fails it. It runs a case in a workbook that holds a value: the
+  case is refused and nothing is set or calculated. And it clicks the first and the last button on a fake of
+  Script Lab's page: each runs its own case, and every button is then off. It needs no Excel and says nothing
+  about Excel's values.
 - **M9 and M10** are done by hand: see below.
 - Excel for the web is the set of record: excel-graph is the only oracle (decision 0266 rule 2), and Script Lab runs
   there. Where the web and the desktop differ, the rule follows the web and the entry is CONFLICTING (decision 0039
@@ -68,7 +82,10 @@ mode, edit, read, calculate, read) or about an API that returns ranges, so they 
 | V1 | Automatic; F1 `=RAND()`; edit A9, which nothing reads | Does F1 change? | yes (S1 says so; this is the control) |
 
 `generate.py` writes the three M10 workbooks (`python3 -I generate.py <dir>`), the same bytes at every run, and prints
-their sha256. They are not committed; the request sent to the oracle owner carries them. Their `calcId` is 191029;
+their sha256. The files are deflated, so the sha256s below are those of a Python built on zlib; one built on
+zlib-ng writes the same parts under other sha256s. `python3 -I check.py` holds the files to what was sent: the
+five parts, in order, their content, and on zlib these sha256s. They are not committed; the request sent to
+the oracle owner carries them. Their `calcId` is 191029;
 if the probing build writes a higher one (M9 reports it), say so, because Excel then has a version reason to
 recalculate the Automatic file on open.
 
@@ -119,6 +136,9 @@ P7 is P7a and P7b, P11 the spill rows, P11a to P11g):
 | P23 | H22 | `=SUM(P1:Q2:R3)` | The bounding rectangle `P1:R3`, or the two operands? (`DEP` asks R1, which only the rectangle holds) | `P1:R3` |
 | P9b | H23 | `=SUMIF(A1:A3,">0",B1:B5)` | `B1:B5` as written, or the `B1:B3` SUMIF reads? (`DEP` asks B5) | `A1:A3` and `B1:B5` |
 | P11f | S10 | `=SUM(R10#)`, R10 `=SEQUENCE(3)` blocked by R11 | R10 only? | R10 |
+| P13b | W2, W5 | `=Tb[@Qty]*2` on a data row of the table and off its rows (`#VALUE!`) | `N2` for W2? Anything for W5? | `N2`; no area for W5 |
+| P11h | Y1, Y2 | `=SUM(X1#)`, X1 `=1+1`; `=SUM(X2#)`, X2 = 5 | `X1` for Y1? Anything for Y2, whose `X2#` is `#REF!`? | `X1`; no area for Y2 |
+| P15b | X4:X5 | a two-cell range whose X5 `=X4+1` reads its X4 `=A1+1` | Is X4, a cell of the target, among the precedents of the range? Is X5 among its dependents (`DEP`)? | yes to both: a target cell is listed when another target cell reaches it |
 
 Dependents asked for: S!A1, A2, A3 (is V3, whose `@A1:A5` picks A3, a dependent of A3 only or of every cell of
 the range? P20b), A5, A9 (nothing but `SUM(A:A)` reads A9), B1 to B3 (is H10 a dependent of B2 or
@@ -126,7 +146,8 @@ B3, which only SUMIF's resized range reads?), C1 to C3 (through the names, INDIR
 (a spill cell: is K1 a dependent of J3?), N2 (through the table), H1, T!A1, and the two-cell range A1:A2. For A1
 the question is also whether its dependents hold the anchor J1 only or the whole spill J1:J3, whether
 `getDependents` reaches K2, which reads the spill cell J2 (P11e), and whether the conditional format on T1 and the
-data validation on U1, whose formulas read A1, are listed (P24). B5, R1, R10 and R11 are asked for P9b, P23 and P11f.
+data validation on U1, whose formulas read A1, are listed (P24). B5, R1, R10 and R11 are asked for P9b, P23 and P11f,
+X1 and X2 for P11h (is Y1 a dependent of X1, and Y2 of nothing?), and the range X4:X5 for P15b.
 
 ## What we do with the answers
 

@@ -1,0 +1,49 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "Taskei P561614667: the number format and the displayed text Excel for the web gives six typed entries (12.5%, 12%, 0.5%, -$42.00, $42, -42). The value is in column B; the number format Excel picks is in the oracle's ENTERED log; the displayed text is the sidecar's `text`. The shapes are those of typed-currency-percent-input (T-0283), which logged formats and no displayed text.",
+ "tags": [
+  "M2",
+  "probe",
+  "text"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "A1": {
+     "entered": "12.5%"
+    },
+    "B1": "=A1+0",
+    "A2": {
+     "entered": "12%"
+    },
+    "B2": "=A2+0",
+    "A3": {
+     "entered": "0.5%"
+    },
+    "B3": "=A3+0",
+    "A4": {
+     "entered": "-$42.00"
+    },
+    "B4": "=A4+0",
+    "A5": {
+     "entered": "$42"
+    },
+    "B5": "=A5+0",
+    "A6": {
+     "entered": "-42"
+    },
+    "B6": "=A6+0"
+   }
+  }
+ ],
+ "text": [
+  "Sheet1!A1",
+  "Sheet1!A2",
+  "Sheet1!A3",
+  "Sheet1!A4",
+  "Sheet1!A5",
+  "Sheet1!A6"
+ ],
+ "expected": {}
+}

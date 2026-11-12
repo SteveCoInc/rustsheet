@@ -46,3 +46,14 @@ Remove Duplicates for each case: which rows are removed, and which of two "equal
 The findings go into `docs/excel-semantics/` (a new `autofilter-and-dedupe.md`), and the vectors of
 `query.distinct@1` (`DISTINCT_MAX` 10,000 items) and `plan.dedupePlan@1` are written from them. Until then both stay
 proposed in D-CONTRACTS-24, items 1 and 5.
+
+## Added 2026-11-12 09:00Z: Find's matching (D-CONTRACTS-24 item 2, `query.find@1`)
+
+Office.js `worksheet.findAll(text, {completeMatch, matchCase})` (and `range.find` for one hit). Record which cells
+match, in order.
+
+| Case | Cells (A1:A6) | Searches | Question |
+|---|---|---|---|
+| W1 | `abc`, `a*c`, `aXc`, `ac`, `a?c`, `A~C` | `a*c`, `a~*c`, `a?c`, `a~?c`, `~~` | `*` and `?` wildcards and the `~` escape |
+| W2 | `Total`, `total`, `TOTAL`, `subtotal`, `Total ` (trailing space), `=UPPER("total")` | `total` with matchCase false/true and completeMatch false/true | case and whole-cell, and whether a formula's value matches |
+| W3 | 1 with format `0.00`; 1.5; `=1/3`; text `0.33` | `1.00`, `0.33`, `0.333` | values vs displayed text (Look in: Values matches the shown text?) |

@@ -1,10 +1,11 @@
 // Office.js (Script Lab or an add-in). Excel for the web is the set of record; a desktop run is a second set, labelled
-// (README.md, "How"). Each case runs in a FRESH workbook and logs one JSON line. The cases are those of README.md.
+// (README.md, "How"). Each case runs in a FRESH workbook and logs one JSON line; a workbook that holds a value is
+// refused. The cases are those of README.md.
 // Requirement sets: ExcelApi 1.9 (calculationState), 1.12 (getDirectPrecedents), 1.13 (getDirectDependents),
 // 1.14 (getPrecedents), 1.15 (getDependents). A call the host lacks is logged with its error code in place of its
 // addresses.
 //
-// Usage: await run("M1"); ... one call per case, each in a fresh workbook.
+// Usage: one case per fresh workbook, by its button in Script Lab (the end of this file) or by run("M1").
 
 const log = (id, data) => console.log(JSON.stringify({ id, ...data }));
 
@@ -378,6 +379,20 @@ async function buildP(context) {
   table.name = "Tb";
   s.getRange("H20").formulas = [["=SUM(Tb[Qty])"]];
   await group("table Tb");
+  // P13b: [#This Row] on a data row of the table (W2) and off its rows (W5, #VALUE!).
+  s.getRange("W2").formulas = [["=Tb[@Qty]*2"]];
+  s.getRange("W5").formulas = [["=Tb[@Qty]*2"]];
+  await group("this-row references W2 and W5");
+  // P11h: a spill reference to a cell that is no anchor: X1 holds a one-cell formula, X2 a literal.
+  s.getRange("X1").formulas = [["=1+1"]];
+  s.getRange("X2").values = [[5]];
+  s.getRange("Y1").formulas = [["=SUM(X1#)"]];
+  s.getRange("Y2").formulas = [["=SUM(X2#)"]];
+  await group("spill references to non-anchors Y1 and Y2");
+  // P15b: a range target that holds one of its own precedents (X5 reads X4).
+  s.getRange("X4").formulas = [["=A1+1"]];
+  s.getRange("X5").formulas = [["=X4+1"]];
+  await group("a chain inside one range X4:X5");
   return { s, t, u, buildErrors };
 }
 
@@ -399,7 +414,7 @@ const P = {
     const out = { buildErrors };
     const cells = [];
     for (let r = 1; r <= 23; r++) cells.push(`H${r}`);
-    cells.push("J1", "J2", "K1", "K2", "K3", "A1", "R10", "S10", "V3");
+    cells.push("J1", "J2", "K1", "K2", "K3", "A1", "R10", "S10", "V3", "W2", "W5", "Y1", "Y2");
     for (const a of cells) {
       out[a] = {
         direct: await addresses(context, () => s.getRange(a).getDirectPrecedents()),
@@ -407,13 +422,19 @@ const P = {
       };
     }
     out["H1:H2"] = { direct: await addresses(context, () => s.getRange("H1:H2").getDirectPrecedents()) };
+    out["X4:X5"] = {
+      direct: await addresses(context, () => s.getRange("X4:X5").getDirectPrecedents()),
+      all: await addresses(context, () => s.getRange("X4:X5").getPrecedents()),
+    };
     return out;
   },
   // Direct and all dependents of the cells the formulas read.
   DEP: async (context) => {
     const { s, t, buildErrors } = await buildP(context);
     const out = { buildErrors };
-    for (const a of ["A1", "A2", "A3", "A5", "A9", "B1", "B2", "B3", "B5", "C1", "C2", "C3", "D1", "J1", "J2", "J3", "N2", "H1", "R1", "R10", "R11"]) {
+    const asked = ["A1", "A2", "A3", "A5", "A9", "B1", "B2", "B3", "B5", "C1", "C2", "C3", "D1", "J1", "J2", "J3", "N2", "H1"];
+    asked.push("R1", "R10", "R11", "X1", "X2"); // X1 and X2 for P11h: is Y1 a dependent of X1, and Y2 none of X2?
+    for (const a of asked) {
       out[`S!${a}`] = {
         direct: await addresses(context, () => s.getRange(a).getDirectDependents()),
         all: await addresses(context, () => s.getRange(a).getDependents()),
@@ -421,6 +442,10 @@ const P = {
     }
     out["T!A1"] = { direct: await addresses(context, () => t.getRange("A1").getDirectDependents()) };
     out["S!A1:A2"] = { direct: await addresses(context, () => s.getRange("A1:A2").getDirectDependents()) };
+    out["S!X4:X5"] = {
+      direct: await addresses(context, () => s.getRange("X4:X5").getDirectDependents()),
+      all: await addresses(context, () => s.getRange("X4:X5").getDependents()),
+    };
     return out;
   },
 };
@@ -429,7 +454,18 @@ async function run(id) {
   await Excel.run(async (context) => {
     const s = context.workbook.worksheets.getActiveWorksheet();
     const env = { build: Office.context.diagnostics.version, platform: Office.context.diagnostics.platform };
+    let fresh = false;
     try {
+      // One case a workbook: a case reads cells that an earlier case would have left filled, and its line would
+      // not show it. A workbook that holds any value is refused, untouched.
+      context.workbook.worksheets.load("items/name");
+      await context.sync();
+      const used = context.workbook.worksheets.items.map((sheet) => sheet.getUsedRangeOrNullObject(true));
+      used.forEach((u) => u.load("address"));
+      await context.sync();
+      const full = used.filter((u) => !u.isNullObject).map((u) => u.address);
+      if (full.length) throw { code: "WorkbookNotFresh", message: `run in a new workbook: ${full.join(", ")}` };
+      fresh = true;
       // The mode is the application's on the desktop (research note, section 3): say what it was, then pin it.
       const app = context.application;
       app.load("calculationMode");
@@ -443,9 +479,34 @@ async function run(id) {
     } catch (e) {
       log(id, { ...env, error: e.code || String(e), message: e.message });
     } finally {
-      context.application.calculationMode = Excel.CalculationMode.automatic;
-      await context.sync();
+      if (fresh) {
+        context.application.calculationMode = Excel.CalculationMode.automatic;
+        await context.sync();
+      }
     }
   });
 }
 // run("M1") ... run("M20"), run("V1"), run("PREC"), run("DEP"): one fresh workbook each.
+
+// ---- In Script Lab ---------------------------------------------------------------------------------------------
+// This file is the Script tab, and the HTML tab holds one line: <div id="cases"></div><pre id="out"></pre>
+// Press Run, then click one case's button: the click turns every button off, since a workbook takes one case.
+// Its JSON line is logged, and shown under the buttons to copy from. The next case needs a new workbook.
+if (typeof document !== "undefined" && document.getElementById("cases")) {
+  const print = console.log;
+  console.log = (line) => {
+    print(line);
+    document.getElementById("out").textContent += `${line}\n`;
+  };
+  const buttons = [];
+  for (const id of [...Object.keys(M), ...Object.keys(P)]) {
+    const button = document.createElement("button");
+    button.textContent = id;
+    button.onclick = () => {
+      buttons.forEach((other) => (other.disabled = true));
+      return run(id);
+    };
+    buttons.push(button);
+    document.getElementById("cases").appendChild(button);
+  }
+}
