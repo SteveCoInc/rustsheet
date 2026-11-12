@@ -1,0 +1,47 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-5422: does Excel for the web calculate ECMA.CEILING stored without its _xlfn. prefix? Desktop Excel 16 saves the name bare (calipers roundtrip/formula_stress_test Math!B17, cached 2), and T-1301 recorded that Graph refused a workbook holding the bare name (createSession 501 unsupportedWorkbook), in a workbook that may also have held the one-argument call. Sheet S holds the bare call alone: A1 is the value, A2 its error type through IFERROR (0 for a value, 5 for #NAME?). Both cells are listed in bare_function_names, so the builder writes ECMA.CEILING without the prefix. Neither is scored: they ask how a stored (file) formula loads, while the engine reads the spec text as a typed formula, where ECMA.CEILING is the function; their oracle values are the evidence (docs/excel-semantics/numbers.md \"ECMA.CEILING\"). If the session is refused, that refusal is the answer: record it in the fill's log and in docs/excel-semantics/numbers.md under ECMA.CEILING. The prefixed form is probes/ecma-ceiling A1 (4). Precision!B2:B4 must retain 0.9999999999999998, 1, 1.0000000000000002; C2:C4 must be -1,0,1.",
+ "tags": [
+  "M5",
+  "xlsx",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": "=ECMA.CEILING(2.5,2)",
+    "A2": "=IFERROR(ERROR.TYPE(ECMA.CEILING(2.5,2)),0)"
+   },
+   "bare_function_names": [
+    "A1",
+    "A2"
+   ]
+  },
+  {
+   "name": "Precision",
+   "cells": {
+    "A1": "offset",
+    "B1": "raw",
+    "C1": "raw subtraction, not SUM",
+    "A2": -1,
+    "B2": "=1+A2*2^-52",
+    "C2": "=(B2-1)*2^52",
+    "A3": 0,
+    "B3": "=1+A3*2^-52",
+    "C3": "=(B3-1)*2^52",
+    "A4": 1,
+    "B4": "=1+A4*2^-52",
+    "C4": "=(B4-1)*2^52"
+   }
+  }
+ ],
+ "check": [
+  "Precision!B2",
+  "Precision!C2",
+  "Precision!B3",
+  "Precision!C3",
+  "Precision!B4",
+  "Precision!C4"
+ ]
+}

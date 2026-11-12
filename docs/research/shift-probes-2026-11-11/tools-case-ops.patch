@@ -1,0 +1,302 @@
+diff --git a/tools/src/rustsheet_tools/oracle/backends.py b/tools/src/rustsheet_tools/oracle/backends.py
+index 03789f9af..3072a26c2 100644
+--- a/tools/src/rustsheet_tools/oracle/backends.py
++++ b/tools/src/rustsheet_tools/oracle/backends.py
+@@ -190,6 +190,8 @@ _RANGE_EDITS = {
+     "insert_column": ("insert", "Right"),
+     "delete_column": ("delete", "Left"),
+ }
++# A shift of cells → the Graph range verb it replays with; the `shift` is the op's own (T-5464).
++_CELL_EDITS = {"insert_cells": "insert", "delete_cells": "delete"}
+ SCOPES = ["Files.ReadWrite"]
+ BATCH_SIZE = 20  # Graph's limit of requests in one `$batch` call
+ THROTTLED = (429, 503, 504)  # statuses retried after a pause, whole calls and `$batch` parts alike
+@@ -602,6 +604,17 @@ class GraphBackend:
+                     json={"shift": shift},
+                     headers=sid,
+                 )
++            elif op in _CELL_EDITS:
++                # The call a row or column edit makes, with a range's address and the op's own shift
++                # (SPEC-0039 Amendment 3, T-5464): `B2:C3 down` is `range(address='B2:C3')/insert`
++                # with `{"shift": "Down"}`.
++                address, shift = str(to).split(" ", 1)
++                self._call(
++                    "POST",
++                    f"{ref(sheet)}/range(address='{address}')/{_CELL_EDITS[op]}",
++                    json={"shift": shift.capitalize()},
++                    headers=sid,
++                )
+             elif op == "delete_sheet":
+                 if sheet == CANARY_SHEET:
+                     raise OracleError(f"sheet op delete_sheet {sheet!r}: the canary sheet stays")
+diff --git a/tools/src/rustsheet_tools/sheetop.py b/tools/src/rustsheet_tools/sheetop.py
+index d51974327..d88087cdb 100644
+--- a/tools/src/rustsheet_tools/sheetop.py
++++ b/tools/src/rustsheet_tools/sheetop.py
+@@ -18,7 +18,12 @@ SHEET_OPS = (
+     "convert_table",
+     "delete_table",
+     "add_table",
++    "insert_cells",
++    "delete_cells",
+ )
++# The shifts a shift of cells takes (SPEC-0039 Amendment 3, T-5464): an insert moves the cells at and
++# after its range down or right, a delete moves the cells after it up or left.
++CELL_SHIFTS = {"insert_cells": ("down", "right"), "delete_cells": ("up", "left")}
+ # The spec key holding each op's argument; the ops not listed (add, delete_sheet) take none.
+ _OP_KEYS = {
+     "rename": "to",
+@@ -30,10 +35,13 @@ _OP_KEYS = {
+     "convert_table": "table",
+     "delete_table": "table",
+     "add_table": "table",
++    **dict.fromkeys(CELL_SHIFTS, "range"),
+ }
+ _COLUMN_LETTERS = re.compile(r"[A-Za-z]{1,3}")
+ _ROW_SPAN = re.compile(r"([1-9][0-9]*):([1-9][0-9]*)")
+ _LAST_COLUMN = 16384  # XFD
++_LAST_ROW = 1048576
++_CELL = re.compile(r"([A-Za-z]{1,3})([1-9][0-9]*)")
+ # An add_table's recorded argument, `<table name> <A1 range>` (T-3629): neither part holds a space.
+ _TABLE_AT = re.compile(r"([^\s:]+) ([A-Za-z]{1,3}[1-9][0-9]*:[A-Za-z]{1,3}[1-9][0-9]*)")
+ 
+@@ -93,6 +101,31 @@ def _is_row_span(value: object) -> bool:
+     return match is not None and int(match[1]) < int(match[2])
+ 
+ 
++def _corner(cell: str) -> tuple[int, int] | None:
++    """The 1-based `(column, row)` of an A1 cell, None for anything else."""
++    match = _CELL.fullmatch(cell)
++    return (column_number(match[1]), int(match[2])) if match else None
++
++
++def _is_area(value: str) -> bool:
++    """Whether `value` is one cell (`B2`) or a range (`B2:C3`) on the grid, its first corner first."""
++    first, colon, last = value.partition(":")
++    start, end = _corner(first), _corner(last if colon else first)
++    return (
++        start is not None
++        and end is not None
++        and start[0] <= end[0] <= _LAST_COLUMN
++        and start[1] <= end[1] <= _LAST_ROW
++    )
++
++
++def _is_cell_shift(kind: str, to: object) -> bool:
++    """Whether `to` is the recorded `<A1 range> <shift>` of an insert_cells or delete_cells: a range on
++    the grid and a shift the op takes (T-5464)."""
++    area, _, shift = to.partition(" ") if isinstance(to, str) else ("", "", "")
++    return shift in CELL_SHIFTS[kind] and _is_area(area)
++
++
+ def _valid_op_argument(kind: str, to: object) -> bool:
+     """Whether `to` is a valid argument for sheet op `kind`."""
+     return {
+@@ -105,9 +138,31 @@ def _valid_op_argument(kind: str, to: object) -> bool:
+         "convert_table": _is_name(to),
+         "delete_table": _is_name(to),
+         "add_table": isinstance(to, str) and _TABLE_AT.fullmatch(to) is not None,
++        "insert_cells": kind in CELL_SHIFTS and _is_cell_shift(kind, to),
++        "delete_cells": kind in CELL_SHIFTS and _is_cell_shift(kind, to),
+     }.get(kind, to is None)
+ 
+ 
++# The second spec key of an op whose recorded argument joins two.
++_SECOND_KEYS = {"add_table": "ref", "insert_cells": "shift", "delete_cells": "shift"}
++
++
++def _joined_argument(op: dict[str, Any], kind: str, to: object) -> str:
++    """The recorded argument of a spec op that names its argument with two keys: an add_table's
++    `<table> <ref>` (T-3629) and a shift of cells' `<range> <shift>` (T-5464), the range in capitals,
++    which is also Graph's address. Raises ValueError when either key is missing or misshapen."""
++    second = op.get(_SECOND_KEYS[kind])
++    if kind == "add_table":
++        if not _is_name(to) or not isinstance(second, str) or " " in str(to):
++            msg = f"sheet op {op!r}: add_table needs a `table` name without spaces and a `ref` range"
++            raise ValueError(msg)
++        return f"{to} {second.upper()}"
++    if not isinstance(to, str) or not isinstance(second, str):
++        msg = f"sheet op {op!r}: {kind} needs a `range` and a `shift`"
++        raise ValueError(msg)
++    return f"{to.upper()} {second}"
++
++
+ def sheet_op(op: Any) -> tuple[str, str, str | int | None]:
+     """A spec's sheet op as `(op, sheet, to)`: `to` is the new name of a rename, the 0-based
+     position of a move, the 1-based row of an insert_row or delete_row (spec key `row`; the
+@@ -115,7 +170,9 @@ def sheet_op(op: Any) -> tuple[str, str, str | int | None]:
+     T-3019), the column letter of an insert_column or delete_column
+     (spec key `column`), the table name of a convert_table or delete_table (spec key `table`;
+     T-2323), `<table> <range>` for an add_table (spec keys `table` and `ref`, a range with its header
+-    row first; T-3629) and None for an add or delete_sheet. Raises ValueError for an unknown or malformed op."""
++    row first; T-3629), `<range> <shift>` for an insert_cells or delete_cells (spec keys `range`, one
++    cell or `B2:C3`, and `shift`: `down` or `right` for an insert, `up` or `left` for a delete; T-5464)
++    and None for an add or delete_sheet. Raises ValueError for an unknown or malformed op."""
+     recorded = isinstance(op, (list, tuple)) and len(op) == 3
+     if recorded:
+         key = _op_key(op[0])
+@@ -127,16 +184,13 @@ def sheet_op(op: Any) -> tuple[str, str, str | int | None]:
+     key = _op_key(kind)
+     to = op.get(key) if key else None
+     counted = kind in ("delete_row", "insert_column", "delete_column")
+-    placed = kind == "add_table" and not recorded
+-    if set(op) - {"op", "sheet", key, *(["count"] if counted else []), *(["ref"] if placed else [])}:
++    # A spec names such an op's two parts apart; the recording joins them.
++    second = None if recorded else _SECOND_KEYS.get(kind)
++    if set(op) - {"op", "sheet", key, second, *(["count"] if counted else [])}:
+         msg = f"sheet op {op!r} has unknown keys"
+         raise ValueError(msg)
+-    if placed:
+-        # A spec names the table and its `ref` apart; the recording joins them (T-3629).
+-        if not _is_name(to) or not isinstance(op.get("ref"), str) or " " in str(to):
+-            msg = f"sheet op {op!r}: add_table needs a `table` name without spaces and a `ref` range"
+-            raise ValueError(msg)
+-        to = f"{to} {op['ref'].upper()}"
++    if second:
++        to = _joined_argument(op, kind, to)
+     elif "count" in op:
+         count = op["count"]
+         by_column = kind != "delete_row"
+@@ -168,6 +222,7 @@ def sheet_op(op: Any) -> tuple[str, str, str | int | None]:
+         " >= 0 for move; `row` a 1-based row for insert_row and delete_row (with an optional row `count`"
+         " for delete_row); `column` a column letter"
+         " (A to XFD) for insert_column and delete_column; `table` a table name for convert_table and"
+-        " delete_table; `table` and `ref` (A1:B2) for add_table"
++        " delete_table; `table` and `ref` (A1:B2) for add_table; `range` (A1 or A1:B2, on the grid) and"
++        " `shift` (down or right for insert_cells, up or left for delete_cells)"
+     )
+     raise ValueError(msg)
+diff --git a/tools/src/rustsheet_tools/spec2xlsx.py b/tools/src/rustsheet_tools/spec2xlsx.py
+index 96350c741..f21ad663b 100644
+--- a/tools/src/rustsheet_tools/spec2xlsx.py
++++ b/tools/src/rustsheet_tools/spec2xlsx.py
+@@ -34,10 +34,10 @@ Conventions (normative; mirrored by the Rust engine adapter in crates/rustsheet-
+     one (Excel rewrites the formulas that refer to it), `move` puts one at a 0-based position,
+     `{"op": "insert_row", "sheet": "S", "row": 1}` inserts a blank row above row 1 (T-1933),
+     `delete_row` (same keys) deletes row 1 (with `"count": 4`, rows 1-4 in one edit, T-3019),
+-    `{"op": "insert_column", "sheet": "S", "column": "B"}`
+-    inserts a blank column left of B and `delete_column` deletes it, `{"op": "delete_sheet",
+-    "sheet": "S"}` deletes a sheet, and `{"op": "convert_table", "sheet": "S", "table": "T1"}` /
+-    `delete_table` turn a table into a range / delete it (T-2323). The
++    `{"op": "insert_column", "sheet": "S", "column": "B"}` inserts a blank column left of B and
++    `delete_column` deletes it, `{"op": "delete_sheet", "sheet": "S"}` deletes a sheet, `{"op":
++    "convert_table", "sheet": "S", "table": "T1"}` / `delete_table` turn a table into a range / delete it
++    (T-2323), and `insert_cells` / `delete_cells` (`range`, `shift`) shift cells (sheetop.py, T-5464). The
+     docProps custom properties `rustsheet.sheetop.<n>` hold them as JSON, n from 1 in order, and the
+     oracle backend replays them in Excel; the engine adapter applies them through its edit API.
+   * A sheet may list `"hidden_rows": [3, 5]` (1-based rows written with `hidden="1"`) and
+diff --git a/tools/tests/test_spec2xlsx_sheet_ops.py b/tools/tests/test_spec2xlsx_sheet_ops.py
+index 346a520a9..2c2564238 100644
+--- a/tools/tests/test_spec2xlsx_sheet_ops.py
++++ b/tools/tests/test_spec2xlsx_sheet_ops.py
+@@ -9,7 +9,7 @@ import pytest
+ from rustsheet_tools.oracle.backends import GraphBackend, OracleError, recorded_sheet_ops
+ from rustsheet_tools.oracle.canary import SHEET as CANARY
+ from rustsheet_tools.oracle.package import patch_parts
+-from rustsheet_tools.sheetop import column_letters, column_number
++from rustsheet_tools.sheetop import column_letters, column_number, sheet_op
+ from rustsheet_tools.spec2xlsx import build_xlsx, sheet_ops
+ 
+ 
+@@ -36,6 +36,10 @@ def test_each_op_is_recorded_in_order() -> None:
+         {"op": "convert_table", "sheet": "Calc", "table": "Sales"},
+         {"op": "delete_table", "sheet": "Calc", "table": "Sales"},
+         {"op": "add_table", "sheet": "Calc", "table": "Sales", "ref": "k8:L11"},
++        {"op": "insert_cells", "sheet": "Calc", "range": "b2:c3", "shift": "down"},
++        {"op": "insert_cells", "sheet": "Calc", "range": "B2", "shift": "right"},
++        {"op": "delete_cells", "sheet": "Calc", "range": "XFD1048576", "shift": "up"},
++        {"op": "delete_cells", "sheet": "Calc", "range": "A1:XFD1", "shift": "left"},
+         {"op": "delete_sheet", "sheet": "New"},
+     ]
+     xlsx = build_xlsx(_spec(ops))
+@@ -54,6 +58,10 @@ def test_each_op_is_recorded_in_order() -> None:
+         ("convert_table", "Calc", "Sales"),
+         ("delete_table", "Calc", "Sales"),
+         ("add_table", "Calc", "Sales K8:L11"),
++        ("insert_cells", "Calc", "B2:C3 down"),
++        ("insert_cells", "Calc", "B2 right"),
++        ("delete_cells", "Calc", "XFD1048576 up"),
++        ("delete_cells", "Calc", "A1:XFD1 left"),
+         ("delete_sheet", "New", None),
+     ]
+     assert sheet_ops(xlsx) == expected
+@@ -97,6 +105,19 @@ def test_workbook_without_ops_lists_none() -> None:
+         {"op": "convert_table", "sheet": "Data"},
+         {"op": "delete_table", "sheet": "Data", "table": ""},
+         {"op": "delete_table", "sheet": "Data", "name": "T"},
++        {"op": "insert_cells", "sheet": "Data", "range": "B2:C3"},
++        {"op": "insert_cells", "sheet": "Data", "shift": "down"},
++        {"op": "insert_cells", "sheet": "Data", "range": "B2:C3", "shift": "up"},
++        {"op": "insert_cells", "sheet": "Data", "range": "B2:C3", "shift": "Down"},
++        {"op": "delete_cells", "sheet": "Data", "range": "B2:C3", "shift": "down"},
++        {"op": "delete_cells", "sheet": "Data", "range": "C3:B2", "shift": "up"},
++        {"op": "delete_cells", "sheet": "Data", "range": "B3:C2", "shift": "up"},
++        {"op": "delete_cells", "sheet": "Data", "range": "B2:XFE3", "shift": "left"},
++        {"op": "delete_cells", "sheet": "Data", "range": "B2:C1048577", "shift": "left"},
++        {"op": "delete_cells", "sheet": "Data", "range": "B:C", "shift": "left"},
++        {"op": "delete_cells", "sheet": "Data", "range": "B2:C3 up"},
++        {"op": "delete_cells", "sheet": "Data", "range": "B2:C3", "shift": "up", "count": 2},
++        {"op": "insert_cells", "sheet": "Data", "range": 2, "shift": "down"},
+         "add",
+     ],
+ )
+@@ -185,6 +206,59 @@ def test_graph_replay_shifts_rows_and_columns(op: str, to: Any, url: str, body:
+     assert graph.calls == [("POST", url, body)]
+ 
+ 
++@pytest.mark.parametrize(
++    ("op", "to", "url", "body"),
++    [
++        (
++            "insert_cells",
++            "B2:C3 down",
++            "item/workbook/worksheets('S')/range(address='B2:C3')/insert",
++            {"shift": "Down"},
++        ),
++        (
++            "insert_cells",
++            "B2 right",
++            "item/workbook/worksheets('S')/range(address='B2')/insert",
++            {"shift": "Right"},
++        ),
++        (
++            "delete_cells",
++            "B2:C3 up",
++            "item/workbook/worksheets('S')/range(address='B2:C3')/delete",
++            {"shift": "Up"},
++        ),
++        (
++            "delete_cells",
++            "B2:C3 left",
++            "item/workbook/worksheets('S')/range(address='B2:C3')/delete",
++            {"shift": "Left"},
++        ),
++    ],
++)
++def test_graph_replay_shifts_cells_within_a_range(op: str, to: str, url: str, body: dict[str, str]) -> None:
++    """A shift of cells is the call a row or column edit makes, with the range's address and the op's own
++    shift (SPEC-0039 Amendment 3, T-5464)."""
++    graph = _FakeGraph(["S", CANARY])
++    graph._replay_sheet_ops("item", {}, [(op, "S", to)])
++    assert graph.calls == [("POST", url, body)]
++
++
++@pytest.mark.parametrize(
++    "recorded",
++    [
++        ("insert_cells", "S", "B2:C3 up"),
++        ("delete_cells", "S", "B2:C3"),
++        ("delete_cells", "S", "C3:B2 left"),
++        ("insert_cells", "S", None),
++    ],
++)
++def test_a_recorded_shift_the_op_does_not_take_is_refused(recorded: tuple[str, str, Any]) -> None:
++    """The recorded form is validated as the spec's is, so a tampered recording never reaches Excel."""
++    assert sheet_op(["insert_cells", "S", "B2:C3 down"]) == ("insert_cells", "S", "B2:C3 down")
++    with pytest.raises(ValueError, match="sheet op"):
++        sheet_op(list(recorded))
++
++
+ def test_graph_replay_deletes_a_sheet_and_converts_or_deletes_a_table() -> None:
+     graph = _FakeGraph(["S", "Other", CANARY])
+     graph._replay_sheet_ops(

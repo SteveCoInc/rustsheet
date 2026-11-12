@@ -1,0 +1,35 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Which modulus IMPOWER takes (review of CR-321578802, rounds 1 and 2, reviewer 1 B1). Near |z| = 1 (A1:A10, each base raised to the 50000000th power): A1:A3 tell the correctly rounded hypot from the logarithms' modulus, A4:A6 the correctly rounded from x86_64 glibc's, A7:A9 tell it from both, A10 from a full x87 chain. Away from 1 (A11:A16) the two families differ outright: the logarithms' modulus forms the double sum of the squares, which underflows for these bases, where a hypot does not; A17 is IMSQRT of A15's base, evidenced already (probes/eng-imln-modulus-range A80). Pending: no Excel oracle was reachable from the author's host.",
+  "tags": [
+    "M9",
+    "probe",
+    "engineering",
+    "T-5408"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "A1": "=IMPOWER(\"0.999999999999999+1E-8i\",50000000)",
+        "A2": "=IMPOWER(\"0.225+0.974358763495254i\",50000000)",
+        "A3": "=IMPOWER(\"0.64+0.768374908491942i\",50000000)",
+        "A4": "=IMPOWER(\"0.53+0.847997641506154i\",50000000)",
+        "A5": "=IMPOWER(\"0.551+0.834505242643807i\",50000000)",
+        "A6": "=IMPOWER(\"0.715+0.699124452440336i\",50000000)",
+        "A7": "=IMPOWER(\"0.77+0.638043885637971i\",50000000)",
+        "A8": "=IMPOWER(\"0.747+0.664824036869907i\",50000000)",
+        "A9": "=IMPOWER(\"0.261+0.965338800629085i\",50000000)",
+        "A10": "=IMPOWER(\"0.294+0.955805419528473i\",50000000)",
+        "A11": "=IMPOWER(\"1E-170+1E-170i\",1)",
+        "A12": "=IMPOWER(\"3E-200+4E-200i\",1)",
+        "A13": "=IMPOWER(\"1E-160+1E-160i\",0.5)",
+        "A14": "=IMPOWER(\"1E-170+1E-170i\",-1)",
+        "A15": "=IMPOWER(\"1E-154+1E-153i\",1)",
+        "A16": "=IMPOWER(\"1E-154+1E-153i\",0.5)",
+        "A17": "=IMSQRT(\"1E-154+1E-153i\")"
+      }
+    }
+  ],
+  "expected": {}
+}

@@ -1,0 +1,63 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-5465 (SPEC-0039 Amendment 3, U12: a table the moved cells touch in part: the table Sales is S!F3:G6, and the band is rows 4:5,) insert_cells of S!C4:D5 shifting right. If Excel refuses the edit, the answer wanted is the refusal: the HTTP status, Graph's error code and message.",
+  "tags": [
+    "M4",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "C4": 44,
+        "D5": 55,
+        "F3": "h1",
+        "G3": "h2",
+        "F4": 1,
+        "G4": 2,
+        "F5": 4,
+        "G5": 5,
+        "F6": 7,
+        "G6": 8
+      },
+      "tables": [
+        {
+          "name": "Sales",
+          "ref": "F3:G6"
+        }
+      ]
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=SUM(Sales[h1])",
+        "B1": "=FORMULATEXT(A1)",
+        "A2": "=SUM(S!F4:F6)",
+        "B2": "=FORMULATEXT(A2)",
+        "A3": "=COLUMNS(Sales[#All])",
+        "B3": "=FORMULATEXT(A3)",
+        "A4": "=TEXTJOIN(\",\",FALSE,INDIRECT(\"S!E3:J6\"))",
+        "B4": "=FORMULATEXT(A4)"
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "insert_cells",
+      "sheet": "S",
+      "range": "C4:D5",
+      "shift": "right"
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!B1",
+    "F!A2",
+    "F!B2",
+    "F!A3",
+    "F!B3",
+    "F!A4",
+    "F!B4"
+  ]
+}

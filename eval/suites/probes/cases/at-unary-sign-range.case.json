@@ -1,0 +1,42 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "An explicit @ over a unary plus or minus over a multi-cell range, alone and inside T and N: is the @ applied to the range (an implicit intersection, #VALUE! off the range's rows) or to the value the sign makes (review of CR-321672244, round 1, reviewer 1 N4; a sibling of t-n-at-unary-plus-if-array). The formulas in column A are off the rows of the ranges, each with four empty rows below it; row 202 holds four of them (the three plus forms over H and I, and the bare @) on a row of the ranges. Columns D and P hold FORMULATEXT, to see whether Excel keeps the plus.",
+ "tags": [
+  "M2",
+  "references",
+  "at",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "G201": true,
+    "G202": false,
+    "G203": true,
+    "H201": 5,
+    "H202": 6,
+    "H203": 7,
+    "I201": "p",
+    "I202": "q",
+    "I203": "r",
+    "A1": "=@+G201:G203",
+    "A6": "=@-H201:H203",
+    "A11": "=@+H201:H203",
+    "A16": "=T(@+I201:I203)",
+    "A21": "=N(@+H201:H203)",
+    "A26": "=T(@-H201:H203)",
+    "A31": "=N(@-H201:H203)",
+    "A36": "=@H201:H203",
+    "D1": "=FORMULATEXT(A1)",
+    "D11": "=FORMULATEXT(A11)",
+    "K202": "=@+H201:H203",
+    "L202": "=T(@+I201:I203)",
+    "M202": "=N(@+H201:H203)",
+    "N202": "=@H201:H203",
+    "P202": "=FORMULATEXT(K202)"
+   }
+  }
+ ],
+ "expected": {}
+}

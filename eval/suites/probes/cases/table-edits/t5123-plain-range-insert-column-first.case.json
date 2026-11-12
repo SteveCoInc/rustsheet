@@ -1,0 +1,51 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-5123 (SPEC-0039 U3, the column twins): with no table near, a plain range under insert_column at the range's first column (left of column C): does it shift to S!D4:G4, or grow? S!C4:F4 hold 1,2,4,8 and S!H4 16; sheet F holds A1 =SUM(S!C4:F4), A2 FORMULATEXT(A1), A3 =SUM(S!$C$4:$F$4), A4 FORMULATEXT(A3), A5 =SUM(S!C4:C4) (one column), A6 FORMULATEXT(A5), A7 =SUM(S!F4:H4), A8 FORMULATEXT(A7).",
+  "tags": [
+    "M8",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "C4": 1,
+        "D4": 2,
+        "E4": 4,
+        "F4": 8,
+        "H4": 16
+      }
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=SUM(S!C4:F4)",
+        "A2": "=FORMULATEXT(A1)",
+        "A3": "=SUM(S!$C$4:$F$4)",
+        "A4": "=FORMULATEXT(A3)",
+        "A5": "=SUM(S!C4:C4)",
+        "A6": "=FORMULATEXT(A5)",
+        "A7": "=SUM(S!F4:H4)",
+        "A8": "=FORMULATEXT(A7)"
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "insert_column",
+      "sheet": "S",
+      "column": "C"
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!A2",
+    "F!A3",
+    "F!A4",
+    "F!A5",
+    "F!A6",
+    "F!A7",
+    "F!A8"
+  ]
+}
