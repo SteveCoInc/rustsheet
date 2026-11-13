@@ -1,0 +1,45 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T and N of an explicit @ over a unary plus over an array-returning IF, CHOOSE, IFS or SWITCH: does the @ give one value before T or N reads it, or is the call lifted over the array (Taskei P559459515). Each formula has four empty rows below it and an empty column beside it, room for the 3-row by 2-column spill a lifted call gives; the oracle records every spill member and the harness scores a cell the engine fills that Excel left empty, so the case has no check list. The inputs are in rows 201 to 203, off every formula's row. Rows 51, 61, 66 and 71 are the controls without @; column D holds FORMULATEXT of four of the formulas.",
+ "tags": [
+  "M5",
+  "references",
+  "at",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "G201": true,
+    "G202": false,
+    "G203": true,
+    "A1": "=T(@+IF(G201:G203,{1,2},0))",
+    "A6": "=T(@IF(G201:G203,{1,2},0))",
+    "A11": "=N(@+IF(G201:G203,{1,2},0))",
+    "A16": "=N(@IF(G201:G203,{1,2},0))",
+    "A21": "=@+IF(G201:G203,{1,2},0)",
+    "A26": "=@IF(G201:G203,{1,2},0)",
+    "A31": "=T(@+IF(G201:G203,{\"a\",\"b\"},\"z\"))",
+    "A36": "=N(@+IF(G201:G203,{\"a\",\"b\"},\"z\"))",
+    "A41": "=LEN(T(@+IF(G201:G203,{1,2},0)))",
+    "A46": "=ISTEXT(T(@+IF(G201:G203,{1,2},0)))",
+    "A51": "=T(+IF(G201:G203,{1,2},0))",
+    "A56": "=T(@(+IF(G201:G203,{1,2},0)))",
+    "A61": "=N(+IF(G201:G203,{1,2},0))",
+    "A66": "=T(IF(G201:G203,{1,2},0))",
+    "A71": "=N(IF(G201:G203,{1,2},0))",
+    "A76": "=T(@+CHOOSE({1,2},\"a\",\"b\"))",
+    "A81": "=T(@+IFS(G201:G203,{\"a\",\"b\"},TRUE,\"z\"))",
+    "A86": "=T(@+SWITCH(G201:G203,TRUE,{\"a\",\"b\"},\"z\"))",
+    "A91": "=T((@+IF(G201:G203,{1,2},0)))",
+    "A96": "=T(@+(IF(G201:G203,{1,2},0)))",
+    "D1": "=FORMULATEXT(A1)",
+    "D56": "=FORMULATEXT(A56)",
+    "D91": "=FORMULATEXT(A91)",
+    "D96": "=FORMULATEXT(A96)"
+   }
+  }
+ ],
+ "expected": {}
+}

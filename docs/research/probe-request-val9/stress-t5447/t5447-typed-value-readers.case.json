@@ -1,0 +1,198 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-5447: the stress suite's typed values (hardening/app/src/drivers/formula-cases.json) whose value the repo's oracle records do not hold: each is typed into column C as one entry after load, and read by the formula =C<n> entered into column D right after it (row-major order), so an excel-graph fill, which records formula cells, records the typed cell's value and type in D. The t5313 case typed the same values without readers, and its fill holds none of them. Nothing else on the sheet; no formats.",
+  "tags": [
+    "M2",
+    "probe",
+    "stress",
+    "T-5447"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "C1": {
+          "entered": "1/2/2024"
+        },
+        "D1": {
+          "entered": "=C1"
+        },
+        "C2": {
+          "entered": "15-Jan-2024"
+        },
+        "D2": {
+          "entered": "=C2"
+        },
+        "C3": {
+          "entered": "Jan 15, 2024"
+        },
+        "D3": {
+          "entered": "=C3"
+        },
+        "C4": {
+          "entered": "13/13/2024"
+        },
+        "D4": {
+          "entered": "=C4"
+        },
+        "C5": {
+          "entered": "2/29/2023"
+        },
+        "D5": {
+          "entered": "=C5"
+        },
+        "C6": {
+          "entered": "2/29/2024"
+        },
+        "D6": {
+          "entered": "=C6"
+        },
+        "C7": {
+          "entered": "12:30"
+        },
+        "D7": {
+          "entered": "=C7"
+        },
+        "C8": {
+          "entered": "12:30 PM"
+        },
+        "D8": {
+          "entered": "=C8"
+        },
+        "C9": {
+          "entered": "25:00"
+        },
+        "D9": {
+          "entered": "=C9"
+        },
+        "C10": {
+          "entered": "(100)"
+        },
+        "D10": {
+          "entered": "=C10"
+        },
+        "C11": {
+          "entered": "-$5"
+        },
+        "D11": {
+          "entered": "=C11"
+        },
+        "C12": {
+          "entered": "50%"
+        },
+        "D12": {
+          "entered": "=C12"
+        },
+        "C13": {
+          "entered": "1,2,3"
+        },
+        "D13": {
+          "entered": "=C13"
+        },
+        "C14": {
+          "entered": "1,234"
+        },
+        "D14": {
+          "entered": "=C14"
+        },
+        "C15": {
+          "entered": "1.234,5"
+        },
+        "D15": {
+          "entered": "=C15"
+        },
+        "C16": {
+          "entered": "  42  "
+        },
+        "D16": {
+          "entered": "=C16"
+        },
+        "C17": {
+          "entered": "0042"
+        },
+        "D17": {
+          "entered": "=C17"
+        },
+        "C18": {
+          "entered": "+5"
+        },
+        "D18": {
+          "entered": "=C18"
+        },
+        "C19": {
+          "entered": "5-"
+        },
+        "D19": {
+          "entered": "=C19"
+        },
+        "C20": {
+          "entered": "TRUE"
+        },
+        "D20": {
+          "entered": "=C20"
+        },
+        "C21": {
+          "entered": "true"
+        },
+        "D21": {
+          "entered": "=C21"
+        },
+        "C22": {
+          "entered": "#N/A"
+        },
+        "D22": {
+          "entered": "=C22"
+        },
+        "C23": {
+          "entered": "'123"
+        },
+        "D23": {
+          "entered": "=C23"
+        },
+        "C24": {
+          "entered": "1e3"
+        },
+        "D24": {
+          "entered": "=C24"
+        },
+        "C25": {
+          "entered": ".5"
+        },
+        "D25": {
+          "entered": "=C25"
+        },
+        "C26": {
+          "entered": "1 1/2"
+        },
+        "D26": {
+          "entered": "=C26"
+        },
+        "C27": {
+          "entered": "€10"
+        },
+        "D27": {
+          "entered": "=C27"
+        },
+        "C28": {
+          "entered": "1E+308"
+        },
+        "D28": {
+          "entered": "=C28"
+        },
+        "C29": {
+          "entered": "12345678901234567890"
+        },
+        "D29": {
+          "entered": "=C29"
+        },
+        "C30": {
+          "entered": "0x1F"
+        },
+        "D30": {
+          "entered": "=C30"
+        }
+      }
+    }
+  ]
+}

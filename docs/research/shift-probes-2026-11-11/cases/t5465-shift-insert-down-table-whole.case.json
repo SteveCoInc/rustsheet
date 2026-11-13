@@ -1,0 +1,64 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-5465 (SPEC-0039 Amendment 3, U14: a table the band holds whole: the table Sales is S!C7:D9, in columns C:D below the area,) insert_cells of S!C4:D5 shifting down. If Excel refuses the edit, the answer wanted is the refusal: the HTTP status, Graph's error code and message.",
+  "tags": [
+    "M4",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "C4": 44,
+        "D5": 55,
+        "C6": 66,
+        "B8": 28,
+        "E8": 58,
+        "C7": "h1",
+        "D7": "h2",
+        "C8": 1,
+        "D8": 2,
+        "C9": 4,
+        "D9": 5
+      },
+      "tables": [
+        {
+          "name": "Sales",
+          "ref": "C7:D9"
+        }
+      ]
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=SUM(Sales[h1])",
+        "B1": "=FORMULATEXT(A1)",
+        "A2": "=SUM(S!C8:C9)",
+        "B2": "=FORMULATEXT(A2)",
+        "A3": "=ROWS(Sales[#All])",
+        "B3": "=FORMULATEXT(A3)",
+        "A4": "=TEXTJOIN(\",\",FALSE,INDIRECT(\"S!B7:E11\"))",
+        "B4": "=FORMULATEXT(A4)"
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "insert_cells",
+      "sheet": "S",
+      "range": "C4:D5",
+      "shift": "down"
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!B1",
+    "F!A2",
+    "F!B2",
+    "F!A3",
+    "F!B3",
+    "F!A4",
+    "F!B4"
+  ]
+}

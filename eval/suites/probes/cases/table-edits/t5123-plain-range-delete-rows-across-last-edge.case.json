@@ -1,0 +1,49 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-5123 (T-2851's plain-range shapes): one delete_row of rows 6-8 (count 3) across the last edge of a plain range, no table: S!C1:C10 hold 1..10. Sheet F holds A1 =SUM(S!C4:C7) (its last two rows go: does it shrink to S!C4:C5?), A2 FORMULATEXT(A1), A3 =SUM(S!$C$4:$C$7), A4 FORMULATEXT(A3). plain-range-delete-rows-across-edge F!A5:A6 answers the relative form for another range (S!C2:C4 under rows 3-5); the absolute form at the last edge is new.",
+  "tags": [
+    "M8",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "C1": 1,
+        "C2": 2,
+        "C3": 3,
+        "C4": 4,
+        "C5": 5,
+        "C6": 6,
+        "C7": 7,
+        "C8": 8,
+        "C9": 9,
+        "C10": 10
+      }
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=SUM(S!C4:C7)",
+        "A2": "=FORMULATEXT(A1)",
+        "A3": "=SUM(S!$C$4:$C$7)",
+        "A4": "=FORMULATEXT(A3)"
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "delete_row",
+      "sheet": "S",
+      "row": 6,
+      "count": 3
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!A2",
+    "F!A3",
+    "F!A4"
+  ]
+}

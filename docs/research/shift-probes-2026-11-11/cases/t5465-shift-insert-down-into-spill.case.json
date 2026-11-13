@@ -1,0 +1,49 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-5465 (SPEC-0039 Amendment 3, U12: an insert inside a spill: S!C3 =SEQUENCE(4,2) spills C3:D6, which holds the area,) insert_cells of S!C4:D5 shifting down. If Excel refuses the edit, the answer wanted is the refusal: the HTTP status, Graph's error code and message.",
+  "tags": [
+    "M4",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "C3": "=SEQUENCE(4,2)",
+        "B2": 22
+      }
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=INDIRECT(\"S!C3\")",
+        "B1": "=FORMULATEXT(A1)",
+        "A2": "=IFERROR(FORMULATEXT(INDIRECT(\"S!C3\")),\"none\")",
+        "B2": "=FORMULATEXT(A2)",
+        "A3": "=TEXTJOIN(\",\",FALSE,INDIRECT(\"S!C3:D8\"))",
+        "B3": "=FORMULATEXT(A3)",
+        "A4": "=SUM(S!C3:D6)",
+        "B4": "=FORMULATEXT(A4)"
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "insert_cells",
+      "sheet": "S",
+      "range": "C4:D5",
+      "shift": "down"
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!B1",
+    "F!A2",
+    "F!B2",
+    "F!A3",
+    "F!B3",
+    "F!A4",
+    "F!B4"
+  ]
+}

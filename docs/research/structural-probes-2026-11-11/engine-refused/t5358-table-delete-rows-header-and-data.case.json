@@ -1,0 +1,69 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-5358: one delete_row of rows 3-5 (count 3), the header row together with the first two data rows: does Excel refuse, as it does for the header row alone? Excel refuses a delete of the header row alone (409 InsertDeleteConflict, references.md 'Structured references under row deletes'), and the engine refuses every delete that takes a header row: if Excel refuses this one too, the answer wanted is the refusal and its error code. Sales on S!B3:C7 (header B3:C3 Region/Qty, data rows 4-7 Qty 1,2,4,8), S!C10 99 below it. Sheet F holds A1 =ROWS(Sales[#All]), A2 FORMULATEXT(A1), A3 =SUM(Sales[Qty]), A4 FORMULATEXT(A3), A5 =S!C10, A6 FORMULATEXT(A5) (how far the cells below move), A7 =SUM(S!C4:C7), A8 FORMULATEXT(A7), A9 =ISREF(Sales) (is there still a table), A10 =INDEX(S!B:B,3) (what sheet row 3 holds after the edit, through a whole-column reference a row delete does not move).",
+  "tags": [
+    "M8",
+    "tables",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "B3": "Region",
+        "C3": "Qty",
+        "B4": "E",
+        "B5": "W",
+        "B6": "N",
+        "B7": "S",
+        "C4": 1,
+        "C5": 2,
+        "C6": 4,
+        "C7": 8,
+        "C10": 99
+      },
+      "tables": [
+        {
+          "name": "Sales",
+          "ref": "B3:C7"
+        }
+      ]
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=ROWS(Sales[#All])",
+        "A2": "=FORMULATEXT(A1)",
+        "A3": "=SUM(Sales[Qty])",
+        "A4": "=FORMULATEXT(A3)",
+        "A5": "=S!C10",
+        "A6": "=FORMULATEXT(A5)",
+        "A7": "=SUM(S!C4:C7)",
+        "A8": "=FORMULATEXT(A7)",
+        "A9": "=ISREF(Sales)",
+        "A10": "=INDEX(S!B:B,3)"
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "delete_row",
+      "sheet": "S",
+      "row": 3,
+      "count": 3
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!A2",
+    "F!A3",
+    "F!A4",
+    "F!A5",
+    "F!A6",
+    "F!A7",
+    "F!A8",
+    "F!A9",
+    "F!A10"
+  ]
+}

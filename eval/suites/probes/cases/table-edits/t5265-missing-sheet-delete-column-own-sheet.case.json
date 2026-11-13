@@ -1,0 +1,73 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-5265: references to a deleted sheet through a column delete left of their cell. S!C4:C7 hold 1,2,4,8; sheet F holds, in column A (it stays) and in column D (it moves left), rows 1-3: =SUM(S!C4:C7), =S!C4+1 and =SUM(S!$C$4:$C$7). delete_sheet S makes each a reference to a missing sheet; then delete_column B on F. Does a moved cell keep its text, shift its relative columns, or become a bare #REF!? Sheet Obs (never edited) holds, for F!A1, A2, A3, D1, D2 and D3 in turn, the value and the FORMULATEXT (A1:A12; the references to column D follow the moved cells).",
+  "tags": [
+    "M8",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "C4": 1,
+        "C5": 2,
+        "C6": 4,
+        "C7": 8
+      }
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=SUM(S!C4:C7)",
+        "A2": "=S!C4+1",
+        "A3": "=SUM(S!$C$4:$C$7)",
+        "D1": "=SUM(S!C4:C7)",
+        "D2": "=S!C4+1",
+        "D3": "=SUM(S!$C$4:$C$7)"
+      }
+    },
+    {
+      "name": "Obs",
+      "cells": {
+        "A1": "=F!A1",
+        "A2": "=FORMULATEXT(F!A1)",
+        "A3": "=F!A2",
+        "A4": "=FORMULATEXT(F!A2)",
+        "A5": "=F!A3",
+        "A6": "=FORMULATEXT(F!A3)",
+        "A7": "=F!D1",
+        "A8": "=FORMULATEXT(F!D1)",
+        "A9": "=F!D2",
+        "A10": "=FORMULATEXT(F!D2)",
+        "A11": "=F!D3",
+        "A12": "=FORMULATEXT(F!D3)"
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "delete_sheet",
+      "sheet": "S"
+    },
+    {
+      "op": "delete_column",
+      "sheet": "F",
+      "column": "B"
+    }
+  ],
+  "expected": {},
+  "check": [
+    "Obs!A1",
+    "Obs!A2",
+    "Obs!A3",
+    "Obs!A4",
+    "Obs!A5",
+    "Obs!A6",
+    "Obs!A7",
+    "Obs!A8",
+    "Obs!A9",
+    "Obs!A10",
+    "Obs!A11",
+    "Obs!A12"
+  ]
+}

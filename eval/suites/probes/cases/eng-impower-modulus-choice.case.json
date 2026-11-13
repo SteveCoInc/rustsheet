@@ -1,0 +1,41 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Which modulus IMPOWER takes (review of CR-321578802, rounds 1 and 2, reviewer 1 B1). Near |z| = 1 (A1:A10, each base raised to the 50000000th power): A1:A3 tell the correctly rounded hypot from the logarithms' modulus, A4:A6 the correctly rounded from x86_64 glibc's, A7:A9 tell it from both, A10 from a full x87 chain. Away from 1 (A11:A16) the two families differ outright: the logarithms' modulus forms the double sum of the squares, each square 0 when it is subnormal, where a hypot keeps the base's size. A11:A14 have a zero modulus: in A11, A12 and A14 the squares themselves round to 0, and A14's negative power makes it #NUM!; in A13 each square (1E-320) is subnormal but not 0, so the modulus is 0 by the flush, where the IEEE sum (2E-320) is not 0. A15:A16 flush only the smaller square (1E-308): the sum (about 1.01E-306) is normal, so the modulus stays nonzero but changes, to 1E-153 where |z| is about 1.005E-153. A17 is IMSQRT of A15's base, evidenced already (probes/eng-imln-modulus-range A80). A18:A23 are the cells of review round 3 (reviewer 1 N1) that the rest does not cover: A18 is an ordinary base at a small power, where the families differ in the 15th digit; A19 has both squares subnormal and a normal sum, so the logarithms' modulus is 0 by the flush alone; A20 is the same shape with each square just normal, where both agree; A21 is the power 0 of a zero modulus, #NUM! where a hypot gives 1; A22 and A23 are a pure real and a pure imaginary base with a subnormal square, which the logs never flush and IMSQRT does. Pending: no Excel oracle was reachable from the author's host.",
+  "tags": [
+    "M9",
+    "probe",
+    "engineering",
+    "T-5408"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "A1": "=IMPOWER(\"0.999999999999999+1E-8i\",50000000)",
+        "A2": "=IMPOWER(\"0.225+0.974358763495254i\",50000000)",
+        "A3": "=IMPOWER(\"0.64+0.768374908491942i\",50000000)",
+        "A4": "=IMPOWER(\"0.53+0.847997641506154i\",50000000)",
+        "A5": "=IMPOWER(\"0.551+0.834505242643807i\",50000000)",
+        "A6": "=IMPOWER(\"0.715+0.699124452440336i\",50000000)",
+        "A7": "=IMPOWER(\"0.77+0.638043885637971i\",50000000)",
+        "A8": "=IMPOWER(\"0.747+0.664824036869907i\",50000000)",
+        "A9": "=IMPOWER(\"0.261+0.965338800629085i\",50000000)",
+        "A10": "=IMPOWER(\"0.294+0.955805419528473i\",50000000)",
+        "A11": "=IMPOWER(\"1E-170+1E-170i\",1)",
+        "A12": "=IMPOWER(\"3E-200+4E-200i\",1)",
+        "A13": "=IMPOWER(\"1E-160+1E-160i\",0.5)",
+        "A14": "=IMPOWER(\"1E-170+1E-170i\",-1)",
+        "A15": "=IMPOWER(\"1E-154+1E-153i\",1)",
+        "A16": "=IMPOWER(\"1E-154+1E-153i\",0.5)",
+        "A17": "=IMSQRT(\"1E-154+1E-153i\")",
+        "A18": "=IMPOWER(\"-17.87+13.63i\",3)",
+        "A19": "=IMPOWER(\"1.4E-154+1.4E-154i\",1)",
+        "A20": "=IMPOWER(\"1.5E-154+1.5E-154i\",1)",
+        "A21": "=IMPOWER(\"1E-170+1E-170i\",0)",
+        "A22": "=IMPOWER(\"1E-160\",0.5)",
+        "A23": "=IMPOWER(\"1E-160i\",1)"
+      }
+    }
+  ],
+  "expected": {}
+}
