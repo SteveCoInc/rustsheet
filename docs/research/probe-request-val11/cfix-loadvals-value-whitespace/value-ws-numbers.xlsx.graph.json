@@ -1,0 +1,95 @@
+{
+  "source": {
+    "kind": "excel-graph",
+    "application": "Excel for the web (Graph)",
+    "version": null,
+    "texts": {},
+    "workbook_name": "1942ce02c4735fde880607257ac5e66ecddf99383af84a26083dd971f1ac2bf2.xlsx",
+    "pivot_texts": {},
+    "input_sha256": "693aadebc9f59a307606058bc11e243642fc8a3143d3b66de645c05e9c03a817"
+  },
+  "sheets": {
+    "Probe": {
+      "B1": {
+        "t": "b",
+        "v": true
+      },
+      "C1": {
+        "t": "n",
+        "v": 10.0
+      },
+      "D1": {
+        "t": "n",
+        "v": 1.0
+      },
+      "E1": {
+        "t": "b",
+        "v": false
+      },
+      "F1": {
+        "t": "s",
+        "v": "9|"
+      },
+      "B2": {
+        "t": "b",
+        "v": true
+      },
+      "C2": {
+        "t": "n",
+        "v": 10.0
+      },
+      "D2": {
+        "t": "n",
+        "v": 1.0
+      },
+      "E2": {
+        "t": "b",
+        "v": false
+      },
+      "F2": {
+        "t": "s",
+        "v": "9|"
+      },
+      "B3": {
+        "t": "b",
+        "v": true
+      },
+      "C3": {
+        "t": "n",
+        "v": 10.0
+      },
+      "D3": {
+        "t": "n",
+        "v": 1.0
+      },
+      "E3": {
+        "t": "b",
+        "v": false
+      },
+      "F3": {
+        "t": "s",
+        "v": "9|"
+      },
+      "B4": {
+        "t": "b",
+        "v": true
+      },
+      "C4": {
+        "t": "n",
+        "v": 10.0
+      },
+      "D4": {
+        "t": "n",
+        "v": 1.0
+      },
+      "E4": {
+        "t": "b",
+        "v": false
+      },
+      "F4": {
+        "t": "s",
+        "v": "9|"
+      }
+    }
+  }
+}

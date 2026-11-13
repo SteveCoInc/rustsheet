@@ -1,0 +1,219 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "Sheet1": {
+   "C12": {
+    "t": "e",
+    "v": "#N/A"
+   },
+   "C2": {
+    "t": "n",
+    "v": 4.0
+   },
+   "C20": {
+    "t": "s",
+    "v": "=MATCH(@L:L,A:A,0)"
+   },
+   "D12": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "D2": {
+    "t": "n",
+    "v": 4.0
+   },
+   "D20": {
+    "t": "s",
+    "v": "=MATCH(@L1:L5,A1:A5,0)"
+   },
+   "E12": {
+    "t": "e",
+    "v": "#N/A"
+   },
+   "E2": {
+    "t": "s",
+    "v": "b4"
+   },
+   "E20": {
+    "t": "s",
+    "v": "=VLOOKUP(@L:L,A:B,2,FALSE)"
+   },
+   "F12": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "F2": {
+    "t": "s",
+    "v": "b4"
+   },
+   "F20": {
+    "t": "s",
+    "v": "=VLOOKUP(@L1:L5,A1:B5,2,FALSE)"
+   },
+   "I20": {
+    "t": "s",
+    "v": "=HLOOKUP(@G1:K1,G3:K4,2,FALSE)"
+   },
+   "I21": {
+    "t": "s",
+    "v": "=HLOOKUP(@1:1,G3:K4,2,FALSE)"
+   },
+   "I6": {
+    "t": "s",
+    "v": "h3"
+   },
+   "I7": {
+    "t": "s",
+    "v": "h3"
+   },
+   "M12": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "M2": {
+    "t": "s",
+    "v": "b2"
+   },
+   "M20": {
+    "t": "s",
+    "v": "=LOOKUP(@L1:L5,L1:L5,B1:B5)"
+   },
+   "N12": {
+    "t": "e",
+    "v": "#N/A"
+   },
+   "N2": {
+    "t": "s",
+    "v": "b4"
+   },
+   "N20": {
+    "t": "s",
+    "v": "=INDEX(B:B,MATCH(@L:L,A:A,0))"
+   },
+   "N6": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "N7": {
+    "t": "e",
+    "v": "#N/A"
+   },
+   "O12": {
+    "t": "e",
+    "v": "#N/A"
+   },
+   "O2": {
+    "t": "s",
+    "v": "b4"
+   },
+   "O20": {
+    "t": "s",
+    "v": "=IF(TRUE,INDEX(B:B,MATCH(@L:L,A:A,0)),0)"
+   },
+   "P12": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "P2": {
+    "t": "n",
+    "v": 4.0
+   },
+   "P20": {
+    "t": "s",
+    "v": "=MATCH(@lvals,A1:A5,0)"
+   },
+   "Q12": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "Q2": {
+    "t": "n",
+    "v": 4.0
+   },
+   "Q20": {
+    "t": "s",
+    "v": "=MATCH(@L1:L5*1,A1:A5,0)"
+   },
+   "R2": {
+    "t": "n",
+    "v": 4.0
+   },
+   "R20": {
+    "t": "s",
+    "v": "=MATCH(@{20,30},A1:A5,0)"
+   },
+   "S2": {
+    "t": "n",
+    "v": 5.0
+   },
+   "S20": {
+    "t": "s",
+    "v": "=SUMPRODUCT(--ISNUMBER(MATCH(L1:L5,A1:A5,0)))"
+   },
+   "T12": {
+    "t": "n",
+    "v": 15.0
+   },
+   "T2": {
+    "t": "n",
+    "v": 15.0
+   },
+   "T20": {
+    "t": "s",
+    "v": "=SUM(INDEX(MATCH(L1:L5,A1:A5,0),0))"
+   },
+   "U12": {
+    "t": "s",
+    "v": "b3"
+   },
+   "U2": {
+    "t": "s",
+    "v": "b3"
+   },
+   "U20": {
+    "t": "s",
+    "v": "=LOOKUP(2,1/(MATCH(L1:L5,A1:A5,0)>2),B1:B5)"
+   },
+   "V12": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "V2": {
+    "t": "n",
+    "v": 4.0
+   },
+   "V20": {
+    "t": "s",
+    "v": "=SUM(MATCH(@L1:L5,A1:A5,0))"
+   },
+   "W2": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "W20": {
+    "t": "s",
+    "v": "=MATCH(N(IF(1,{20;30})),A1:A5,0)"
+   },
+   "X12": {
+    "t": "n",
+    "v": 1.0
+   },
+   "X2": {
+    "t": "n",
+    "v": 1.0
+   },
+   "X20": {
+    "t": "s",
+    "v": "=MATCH(TRUE,INDEX(ISNUMBER(MATCH(L1:L5,A1:A5,0)),0),0)"
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "c16afc46b48bc677d19209a5aade3c018a7f9c5669ddc37f0a938fe56aaa506a",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-13T01:54:26+00:00",
+  "version": null,
+  "workbook_name": "991bcac9b6b24ba33aa7fe5ceb8db410a2c74240546ce37b0e7ff4e73bb4491d.xlsx"
+ }
+}

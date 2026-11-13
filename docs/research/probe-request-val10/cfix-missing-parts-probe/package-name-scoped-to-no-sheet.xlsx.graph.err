@@ -1,0 +1,35 @@
+Traceback (most recent call last):
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/backends.py", line 492, in recalc
+            print(f"SHEET OP {op} {sheet!r} {to!r}", file=sys.stderr)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    
+    
+    def recalc(self, xlsx: bytes) -> tuple[bytes, OracleInfo]:
+    ^^^^^^^^^^^^^
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/backends.py", line 360, in _call
+        return resp
+        ^^^^^^^^^^^
+    ...<3 lines>...
+            _error_code(resp),
+    
+rustsheet_tools.oracle.backends.GraphRequestError: POST <drive>/items/<item>/workbook/createSession -> 501: {"error":{"code":"FileCorruptTryRepair","message":"We're sorry, but something went wrong with this file.","innerError":{"code":"unsupportedWorkbook","message":"The request failed. The workbook contains unsupported features or exceeds the size limit.","innerError":{"code":"FileCorruptTryRepair","message":"We're sorry, but something went wrong with this file."},"date":"2026-11-13T01:56:21","request-id":"<id>","client-request-id":"7ff52952-4207-4a9f-9530-f8128a836fb5
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/user/rustsheet/tools/.venv/bin/rustsheet-oracle", line 10, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/cli.py", line 442, in main
+    sys.exit(args.fn(args))
+             ~~~~~~~^^^^^^
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/cli.py", line 116, in cmd_recalc
+    values, info, sha = _recalc_cached(backend, raw)
+                        ~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/cli.py", line 75, in _recalc_cached
+    data, info = backend.recalc(canaried)
+                 ~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/backends.py", line 497, in recalc
+    name = hashlib.sha256(xlsx).hexdigest() + ".xlsx"
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~
+rustsheet_tools.oracle.backends.OracleRefusedError: FileCorruptTryRepair: We're sorry, but something went wrong with this file.

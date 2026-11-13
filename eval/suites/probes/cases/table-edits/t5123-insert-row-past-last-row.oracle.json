@@ -1,0 +1,72 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "F": {
+   "A1": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "A10": {
+    "t": "s",
+    "v": "=S!A1048576"
+   },
+   "A11": {
+    "t": "n",
+    "v": 7.0
+   },
+   "A12": {
+    "t": "s",
+    "v": "=SUM(S!1048576:1048576)"
+   },
+   "A13": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "A14": {
+    "t": "s",
+    "v": "=SUM(S!#REF!)"
+   },
+   "A2": {
+    "t": "s",
+    "v": "=S!#REF!"
+   },
+   "A3": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "A4": {
+    "t": "s",
+    "v": "=S!#REF!"
+   },
+   "A5": {
+    "t": "n",
+    "v": 10.0
+   },
+   "A6": {
+    "t": "s",
+    "v": "=SUM(S!A1048571:A1048576)"
+   },
+   "A7": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "A8": {
+    "t": "s",
+    "v": "=SUM(S!#REF!)"
+   },
+   "A9": {
+    "t": "n",
+    "v": 7.0
+   }
+  },
+  "S": {}
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "346fd61f2e7d557ae07083a1c3300161d0ab215c49d348de616720bd2567f2f0",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-13T02:00:05+00:00",
+  "version": null,
+  "workbook_name": "30ae9e7a3a44a187a9f45af1d9ddd7a0d7cb2db03cdbeda053761a34268f3fc2.xlsx"
+ }
+}

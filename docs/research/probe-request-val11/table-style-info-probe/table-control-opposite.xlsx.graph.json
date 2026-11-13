@@ -1,0 +1,19 @@
+{
+  "source": {
+    "kind": "excel-graph",
+    "application": "Excel for the web (Graph)",
+    "version": null,
+    "texts": {},
+    "workbook_name": "44e922a3f532cb4d30d4a79431ea3bca6e0182c93bb1548f5cdf607fa36b2fbc.xlsx",
+    "pivot_texts": {},
+    "input_sha256": "627b21b16d3b6d33b710697777f40cb09b12614b64c05e885a3b7fbaadd5ce60"
+  },
+  "sheets": {
+    "S": {
+      "D1": {
+        "t": "n",
+        "v": 30.0
+      }
+    }
+  }
+}

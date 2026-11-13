@@ -1,0 +1,25 @@
+Traceback (most recent call last):
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/canary.py", line 204, in embed_canary
+    scanned = [(name, list(text_runs(name, parts[name]))) for name in formula_parts(parts, wb_path)]
+                                                                      ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/package.py", line 191, in formula_parts
+    raise PackageError(f"{rels_part(workbook)} points at {name}, which is not in the package")
+rustsheet_tools.oracle.package.PackageError: xl/_rels/workbook.xml.rels points at xl/worksheets/sheet9.xml, which is not in the package
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/user/rustsheet/tools/.venv/bin/rustsheet-oracle", line 10, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/cli.py", line 442, in main
+    sys.exit(args.fn(args))
+             ~~~~~~~^^^^^^
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/cli.py", line 116, in cmd_recalc
+    values, info, sha = _recalc_cached(backend, raw)
+                        ~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/cli.py", line 71, in _recalc_cached
+    canaried = embed_canary(xlsx)  # first, so refusals also apply to results cached before them
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/canary.py", line 206, in embed_canary
+    raise OracleError(f"cannot embed the canary: {e}") from e
+rustsheet_tools.oracle.backends.OracleError: cannot embed the canary: xl/_rels/workbook.xml.rels points at xl/worksheets/sheet9.xml, which is not in the package
