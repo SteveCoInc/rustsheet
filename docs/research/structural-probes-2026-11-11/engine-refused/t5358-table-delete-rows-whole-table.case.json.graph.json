@@ -1,0 +1,56 @@
+{
+  "source": {
+    "kind": "excel-graph",
+    "application": "Excel for the web (Graph)",
+    "version": null,
+    "texts": {},
+    "workbook_name": "1ae0bff86d8c6b39d2d80ca2f1ffd0faf64fba9ccbcb22cfc0b9ef6b3f1f79d9.xlsx",
+    "pivot_texts": {},
+    "input_sha256": "604fa19cb76c3c45aa3196372c79ea73351a72aae45db179a7db9c4ae7d82e3e"
+  },
+  "sheets": {
+    "S": {},
+    "F": {
+      "A1": {
+        "t": "e",
+        "v": "#REF!"
+      },
+      "A2": {
+        "t": "s",
+        "v": "=ROWS(#REF!)"
+      },
+      "A3": {
+        "t": "e",
+        "v": "#REF!"
+      },
+      "A4": {
+        "t": "s",
+        "v": "=SUM(#REF!)"
+      },
+      "A5": {
+        "t": "n",
+        "v": 99.0
+      },
+      "A6": {
+        "t": "s",
+        "v": "=S!C5"
+      },
+      "A7": {
+        "t": "e",
+        "v": "#REF!"
+      },
+      "A8": {
+        "t": "s",
+        "v": "=SUM(S!#REF!)"
+      },
+      "A9": {
+        "t": "b",
+        "v": false
+      },
+      "A10": {
+        "t": "n",
+        "v": 0.0
+      }
+    }
+  }
+}

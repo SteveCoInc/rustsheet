@@ -1,0 +1,14 @@
+{
+  "source": {
+    "kind": "excel-graph",
+    "application": "Excel for the web (Graph)",
+    "version": null,
+    "texts": {},
+    "workbook_name": "b33070855311bfc2f0c5373f8cde05918ee192850df1be188eeee0464944a8d7.xlsx",
+    "pivot_texts": {},
+    "input_sha256": "43ac2ca854ee955059f687a8dfe0febec95f3cbcdd3b5b1a66c8862d8c14d3ee"
+  },
+  "sheets": {
+    "Sheet1": {}
+  }
+}

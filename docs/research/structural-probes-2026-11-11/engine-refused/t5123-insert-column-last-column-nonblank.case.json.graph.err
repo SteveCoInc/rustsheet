@@ -1,0 +1,31 @@
+Traceback (most recent call last):
+  File "/home/user/rustsheet/tools/.venv/bin/rustsheet-oracle", line 10, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/cli.py", line 442, in main
+    sys.exit(args.fn(args))
+             ~~~~~~~^^^^^^
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/cli.py", line 116, in cmd_recalc
+    values, info, sha = _recalc_cached(backend, raw)
+                        ~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/cli.py", line 75, in _recalc_cached
+    data, info = backend.recalc(canaried)
+                 ~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/backends.py", line 515, in recalc
+    self._replay_sheet_ops(item_url, sid, recorded_sheet_ops(xlsx))
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/backends.py", line 450, in _replay_sheet_ops
+    self._call(
+    ~~~~~~~~~~^
+        "POST",
+        ^^^^^^^
+    ...<2 lines>...
+        headers=sid,
+        ^^^^^^^^^^^^
+    )
+    ^
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/backends.py", line 362, in _call
+    raise GraphRequestError(
+    ...<3 lines>...
+    )
+rustsheet_tools.oracle.backends.GraphRequestError: POST <drive>/items/<item>/workbook/worksheets('S')/range(address='A:A')/insert -> 400: {"error":{"code":"NonBlankCellOffSheet","message":"Microsoft Excel can't insert new cells because it would push non-empty cells off the end of the worksheet. These non-empty cells might appear empty but have blank values, some formatting, or a formula. Delete enough rows or columns to make room for what you want to insert and then try again.","innerError":{"code":"nonBlankCellOffSheet","message":"Microsoft Excel can't insert new cells because it would push non-empty cells off the end of the work
