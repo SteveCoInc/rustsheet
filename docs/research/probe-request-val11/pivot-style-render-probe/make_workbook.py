@@ -11,6 +11,10 @@ Usage: python3 -I make_workbook.py spec <spec.json>      # step 1
        python3 -I make_workbook.py style <built.xlsx> <out.xlsx>   # step 3
 """
 import itertools, json, re, sys, zipfile
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # probe_package.py
+from probe_package import copy_entry  # noqa: E402
 
 REGIONS, PRODUCTS, SIZES, CHANNELS, KINDS, REPS = ["East", "West"], ["A", "B"], ["S", "L"], ["Web", "Store"], ["X", "Y"], ["Ann", "Bo"]
 HEADER = ["Region", "Product", "Size", "Channel", "Kind", "Rep", "Sales", "Units", "When"]
@@ -114,11 +118,7 @@ def restyle(built, out):
                     text, count = re.subn(r"<pivotTableStyleInfo[^>]*/>", new, text)
                     assert count == 1, (name, count)
                     content = text.encode()
-            # A fixed timestamp keeps the package byte-deterministic.
-            fixed = zipfile.ZipInfo(info.filename, date_time=(2026, 11, 12, 0, 0, 0))
-            fixed.compress_type = zipfile.ZIP_DEFLATED
-            fixed.external_attr = info.external_attr
-            target.writestr(fixed, content)
+            copy_entry(target, info, content)
 
 if sys.argv[1] == "spec":
     with open(sys.argv[2], "w") as f:

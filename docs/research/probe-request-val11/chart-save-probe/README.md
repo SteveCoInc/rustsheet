@@ -1,6 +1,6 @@
 # Probe request `chart-save`: what a save by Excel for the web does to a chart nobody touched
 
-> **val11 note:** the 22 input workbooks are public test files (calipers, MIT; Apache POI, Apache-2.0; LibreOffice, MPL-2.0), so this change does not carry them. Run `python3 -I ../fetch_public_inputs.py chart-save-probe inputs` from this directory: it downloads each from its pinned revision and checks it against `inputs/SHA256SUMS`. The Graph route's `record_graph.py` is at `../chart-selection-probe/record_graph.py`.
+> **val11 note:** the 22 input workbooks are public test files (calipers, MIT; Apache POI, Apache-2.0; LibreOffice, MPL-2.0), so this change does not carry them. Run `python3 -I ../fetch_public_inputs.py chart-save-probe inputs` from this directory: it downloads each from its pinned revision and checks it against `inputs/SHA256SUMS`. The Graph route's `record_graph.py` is main's `docs/research/chart-selection-probe/record_graph.py` (the identical copy this request carried was dropped); `save_graph.py` here is the recorder that ran it.
 
 *From poc-design-cc, 2026-11-12, for the Excel oracle owner (routed by the coordinator). Asked by the charts
 lane (poc-charts-cc): P-CH-1 of `docs/ui/specs/charts/probes.md` on its branch `cr/charts/docs-ui-freeze`

@@ -246,23 +246,16 @@ def round2(out):
     )
     rewrite(path, "xl/workbook.xml", lambda x: x.replace('name="Gone" sheetId="2" r:id=""', 'name="Gone" sheetId="2" state="veryHidden" r:id=""'))
     # 7. The styles part at another name, named by the workbook's relationship.
-    package(
-        out / "package-styles-relocated.xlsx",
-        [("Data", "rId1")],
-        [("rId1", "worksheet", "worksheets/sheet1.xml"), ("rId2", "styles", "formatting/custom.xml")],
-        {"xl/worksheets/sheet1.xml": percent_sheet(), "xl/formatting/custom.xml": STYLES_PERCENT},
-        styles=False,
-        overrides=[("/xl/formatting/custom.xml", CT_STYLES)],
-    )
     # 8. A styles relationship to a part the package lacks, beside a valid xl/styles.xml it does not name.
-    package(
-        out / "package-styles-dangling-relationship.xlsx",
-        [("Data", "rId1")],
-        [("rId1", "worksheet", "worksheets/sheet1.xml"), ("rId2", "styles", "formatting/custom.xml")],
-        {"xl/worksheets/sheet1.xml": percent_sheet(), "xl/styles.xml": STYLES_PERCENT},
-        styles=False,
-        overrides=[("/xl/styles.xml", CT_STYLES)],
-    )
+    for name, stored in (("relocated", "xl/formatting/custom.xml"), ("dangling-relationship", "xl/styles.xml")):
+        package(
+            out / f"package-styles-{name}.xlsx",
+            [("Data", "rId1")],
+            [("rId1", "worksheet", "worksheets/sheet1.xml"), ("rId2", "styles", "formatting/custom.xml")],
+            {"xl/worksheets/sheet1.xml": percent_sheet(), stored: STYLES_PERCENT},
+            styles=False,
+            overrides=[("/" + stored, CT_STYLES)],
+        )
     # 9. A row and a column whose style names no cell format (cellXfs has 1).
     package(
         out / "package-row-style-past-cellxfs.xlsx",

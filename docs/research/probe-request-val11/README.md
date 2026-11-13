@@ -29,7 +29,7 @@ Still open from val10: the first M4 fill (val10 item 2, 53 cases), which several
 | # | Probe | Decides (lane, task) | How | Time | Return |
 |---|---|---|---|---|---|
 | 1 | `chart-insert-probe/` | charts lane **P-CH-8 (asked first)**, P-CH-9, P-CH-3: what the web makes when a chart is inserted (radar, bubble, stock, surface, pie of pie, 3-D types, histograms, secondary axis, Recommended Charts) | Script Lab: `cases.js`, one RUN in a new blank workbook (27 charts, 12 data sheets); then by hand on that workbook | ~25 min | pictures of the two histograms and each Insert gallery, one radar from the ribbon, the Recommended Charts pane for 4 (up to 12) selections, one downloaded copy |
-| 2 | `chart-save-probe/` | charts lane P-CH-1: does a save by the web give back an untouched chart part byte for byte | **Graph, no person**: 22 workbooks, one PATCH each, via `../chart-selection-probe/record_graph.py`; or by hand on the 5 marked † | Graph unattended; by hand ~10 min | one saved copy per input; `python3 -I compare.py inputs <saved>` prints the table for RESULTS.md. Inputs: `python3 -I ../fetch_public_inputs.py chart-save-probe inputs` |
+| 2 | `chart-save-probe/` | charts lane P-CH-1: does a save by the web give back an untouched chart part byte for byte | **Graph, no person**: 22 workbooks, one PATCH each, via `docs/research/chart-selection-probe/record_graph.py`; or by hand on the 5 marked † | Graph unattended; by hand ~10 min | one saved copy per input; `python3 -I compare.py inputs <saved>` prints the table for RESULTS.md. Inputs: `python3 -I ../fetch_public_inputs.py chart-save-probe inputs` |
 
 ## 2. Rulings that wait on Excel
 

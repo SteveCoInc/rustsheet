@@ -8,6 +8,10 @@
    workbook defines.
 """
 import json, re, sys, zipfile
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # probe_package.py
+from probe_package import copy_entry  # noqa: E402
 
 ROWS = [("East", "A", 10), ("East", "B", 20), ("West", "A", 30), ("West", "B", 40), ("North", "A", 50), ("North", "B", 60)]
 
@@ -42,10 +46,7 @@ def styles(built, out_dir):
                         text, n = re.subn(r"<dxfs[^>]*/>|<dxfs[^>]*>.*?</dxfs>", dxfs, text, flags=re.S)
                         assert n == 1, ("dxfs", n)
                     content = text.encode()
-                fixed = zipfile.ZipInfo(info.filename, date_time=(2026, 11, 12, 0, 0, 0))
-                fixed.compress_type = zipfile.ZIP_DEFLATED
-                fixed.external_attr = info.external_attr
-                target.writestr(fixed, content)
+                copy_entry(target, info, content)
 
 if sys.argv[1] == "spec":
     with open(sys.argv[2], "w") as f:

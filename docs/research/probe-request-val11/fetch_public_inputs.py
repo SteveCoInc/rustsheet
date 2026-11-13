@@ -25,32 +25,40 @@ LIBREOFFICE = "https://raw.githubusercontent.com/LibreOffice/core/0d51fdc57aef67
 CLOSEDXML = "https://raw.githubusercontent.com/ClosedXML/ClosedXML/057f5976c788d97e8eac86d1a528bd5411d9386e/ClosedXML.Tests/Resource/"
 XLRD = "https://raw.githubusercontent.com/python-excel/xlrd/1.2.0/examples/"
 
+def table(text: str) -> list[tuple[str, str, str]]:
+    """(local name, url, sha256) rows from lines of `name base path sha256`, base naming a repository above."""
+    bases = {"CALIPERS": CALIPERS, "POI": POI, "LIBREOFFICE": LIBREOFFICE, "CLOSEDXML": CLOSEDXML, "XLRD": XLRD}
+    rows = [line.split() for line in text.strip().splitlines()]
+    return [(name, bases[base] + path, sha) for name, base, path, sha in rows]
+
+
 FILES = {
-    "chart-save-probe": [
-        # (local name, url, sha256)
-        ("123233_charts.xlsx", POI + "123233_charts.xlsx", "47e9e8dea87494d17dbacce9aa3a9ec31cb2b26b288de05ca95c0a4622ca7f80"),
-        ("56557.xlsx", POI + "56557.xlsx", "1660ad90dfb9e81d4b3fb6bf35d8a24d9515fdbe7abcfebaa909da08f1c01f2d"),
-        ("64450.xlsx", POI + "64450.xlsx", "203eaf3275f3d4edaf000728defcece4bc44306852f27b59c9371e52d2338dec"),
-        ("SimpleHistogram.xlsx", LIBREOFFICE + "SimpleHistogram.xlsx", "dfe40e742cf92aad408273d17bb0733e1571c309678ec3a3148e10e45a946e56"),
-        ("WithThreeCharts.xlsx", POI + "WithThreeCharts.xlsx", "629b69bd250d9b4e173eb2088eb80b656b7748b0287cd7b0df0c2dc22c6af7b0"),
-        ("chartTitle_withTitle.xlsx", POI + "chartTitle_withTitle.xlsx", "586c174285621c081020da523c4a814a9ad62b75d86f49276faa1b6036919395"),
-        ("default-chart_titles.golden.xlsx", CALIPERS + "default/chart_titles/golden.xlsx", "ca2e068a18f530bb85a17e352341e60e02cbf459443e8763615c4d450d6471d9"),
-        ("officejs-chart_area.golden.xlsx", CALIPERS + "officejs/chart_area/golden.xlsx", "78d2bbf337c356546a2031bea155b47b591532f43d7cd00ef56614a1e14271ce"),
-        ("officejs-chart_axes.golden.xlsx", CALIPERS + "officejs/chart_axes/golden.xlsx", "4a7120bb305bddb65c3abbf8292aadf17f30963ce10384e0c786ff5d017d2747"),
-        ("officejs-chart_bar.golden.xlsx", CALIPERS + "officejs/chart_bar/golden.xlsx", "5c6c3d18bd57bf2b8bfe36c1d88487691b8903d3464ff8c581bcd5dcdff01f81"),
-        ("officejs-chart_column.golden.xlsx", CALIPERS + "officejs/chart_column/golden.xlsx", "13b723530c3d0f1c4d5d7bc6c6ba6f70679ca444412fa78bf7ca4914c2fe881a"),
-        ("officejs-chart_doughnut.golden.xlsx", CALIPERS + "officejs/chart_doughnut/golden.xlsx", "888494be596c6d235ce0fa3f1019687ad2bf55ff9391f8dfec74e172ae89dbf2"),
-        ("officejs-chart_legend.golden.xlsx", CALIPERS + "officejs/chart_legend/golden.xlsx", "de7e762be6e3dd82e54353db470f29b7b650bd4373c7e00cb8e503e709d764de"),
-        ("officejs-chart_line.golden.xlsx", CALIPERS + "officejs/chart_line/golden.xlsx", "23ae12cde7d0a5ff6a01e53c02002e31e3bb591d3cdd95c794e200fe58e75b85"),
-        ("officejs-chart_pie.golden.xlsx", CALIPERS + "officejs/chart_pie/golden.xlsx", "5924d46b92f46a4c8325ca815cc0a4013445d56b0cbe48d6a21098d5d0fc7845"),
-        ("officejs-chart_scatter.golden.xlsx", CALIPERS + "officejs/chart_scatter/golden.xlsx", "edabd6a959b7bd6d26b713c98cdf059d3e038d59fb88c02f2329360c952f318f"),
-        ("officejs-chart_title.golden.xlsx", CALIPERS + "officejs/chart_title/golden.xlsx", "0bf5422f8007e13ef037ab260a05d72fb6bc371ac69c166c96a81a7b38bbfbc0"),
-        ("roundtrip-scatter_chart.golden.xlsx", CALIPERS + "roundtrip/scatter_chart/golden.xlsx", "4613b5c9faa7f47cca160a361544730a8efef16618c237ebfdd63a97537a66bd"),
-        ("roundtrip-three_charts.golden.xlsx", CALIPERS + "roundtrip/three_charts/golden.xlsx", "2ad2eabe3fb91f2599d9a83630b7d52af745c7b160a93155d9cc42421f48412f"),
-        ("roundtrip-with_chart.golden.xlsx", CALIPERS + "roundtrip/with_chart/golden.xlsx", "3a3acf795f1f1b88a73e4d9385a797c51c8bf216572b718a84b17fbe8df300d2"),
-        ("scratch-chart.golden.xlsx", CALIPERS + "scratch/chart/golden.xlsx", "e083c7b3ff8c0a0fc6d8d027a281a845e01b93d59d12226c8d88ec4b011a22b0"),
-        ("waterfall.xlsx", LIBREOFFICE + "waterfall.xlsx", "f23626e52b75c7e57a6b3a6c69361bdacdbf2648a77c198963daacc4cba2e660"),
-    ],
+    "chart-save-probe": table(
+        """
+123233_charts.xlsx POI 123233_charts.xlsx 47e9e8dea87494d17dbacce9aa3a9ec31cb2b26b288de05ca95c0a4622ca7f80
+56557.xlsx POI 56557.xlsx 1660ad90dfb9e81d4b3fb6bf35d8a24d9515fdbe7abcfebaa909da08f1c01f2d
+64450.xlsx POI 64450.xlsx 203eaf3275f3d4edaf000728defcece4bc44306852f27b59c9371e52d2338dec
+SimpleHistogram.xlsx LIBREOFFICE SimpleHistogram.xlsx dfe40e742cf92aad408273d17bb0733e1571c309678ec3a3148e10e45a946e56
+WithThreeCharts.xlsx POI WithThreeCharts.xlsx 629b69bd250d9b4e173eb2088eb80b656b7748b0287cd7b0df0c2dc22c6af7b0
+chartTitle_withTitle.xlsx POI chartTitle_withTitle.xlsx 586c174285621c081020da523c4a814a9ad62b75d86f49276faa1b6036919395
+default-chart_titles.golden.xlsx CALIPERS default/chart_titles/golden.xlsx ca2e068a18f530bb85a17e352341e60e02cbf459443e8763615c4d450d6471d9
+officejs-chart_area.golden.xlsx CALIPERS officejs/chart_area/golden.xlsx 78d2bbf337c356546a2031bea155b47b591532f43d7cd00ef56614a1e14271ce
+officejs-chart_axes.golden.xlsx CALIPERS officejs/chart_axes/golden.xlsx 4a7120bb305bddb65c3abbf8292aadf17f30963ce10384e0c786ff5d017d2747
+officejs-chart_bar.golden.xlsx CALIPERS officejs/chart_bar/golden.xlsx 5c6c3d18bd57bf2b8bfe36c1d88487691b8903d3464ff8c581bcd5dcdff01f81
+officejs-chart_column.golden.xlsx CALIPERS officejs/chart_column/golden.xlsx 13b723530c3d0f1c4d5d7bc6c6ba6f70679ca444412fa78bf7ca4914c2fe881a
+officejs-chart_doughnut.golden.xlsx CALIPERS officejs/chart_doughnut/golden.xlsx 888494be596c6d235ce0fa3f1019687ad2bf55ff9391f8dfec74e172ae89dbf2
+officejs-chart_legend.golden.xlsx CALIPERS officejs/chart_legend/golden.xlsx de7e762be6e3dd82e54353db470f29b7b650bd4373c7e00cb8e503e709d764de
+officejs-chart_line.golden.xlsx CALIPERS officejs/chart_line/golden.xlsx 23ae12cde7d0a5ff6a01e53c02002e31e3bb591d3cdd95c794e200fe58e75b85
+officejs-chart_pie.golden.xlsx CALIPERS officejs/chart_pie/golden.xlsx 5924d46b92f46a4c8325ca815cc0a4013445d56b0cbe48d6a21098d5d0fc7845
+officejs-chart_scatter.golden.xlsx CALIPERS officejs/chart_scatter/golden.xlsx edabd6a959b7bd6d26b713c98cdf059d3e038d59fb88c02f2329360c952f318f
+officejs-chart_title.golden.xlsx CALIPERS officejs/chart_title/golden.xlsx 0bf5422f8007e13ef037ab260a05d72fb6bc371ac69c166c96a81a7b38bbfbc0
+roundtrip-scatter_chart.golden.xlsx CALIPERS roundtrip/scatter_chart/golden.xlsx 4613b5c9faa7f47cca160a361544730a8efef16618c237ebfdd63a97537a66bd
+roundtrip-three_charts.golden.xlsx CALIPERS roundtrip/three_charts/golden.xlsx 2ad2eabe3fb91f2599d9a83630b7d52af745c7b160a93155d9cc42421f48412f
+roundtrip-with_chart.golden.xlsx CALIPERS roundtrip/with_chart/golden.xlsx 3a3acf795f1f1b88a73e4d9385a797c51c8bf216572b718a84b17fbe8df300d2
+scratch-chart.golden.xlsx CALIPERS scratch/chart/golden.xlsx e083c7b3ff8c0a0fc6d8d027a281a845e01b93d59d12226c8d88ec4b011a22b0
+waterfall.xlsx LIBREOFFICE waterfall.xlsx f23626e52b75c7e57a6b3a6c69361bdacdbf2648a77c198963daacc4cba2e660
+"""
+    ),
     "review-comments-probe": [
         ("64759.xlsx", POI + "64759.xlsx", "43f3c765678160e26fab0e3963782a941fb3d41a6a4a9904a48656aa284d68e8"),
     ],

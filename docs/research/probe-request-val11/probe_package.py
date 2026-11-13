@@ -156,3 +156,11 @@ def generated(directory: Path) -> dict[str, tuple[str, dict[str, bytes]]]:
                 parts = {name: z.read(name) for name in z.namelist()}
             packages[path.name] = (hashlib.sha256(path.read_bytes()).hexdigest(), parts)
     return packages
+
+
+def copy_entry(target: zipfile.ZipFile, info: zipfile.ZipInfo, content: bytes) -> None:
+    """Writes one entry to `target` under a fixed timestamp, so the package is byte-deterministic."""
+    fixed = zipfile.ZipInfo(info.filename, date_time=(2026, 11, 12, 0, 0, 0))
+    fixed.compress_type = zipfile.ZIP_DEFLATED
+    fixed.external_attr = info.external_attr
+    target.writestr(fixed, content)
