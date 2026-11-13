@@ -1,0 +1,111 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "Sheet1": {
+   "C12": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "C2": {
+    "t": "b",
+    "v": false
+   },
+   "C20": {
+    "t": "s",
+    "v": "=OR(@L1:L5=10)"
+   },
+   "D12": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "D2": {
+    "t": "b",
+    "v": true
+   },
+   "D20": {
+    "t": "s",
+    "v": "=AND(@L1:L5>0)"
+   },
+   "E12": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "E2": {
+    "t": "b",
+    "v": true
+   },
+   "E20": {
+    "t": "s",
+    "v": "=AND(@L1:L5=20)"
+   },
+   "F12": {
+    "t": "b",
+    "v": false
+   },
+   "F2": {
+    "t": "b",
+    "v": true
+   },
+   "F20": {
+    "t": "s",
+    "v": "=OR(AND(@L:L=20,@A:A=40))"
+   },
+   "G12": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "G2": {
+    "t": "b",
+    "v": false
+   },
+   "G20": {
+    "t": "s",
+    "v": "=XOR(@L1:L5=10)"
+   },
+   "H12": {
+    "t": "b",
+    "v": true
+   },
+   "H2": {
+    "t": "b",
+    "v": true
+   },
+   "H20": {
+    "t": "s",
+    "v": "=OR(L1:L5)"
+   },
+   "I12": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "I2": {
+    "t": "b",
+    "v": false
+   },
+   "I20": {
+    "t": "s",
+    "v": "=OR(@lvals=10)"
+   },
+   "J12": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "J2": {
+    "t": "n",
+    "v": 0.0
+   },
+   "J20": {
+    "t": "s",
+    "v": "=IF(OR(@L1:L5=10),1,0)"
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "09f14f79d9bc4e4d883a9a7b74d8556c9cf9622ed83a291267a20afdc5bb6a62",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-13T01:54:09+00:00",
+  "version": null,
+  "workbook_name": "48959d377980c3787d4b897a59ebfe75eedd32e86b2edab9408d95da36ce28db.xlsx"
+ }
+}

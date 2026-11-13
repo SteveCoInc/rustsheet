@@ -1,0 +1,32 @@
+{
+  "source": {
+    "kind": "excel-graph",
+    "application": "Excel for the web (Graph)",
+    "version": null,
+    "texts": {},
+    "workbook_name": "abc99f65af5147014c435fd57e6e0ce04875f5cc0aa24b9a404f64f05adca167.xlsx",
+    "pivot_texts": {},
+    "input_sha256": "7573303be29a592b8fbe1a4356fea28cb054a8f4f0cca2dbf813b8927720ba9b"
+  },
+  "sheets": {
+    "S": {},
+    "F": {
+      "A1": {
+        "t": "e",
+        "v": "#VALUE!"
+      },
+      "B1": {
+        "t": "s",
+        "v": "=CELL(\"format\",INDIRECT(\"S!C1048576\"))"
+      },
+      "A2": {
+        "t": "n",
+        "v": 63.0
+      },
+      "B2": {
+        "t": "s",
+        "v": "=S!C8"
+      }
+    }
+  }
+}

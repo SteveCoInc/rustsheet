@@ -1,0 +1,89 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "F": {
+   "A1": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "A10": {
+    "t": "s",
+    "v": "=#REF!"
+   },
+   "A11": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "A12": {
+    "t": "s",
+    "v": "=#REF!"
+   },
+   "A13": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "A14": {
+    "t": "s",
+    "v": "=#REF!"
+   },
+   "A2": {
+    "t": "s",
+    "v": "=S!#REF!"
+   },
+   "A3": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "A4": {
+    "t": "s",
+    "v": "=S!#REF!+1"
+   },
+   "A5": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "A6": {
+    "t": "s",
+    "v": "=SUM(S!#REF!,S!C4)"
+   },
+   "A7": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "A8": {
+    "t": "s",
+    "v": "=#REF!"
+   },
+   "A9": {
+    "t": "e",
+    "v": "#REF!"
+   }
+  },
+  "S": {
+   "E2": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "E5": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "F2": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "F5": {
+    "t": "e",
+    "v": "#REF!"
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "56931e84265ab5877168cd8f74755a182a4b3d9b338ca8c906944a766b767dc9",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-13T01:59:40+00:00",
+  "version": null,
+  "workbook_name": "77610642d70292015b60e99baa604783ccba1207b6b17d3c8bb58304b62c8c5a.xlsx"
+ }
+}

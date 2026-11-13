@@ -1,0 +1,35 @@
+{
+  "source": {
+    "kind": "excel-graph",
+    "application": "Excel for the web (Graph)",
+    "version": null,
+    "texts": {},
+    "workbook_name": "657c371b662dd5c45220f8e2710f13b04104944b7ca7db68006e1e498440958b.xlsx",
+    "pivot_texts": {},
+    "input_sha256": "7ac7619a2480f467e75a9e6ce273c4e6aa46c595d398afd66f174fd0d6216134"
+  },
+  "sheets": {
+    "Probe": {
+      "B1": {
+        "t": "b",
+        "v": true
+      },
+      "C1": {
+        "t": "n",
+        "v": 1.0
+      },
+      "D1": {
+        "t": "b",
+        "v": false
+      },
+      "E1": {
+        "t": "b",
+        "v": false
+      },
+      "F1": {
+        "t": "s",
+        "v": "|"
+      }
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-5123 (SPEC-0039 U2, the column twin of t5123-insert-row-last-row-nonblank): insert_column A on S when S's last column holds a plain nonblank cell (S!XFD1 is 5, no table): does Excel refuse the insert (the answer wanted is then the refusal and its error code), or drop the cell? Sheet F holds A1 =S!XFD1, A2 FORMULATEXT(A1), A3 =COUNTA(S!1:1) (is the 5 still on the sheet), A4 FORMULATEXT(A3).",
+  "tags": [
+    "M8",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "XFD1": 5
+      }
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=S!XFD1",
+        "A2": "=FORMULATEXT(A1)",
+        "A3": "=COUNTA(S!1:1)",
+        "A4": "=FORMULATEXT(A3)"
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "insert_column",
+      "sheet": "S",
+      "column": "A"
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!A2",
+    "F!A3",
+    "F!A4"
+  ]
+}

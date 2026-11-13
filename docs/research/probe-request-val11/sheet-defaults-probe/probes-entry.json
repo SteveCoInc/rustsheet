@@ -1,0 +1,67 @@
+{
+ "id": "sheet-defaults",
+ "file": "sheet-defaults.xlsx",
+ "sha256": "8431d9c5ff3b0cb98b17825c6343760a8073ee967fd8647581fc2c509b896e48",
+ "sheets": [
+  {
+   "name": "Base10",
+   "range": "A1:D4",
+   "charts": 0
+  },
+  {
+   "name": "Base8",
+   "range": "A1:D4",
+   "charts": 0
+  },
+  {
+   "name": "Base5",
+   "range": "A1:D4",
+   "charts": 0
+  },
+  {
+   "name": "Base12",
+   "range": "A1:D4",
+   "charts": 0
+  },
+  {
+   "name": "Base20",
+   "range": "A1:D4",
+   "charts": 0
+  },
+  {
+   "name": "DefCol12",
+   "range": "A1:D4",
+   "charts": 0
+  },
+  {
+   "name": "Base10DefCol12",
+   "range": "A1:D4",
+   "charts": 0
+  },
+  {
+   "name": "RowDef14_4",
+   "range": "A1:B5",
+   "charts": 0
+  },
+  {
+   "name": "RowDef14_4Custom",
+   "range": "A1:B5",
+   "charts": 0
+  },
+  {
+   "name": "RowDef18",
+   "range": "A1:B5",
+   "charts": 0
+  },
+  {
+   "name": "RowDef18Custom",
+   "range": "A1:B5",
+   "charts": 0
+  },
+  {
+   "name": "RowHt",
+   "range": "A1:B17",
+   "charts": 0
+  }
+ ]
+}

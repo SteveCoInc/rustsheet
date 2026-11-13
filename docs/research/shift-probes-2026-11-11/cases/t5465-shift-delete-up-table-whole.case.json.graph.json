@@ -1,0 +1,48 @@
+{
+  "source": {
+    "kind": "excel-graph",
+    "application": "Excel for the web (Graph)",
+    "version": null,
+    "texts": {},
+    "workbook_name": "d66634f6e7a466b2b5cef491e0cfcb58c9de6b0e0b50dad33cb1b5b9cc5210d5.xlsx",
+    "pivot_texts": {},
+    "input_sha256": "9b9d9561d141efed74c3e09a01ba005c574899667f2cd9f703ca9a8006ee4e39"
+  },
+  "sheets": {
+    "S": {},
+    "F": {
+      "A1": {
+        "t": "n",
+        "v": 5.0
+      },
+      "B1": {
+        "t": "s",
+        "v": "=SUM(Sales[h1])"
+      },
+      "A2": {
+        "t": "n",
+        "v": 5.0
+      },
+      "B2": {
+        "t": "s",
+        "v": "=SUM(S!C6:C7)"
+      },
+      "A3": {
+        "t": "n",
+        "v": 3.0
+      },
+      "B3": {
+        "t": "s",
+        "v": "=ROWS(Sales[#All])"
+      },
+      "A4": {
+        "t": "s",
+        "v": ",h1,h2,,,1,2,,,4,5,,28,,,58,,,,"
+      },
+      "B4": {
+        "t": "s",
+        "v": "=TEXTJOIN(\",\",FALSE,INDIRECT(\"S!B5:E9\"))"
+      }
+    }
+  }
+}

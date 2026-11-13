@@ -1,0 +1,69 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-5358: one delete_row of rows 3-6 (count 4), exactly the rows of a table without a header row: does Excel delete the table, keep one cleared row, or refuse (the answer wanted is then the refusal and its error code)? The engine accepts it and leaves the table's record over other rows. Sales on S!B3:C6 without a header row (columns Column1/Column2, data rows 3-6: E,W,N,S and Qty 1,2,4,8; table-no-header-delete-first-row's layout), S!B2 'above' and S!C10 99 outside it. Sheet F holds A1 =ROWS(Sales[#All]), A2 FORMULATEXT(A1), A3 =SUM(Sales[Column2]), A4 FORMULATEXT(A3), A5 =S!C10, A6 FORMULATEXT(A5) (how far the cells below move), A7 =SUM(S!C3:C6), A8 FORMULATEXT(A7), A9 =ISREF(Sales) (is there still a table), A10 =INDEX(S!B:B,3) (what sheet row 3 holds after the edit, through a whole-column reference a row delete does not move).",
+  "tags": [
+    "M8",
+    "tables",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "B2": "above",
+        "B3": "E",
+        "B4": "W",
+        "B5": "N",
+        "B6": "S",
+        "C3": 1,
+        "C4": 2,
+        "C5": 4,
+        "C6": 8,
+        "C10": 99
+      },
+      "tables": [
+        {
+          "name": "Sales",
+          "ref": "B3:C6",
+          "header_row": false
+        }
+      ]
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=ROWS(Sales[#All])",
+        "A2": "=FORMULATEXT(A1)",
+        "A3": "=SUM(Sales[Column2])",
+        "A4": "=FORMULATEXT(A3)",
+        "A5": "=S!C10",
+        "A6": "=FORMULATEXT(A5)",
+        "A7": "=SUM(S!C3:C6)",
+        "A8": "=FORMULATEXT(A7)",
+        "A9": "=ISREF(Sales)",
+        "A10": "=INDEX(S!B:B,3)"
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "delete_row",
+      "sheet": "S",
+      "row": 3,
+      "count": 4
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!A2",
+    "F!A3",
+    "F!A4",
+    "F!A5",
+    "F!A6",
+    "F!A7",
+    "F!A8",
+    "F!A9",
+    "F!A10"
+  ]
+}

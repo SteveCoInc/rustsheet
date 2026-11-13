@@ -1,0 +1,45 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "F": {
+   "A1": {
+    "t": "n",
+    "v": 1.0
+   },
+   "A2": {
+    "t": "s",
+    "v": "=[@Qty]*2"
+   },
+   "A3": {
+    "t": "b",
+    "v": true
+   },
+   "A4": {
+    "t": "e",
+    "v": "#N/A"
+   },
+   "A5": {
+    "t": "b",
+    "v": false
+   },
+   "A6": {
+    "t": "n",
+    "v": 0.0
+   }
+  },
+  "S": {
+   "D4": {
+    "t": "n",
+    "v": 0.0
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "08ca1aa4133f6b3b5a317f10d370a440cb22ace34852779959df73e59610c15d",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-13T02:02:05+00:00",
+  "version": null,
+  "workbook_name": "589716a02f637b7c0893d1c116d989e4ad2865ef01a5f6272bb6cdbe9ae6ce8d.xlsx"
+ }
+}

@@ -1,0 +1,76 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Taskei P559198894 (and the reference-bodied part of T-2188): does a relative defined name's reference wrap round the grid when the using cell's offset carries it past the last row or column? A file stores a relative name anchored at A1. Above = Data!C1048576 (one row up, two columns right): from Calc!A2 it reads Data!C1 (10 with a wrap), from Calc!A5 Data!C4 (40), from Calc!A1 Data!C1048576 (empty, 0). Left = Data!XFD3 (one column left, two rows down): from Calc!B1 it reads Data!A3 (7). Blk = Grid!XER1048545:M1048554 is R[-32]C[-13]:R[-23]C[12]: from Calc!N33 it is Grid!A1:Z10 (COLUMNS 26), from N34 Grid!A2:Z11 (ROWS 10), from N35 Grid!A3:Z12 (SUM 1050: M5 50 and Z10 1000), from N36 Grid!A4:Z13 (COUNT 2); from N28 its first corner lands on row 1048572 and its second on row 5, so ROWS asks whether Excel reads A5:Z1048572 (1048568). A formula-bodied name, Twice = Data!C1048576*2, from Calc2!A2 is 20 with a wrap. The far edge: Below = Data!A2 (one row down) used on Calc2!A1048576 reads Data!A1 (5), and Right = Data!B1 (one column right) used in Calc2!XFD1 reads Data!A1 (5). The engine before any fix does not wrap: COLUMNS of the shifted block was 16,360.",
+  "tags": [
+    "M8",
+    "names",
+    "probe"
+  ],
+  "names": {
+    "Above": "=Data!C1048576",
+    "Left": "=Data!XFD3",
+    "Blk": "=Grid!XER1048545:M1048554",
+    "Twice": "=Data!C1048576*2",
+    "Below": "=Data!A2",
+    "Right": "=Data!B1"
+  },
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=Above",
+        "A2": "=Above",
+        "A5": "=Above",
+        "B1": "=Left",
+        "N28": "=ROWS(Blk)",
+        "N33": "=COLUMNS(Blk)",
+        "N34": "=ROWS(Blk)",
+        "N35": "=SUM(Blk)",
+        "N36": "=COUNT(Blk)"
+      }
+    },
+    {
+      "name": "Calc2",
+      "cells": {
+        "A2": "=Twice",
+        "A1048576": "=Below",
+        "XFD1": "=Right"
+      }
+    },
+    {
+      "name": "Data",
+      "cells": {
+        "A1": 5,
+        "A3": 7,
+        "C1": 10,
+        "C2": 20,
+        "C3": 30,
+        "C4": 40,
+        "C5": 50
+      }
+    },
+    {
+      "name": "Grid",
+      "cells": {
+        "A1": 1,
+        "M5": 50,
+        "Z10": 1000
+      }
+    }
+  ],
+  "expected": {},
+  "check": [
+    "Calc!A1",
+    "Calc!A2",
+    "Calc!A5",
+    "Calc!B1",
+    "Calc!N28",
+    "Calc!N33",
+    "Calc!N34",
+    "Calc!N35",
+    "Calc!N36",
+    "Calc2!A2",
+    "Calc2!A1048576",
+    "Calc2!XFD1"
+  ]
+}

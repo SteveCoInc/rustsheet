@@ -1,0 +1,72 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Whether a legacy (non-dynamic, no cm) formula intersects a comparison over a range inside AND, OR and XOR, as it does inside SUM (legacy-value-argument-intersection), or evaluates it as an array: the corpus's legacy IF(OR(AND(Department=\"GERON\",Course_Number=255)),..) over whole-column names. L1:L5 = 10..50, A1:A5 = 50..10; row 2 is on the ranges' rows (L2 = 20, A2 = 40), row 12 off them. C: intersected FALSE, as an array TRUE; E and F: intersected TRUE, as an array FALSE; G: XOR; H: a bare range (read whole, TRUE on both rows); I: the name lvals = $L$1:$L$5; J: under IF. Row 20 shows the formulas' text. Taskei: the corpus-fix lane's recalc.budget item.",
+  "tags": [
+    "M2",
+    "logical",
+    "probe"
+  ],
+  "names": {
+    "lvals": "=Sheet1!$L$1:$L$5"
+  },
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": 50,
+        "L1": 10,
+        "A2": 40,
+        "L2": 20,
+        "A3": 30,
+        "L3": 30,
+        "A4": 20,
+        "L4": 40,
+        "A5": 10,
+        "L5": 50,
+        "C2": "=OR(L1:L5=10)",
+        "C12": "=OR(L1:L5=10)",
+        "D2": "=AND(L1:L5>0)",
+        "D12": "=AND(L1:L5>0)",
+        "E2": "=AND(L1:L5=20)",
+        "E12": "=AND(L1:L5=20)",
+        "F2": "=OR(AND(L:L=20,A:A=40))",
+        "F12": "=OR(AND(L:L=20,A:A=40))",
+        "G2": "=XOR(L1:L5=10)",
+        "G12": "=XOR(L1:L5=10)",
+        "H2": "=OR(L1:L5)",
+        "H12": "=OR(L1:L5)",
+        "I2": "=OR(lvals=10)",
+        "I12": "=OR(lvals=10)",
+        "J2": "=IF(OR(L1:L5=10),1,0)",
+        "J12": "=IF(OR(L1:L5=10),1,0)",
+        "C20": "=FORMULATEXT(C2)",
+        "D20": "=FORMULATEXT(D2)",
+        "E20": "=FORMULATEXT(E2)",
+        "F20": "=FORMULATEXT(F2)",
+        "G20": "=FORMULATEXT(G2)",
+        "H20": "=FORMULATEXT(H2)",
+        "I20": "=FORMULATEXT(I2)",
+        "J20": "=FORMULATEXT(J2)"
+      },
+      "legacy_formulas": [
+        "C2",
+        "C12",
+        "D2",
+        "D12",
+        "E2",
+        "E12",
+        "F2",
+        "F12",
+        "G2",
+        "G12",
+        "H2",
+        "H12",
+        "I2",
+        "I12",
+        "J2",
+        "J12"
+      ]
+    }
+  ],
+  "expected": {}
+}

@@ -1,0 +1,39 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-5123 (SPEC-0039 U2): insert_row 1 on S when S's last row holds a plain nonblank cell (S!A1048576 is 5, no table): does Excel refuse the insert (the answer wanted is then the refusal and its error code; Excel's refusal has evidence only for tables, references.md, Graph 409 InsertDeleteConflict), or drop the cell? Sheet F holds A1 =S!A1048576, A2 FORMULATEXT(A1), A3 =COUNTA(S!A:A) (is the 5 still on the sheet), A4 FORMULATEXT(A3).",
+  "tags": [
+    "M8",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "A1048576": 5
+      }
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=S!A1048576",
+        "A2": "=FORMULATEXT(A1)",
+        "A3": "=COUNTA(S!A:A)",
+        "A4": "=FORMULATEXT(A3)"
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "insert_row",
+      "sheet": "S",
+      "row": 1
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!A2",
+    "F!A3",
+    "F!A4"
+  ]
+}

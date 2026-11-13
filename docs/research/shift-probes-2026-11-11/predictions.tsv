@@ -1,0 +1,153 @@
+case	cell	formula	covered	provisional rule (SPEC-0039 A11), for this reference alone
+t5465-shift-insert-down-cells	F!B1	=S!C4	Whole	=S!C6
+t5465-shift-insert-down-cells	F!B2	=S!D5	Whole	=S!D7
+t5465-shift-insert-down-cells	F!B3	=S!C6	Whole	=S!C8
+t5465-shift-insert-down-cells	F!B4	=S!D9	Whole	=S!D11
+t5465-shift-insert-down-cells	F!B5	=S!E4	Outside	stays
+t5465-shift-insert-down-cells	F!B6	=S!G5	Outside	stays
+t5465-shift-insert-down-cells	F!B7	=S!C3	Whole	stays
+t5465-shift-insert-down-cells	F!B8	=S!C2	Whole	stays
+t5465-shift-insert-down-cells	F!B9	=S!B4	Outside	stays
+t5465-shift-insert-down-cells	F!B10	=S!B5	Outside	stays
+t5465-shift-insert-down-cells	F!B11	=S!E6	Outside	stays
+t5465-shift-insert-down-cells	F!B12	=S!$C$6	Whole	=S!$C$8
+t5465-shift-insert-down-cells	F!B13	=S!$E$4	Outside	stays
+t5465-shift-insert-down-ranges	F!B1	=SUM(S!C6:D7)	Whole	=SUM(S!C8:D9)
+t5465-shift-insert-down-ranges	F!B2	=SUM(S!C3:D7)	Whole	=SUM(S!C3:D9)
+t5465-shift-insert-down-ranges	F!B3	=SUM(S!C4:D5)	Whole	=SUM(S!C6:D7)
+t5465-shift-insert-down-ranges	F!B4	=SUM(S!C2:C9)	Whole	=SUM(S!C2:C11)
+t5465-shift-insert-down-ranges	F!B5	=SUM(S!C4:D9)	Whole	=SUM(S!C6:D11)
+t5465-shift-insert-down-ranges	F!B6	=SUM(S!C6:C6)	Whole	=SUM(S!C8:C8)
+t5465-shift-insert-down-ranges	F!B7	=SUM(S!E4:F5)	Outside	stays
+t5465-shift-insert-down-ranges	F!B8	=SUM(S!B4:F5)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-insert-down-ranges	F!B9	=SUM(S!B4:G4)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-insert-down-ranges	F!B10	=SUM(S!C4:G5)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-insert-down-ranges	F!B11	=SUM(S!E4:E4)	Outside	stays
+t5465-shift-insert-down-ranges	F!B12	=SUM(S!B6:E7)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-insert-down-ranges	F!B13	=SUM(S!B2:E3)	Part	stays (nothing under it moves)
+t5465-shift-insert-down-ranges	F!B14	=SUM(S!B4:E5)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-insert-down-ranges	F!B15	=SUM(S!E3:F6)	Outside	stays
+t5465-shift-insert-down-ranges	F!B16	=SUM(S!B3:B6)	Outside	stays
+t5465-shift-insert-down-ranges	F!B17	=SUM(S!A1:H10)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-insert-down-lines-spans-names	F!B1	=SUM(S!4:4)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-insert-down-lines-spans-names	F!B2	=SUM(S!4:5)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-insert-down-lines-spans-names	F!B3	=SUM(S!6:6)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-insert-down-lines-spans-names	F!B4	=SUM(S!3:3)	Part	stays (nothing under it moves)
+t5465-shift-insert-down-lines-spans-names	F!B5	=SUM(S!C:C)	Whole	stays (it spans the edited axis)
+t5465-shift-insert-down-lines-spans-names	F!B6	=SUM(S!C:D)	Whole	stays (it spans the edited axis)
+t5465-shift-insert-down-lines-spans-names	F!B7	=SUM(S!E:E)	Outside	stays (it spans the edited axis)
+t5465-shift-insert-down-lines-spans-names	F!B8	=SUM(S!B:B)	Outside	stays (it spans the edited axis)
+t5465-shift-insert-right-cells	F!B1	=S!C4	Whole	=S!E4
+t5465-shift-insert-right-cells	F!B2	=S!D5	Whole	=S!F5
+t5465-shift-insert-right-cells	F!B3	=S!C6	Outside	stays
+t5465-shift-insert-right-cells	F!B4	=S!D9	Outside	stays
+t5465-shift-insert-right-cells	F!B5	=S!E4	Whole	=S!G4
+t5465-shift-insert-right-cells	F!B6	=S!G5	Whole	=S!I5
+t5465-shift-insert-right-cells	F!B7	=S!C3	Outside	stays
+t5465-shift-insert-right-cells	F!B8	=S!C2	Outside	stays
+t5465-shift-insert-right-cells	F!B9	=S!B4	Whole	stays
+t5465-shift-insert-right-cells	F!B10	=S!B5	Whole	stays
+t5465-shift-insert-right-cells	F!B11	=S!E6	Outside	stays
+t5465-shift-insert-right-cells	F!B12	=S!$C$6	Outside	stays
+t5465-shift-insert-right-cells	F!B13	=S!$E$4	Whole	=S!$G$4
+t5465-shift-insert-right-ranges	F!B1	=SUM(S!C6:D7)	Outside	stays
+t5465-shift-insert-right-ranges	F!B2	=SUM(S!C3:D7)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-insert-right-ranges	F!B3	=SUM(S!C4:D5)	Whole	=SUM(S!E4:F5)
+t5465-shift-insert-right-ranges	F!B4	=SUM(S!C2:C9)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-insert-right-ranges	F!B5	=SUM(S!C4:D9)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-insert-right-ranges	F!B6	=SUM(S!C6:C6)	Outside	stays
+t5465-shift-insert-right-ranges	F!B7	=SUM(S!E4:F5)	Whole	=SUM(S!G4:H5)
+t5465-shift-insert-right-ranges	F!B8	=SUM(S!B4:F5)	Whole	=SUM(S!B4:H5)
+t5465-shift-insert-right-ranges	F!B9	=SUM(S!B4:G4)	Whole	=SUM(S!B4:I4)
+t5465-shift-insert-right-ranges	F!B10	=SUM(S!C4:G5)	Whole	=SUM(S!E4:I5)
+t5465-shift-insert-right-ranges	F!B11	=SUM(S!E4:E4)	Whole	=SUM(S!G4:G4)
+t5465-shift-insert-right-ranges	F!B12	=SUM(S!B6:E7)	Outside	stays
+t5465-shift-insert-right-ranges	F!B13	=SUM(S!B2:E3)	Outside	stays
+t5465-shift-insert-right-ranges	F!B14	=SUM(S!B4:E5)	Whole	=SUM(S!B4:G5)
+t5465-shift-insert-right-ranges	F!B15	=SUM(S!E3:F6)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-insert-right-ranges	F!B16	=SUM(S!B3:B6)	Part	stays (nothing under it moves)
+t5465-shift-insert-right-ranges	F!B17	=SUM(S!A1:H10)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-insert-right-lines-spans-names	F!B1	=SUM(S!4:4)	Whole	stays (it spans the edited axis)
+t5465-shift-insert-right-lines-spans-names	F!B2	=SUM(S!4:5)	Whole	stays (it spans the edited axis)
+t5465-shift-insert-right-lines-spans-names	F!B3	=SUM(S!6:6)	Outside	stays (it spans the edited axis)
+t5465-shift-insert-right-lines-spans-names	F!B4	=SUM(S!3:3)	Outside	stays (it spans the edited axis)
+t5465-shift-insert-right-lines-spans-names	F!B5	=SUM(S!C:C)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-insert-right-lines-spans-names	F!B6	=SUM(S!C:D)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-insert-right-lines-spans-names	F!B7	=SUM(S!E:E)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-insert-right-lines-spans-names	F!B8	=SUM(S!B:B)	Part	stays (nothing under it moves)
+t5465-shift-delete-up-cells	F!B1	=S!C4	Whole	=#REF!
+t5465-shift-delete-up-cells	F!B2	=S!D5	Whole	=#REF!
+t5465-shift-delete-up-cells	F!B3	=S!C6	Whole	=S!C4
+t5465-shift-delete-up-cells	F!B4	=S!D9	Whole	=S!D7
+t5465-shift-delete-up-cells	F!B5	=S!E4	Outside	stays
+t5465-shift-delete-up-cells	F!B6	=S!G5	Outside	stays
+t5465-shift-delete-up-cells	F!B7	=S!C3	Whole	stays
+t5465-shift-delete-up-cells	F!B8	=S!C2	Whole	stays
+t5465-shift-delete-up-cells	F!B9	=S!B4	Outside	stays
+t5465-shift-delete-up-cells	F!B10	=S!B5	Outside	stays
+t5465-shift-delete-up-cells	F!B11	=S!E6	Outside	stays
+t5465-shift-delete-up-cells	F!B12	=S!$C$6	Whole	=S!$C$4
+t5465-shift-delete-up-cells	F!B13	=S!$E$4	Outside	stays
+t5465-shift-delete-up-ranges	F!B1	=SUM(S!C6:D7)	Whole	=SUM(S!C4:D5)
+t5465-shift-delete-up-ranges	F!B2	=SUM(S!C3:D7)	Whole	=SUM(S!C3:D5)
+t5465-shift-delete-up-ranges	F!B3	=SUM(S!C4:D5)	Whole	=SUM(#REF!)
+t5465-shift-delete-up-ranges	F!B4	=SUM(S!C2:C9)	Whole	=SUM(S!C2:C7)
+t5465-shift-delete-up-ranges	F!B5	=SUM(S!C4:D9)	Whole	=SUM(S!C4:D7)
+t5465-shift-delete-up-ranges	F!B6	=SUM(S!C6:C6)	Whole	=SUM(S!C4:C4)
+t5465-shift-delete-up-ranges	F!B7	=SUM(S!E4:F5)	Outside	stays
+t5465-shift-delete-up-ranges	F!B8	=SUM(S!B4:F5)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-delete-up-ranges	F!B9	=SUM(S!B4:G4)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-delete-up-ranges	F!B10	=SUM(S!C4:G5)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-delete-up-ranges	F!B11	=SUM(S!E4:E4)	Outside	stays
+t5465-shift-delete-up-ranges	F!B12	=SUM(S!B6:E7)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-delete-up-ranges	F!B13	=SUM(S!B2:E3)	Part	stays (nothing under it moves)
+t5465-shift-delete-up-ranges	F!B14	=SUM(S!B4:E5)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-delete-up-ranges	F!B15	=SUM(S!E3:F6)	Outside	stays
+t5465-shift-delete-up-ranges	F!B16	=SUM(S!B3:B6)	Outside	stays
+t5465-shift-delete-up-ranges	F!B17	=SUM(S!A1:H10)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-delete-up-lines-spans-names	F!B1	=SUM(S!4:4)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-delete-up-lines-spans-names	F!B2	=SUM(S!4:5)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-delete-up-lines-spans-names	F!B3	=SUM(S!6:6)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-delete-up-lines-spans-names	F!B4	=SUM(S!3:3)	Part	stays (nothing under it moves)
+t5465-shift-delete-up-lines-spans-names	F!B5	=SUM(S!C:C)	Whole	stays (it spans the edited axis)
+t5465-shift-delete-up-lines-spans-names	F!B6	=SUM(S!C:D)	Whole	stays (it spans the edited axis)
+t5465-shift-delete-up-lines-spans-names	F!B7	=SUM(S!E:E)	Outside	stays (it spans the edited axis)
+t5465-shift-delete-up-lines-spans-names	F!B8	=SUM(S!B:B)	Outside	stays (it spans the edited axis)
+t5465-shift-delete-left-cells	F!B1	=S!C4	Whole	=#REF!
+t5465-shift-delete-left-cells	F!B2	=S!D5	Whole	=#REF!
+t5465-shift-delete-left-cells	F!B3	=S!C6	Outside	stays
+t5465-shift-delete-left-cells	F!B4	=S!D9	Outside	stays
+t5465-shift-delete-left-cells	F!B5	=S!E4	Whole	=S!C4
+t5465-shift-delete-left-cells	F!B6	=S!G5	Whole	=S!E5
+t5465-shift-delete-left-cells	F!B7	=S!C3	Outside	stays
+t5465-shift-delete-left-cells	F!B8	=S!C2	Outside	stays
+t5465-shift-delete-left-cells	F!B9	=S!B4	Whole	stays
+t5465-shift-delete-left-cells	F!B10	=S!B5	Whole	stays
+t5465-shift-delete-left-cells	F!B11	=S!E6	Outside	stays
+t5465-shift-delete-left-cells	F!B12	=S!$C$6	Outside	stays
+t5465-shift-delete-left-cells	F!B13	=S!$E$4	Whole	=S!$C$4
+t5465-shift-delete-left-ranges	F!B1	=SUM(S!C6:D7)	Outside	stays
+t5465-shift-delete-left-ranges	F!B2	=SUM(S!C3:D7)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-delete-left-ranges	F!B3	=SUM(S!C4:D5)	Whole	=SUM(#REF!)
+t5465-shift-delete-left-ranges	F!B4	=SUM(S!C2:C9)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-delete-left-ranges	F!B5	=SUM(S!C4:D9)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-delete-left-ranges	F!B6	=SUM(S!C6:C6)	Outside	stays
+t5465-shift-delete-left-ranges	F!B7	=SUM(S!E4:F5)	Whole	=SUM(S!C4:D5)
+t5465-shift-delete-left-ranges	F!B8	=SUM(S!B4:F5)	Whole	=SUM(S!B4:D5)
+t5465-shift-delete-left-ranges	F!B9	=SUM(S!B4:G4)	Whole	=SUM(S!B4:E4)
+t5465-shift-delete-left-ranges	F!B10	=SUM(S!C4:G5)	Whole	=SUM(S!C4:E5)
+t5465-shift-delete-left-ranges	F!B11	=SUM(S!E4:E4)	Whole	=SUM(S!C4:C4)
+t5465-shift-delete-left-ranges	F!B12	=SUM(S!B6:E7)	Outside	stays
+t5465-shift-delete-left-ranges	F!B13	=SUM(S!B2:E3)	Outside	stays
+t5465-shift-delete-left-ranges	F!B14	=SUM(S!B4:E5)	Whole	=SUM(S!B4:C5)
+t5465-shift-delete-left-ranges	F!B15	=SUM(S!E3:F6)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-delete-left-ranges	F!B16	=SUM(S!B3:B6)	Part	stays (nothing under it moves)
+t5465-shift-delete-left-ranges	F!B17	=SUM(S!A1:H10)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-delete-left-lines-spans-names	F!B1	=SUM(S!4:4)	Whole	stays (it spans the edited axis)
+t5465-shift-delete-left-lines-spans-names	F!B2	=SUM(S!4:5)	Whole	stays (it spans the edited axis)
+t5465-shift-delete-left-lines-spans-names	F!B3	=SUM(S!6:6)	Outside	stays (it spans the edited axis)
+t5465-shift-delete-left-lines-spans-names	F!B4	=SUM(S!3:3)	Outside	stays (it spans the edited axis)
+t5465-shift-delete-left-lines-spans-names	F!B5	=SUM(S!C:C)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-delete-left-lines-spans-names	F!B6	=SUM(S!C:D)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-delete-left-lines-spans-names	F!B7	=SUM(S!E:E)	Part	the shift is REFUSED (U9: a range across the band's edge with moved or deleted cells under it)
+t5465-shift-delete-left-lines-spans-names	F!B8	=SUM(S!B:B)	Part	stays (nothing under it moves)

@@ -1,0 +1,63 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-5265: references to a deleted sheet through a row insert above the referenced rows on another sheet. Sheets in order F, S, Third: S!C4:C7 hold 1,2,4,8 and Third!C4:C7 10,20,40,80. delete_sheet S (Third then takes S's place in the sheet order), then insert_row 2 on Third, above rows 4-7. Do the references to the missing sheet keep their rows? Sheet F holds A1 =SUM(S!C4:C7), A2 FORMULATEXT(A1), A3 =S!C4+1, A4 FORMULATEXT(A3), A5 =SUM(S!$C$4:$C$7), A6 FORMULATEXT(A5), A7 =SUM(Third!C4:C7) (the control: it shifts to Third!C5:C8), A8 FORMULATEXT(A7).",
+  "tags": [
+    "M8",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=SUM(S!C4:C7)",
+        "A2": "=FORMULATEXT(A1)",
+        "A3": "=S!C4+1",
+        "A4": "=FORMULATEXT(A3)",
+        "A5": "=SUM(S!$C$4:$C$7)",
+        "A6": "=FORMULATEXT(A5)",
+        "A7": "=SUM(Third!C4:C7)",
+        "A8": "=FORMULATEXT(A7)"
+      }
+    },
+    {
+      "name": "S",
+      "cells": {
+        "C4": 1,
+        "C5": 2,
+        "C6": 4,
+        "C7": 8
+      }
+    },
+    {
+      "name": "Third",
+      "cells": {
+        "C4": 10,
+        "C5": 20,
+        "C6": 40,
+        "C7": 80
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "delete_sheet",
+      "sheet": "S"
+    },
+    {
+      "op": "insert_row",
+      "sheet": "Third",
+      "row": 2
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!A2",
+    "F!A3",
+    "F!A4",
+    "F!A5",
+    "F!A6",
+    "F!A7",
+    "F!A8"
+  ]
+}

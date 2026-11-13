@@ -1,0 +1,18 @@
+Traceback (most recent call last):
+  File "/home/user/rustsheet/tools/.venv/bin/rustsheet-oracle", line 10, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/cli.py", line 442, in main
+    sys.exit(args.fn(args))
+             ~~~~~~~^^^^^^
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/cli.py", line 116, in cmd_recalc
+    values, info, sha = _recalc_cached(backend, raw)
+                        ~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/cli.py", line 78, in _recalc_cached
+    values = checked_values(out)
+  File "/home/user/rustsheet/tools/src/rustsheet_tools/oracle/canary.py", line 276, in checked_values
+    raise OracleError(
+    ...<2 lines>...
+    )
+rustsheet_tools.oracle.backends.OracleError: canary failed, so this workbook was not recalculated; refusing its values:
+  A4 =SQRT(2): expected 1.4142135623730951, got {'t': 'n', 'v': 1.4142135623731}

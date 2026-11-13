@@ -1,0 +1,89 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "F": {
+   "A1": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "A6": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "B1": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "B6": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "C1": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "C6": {
+    "t": "e",
+    "v": "#REF!"
+   }
+  },
+  "Obs": {
+   "A1": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "A10": {
+    "t": "s",
+    "v": "=#REF!C4+1"
+   },
+   "A11": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "A12": {
+    "t": "s",
+    "v": "=SUM(#REF!$C$4:$C$7)"
+   },
+   "A2": {
+    "t": "s",
+    "v": "=SUM(#REF!C4:C7)"
+   },
+   "A3": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "A4": {
+    "t": "s",
+    "v": "=#REF!C4+1"
+   },
+   "A5": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "A6": {
+    "t": "s",
+    "v": "=SUM(#REF!$C$4:$C$7)"
+   },
+   "A7": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "A8": {
+    "t": "s",
+    "v": "=SUM(#REF!C4:C7)"
+   },
+   "A9": {
+    "t": "e",
+    "v": "#REF!"
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "19cd2eeae888d2fe02ece76e4014794ccd836abf0dc98b1e5d0150679221c2ea",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-13T02:06:24+00:00",
+  "version": null,
+  "workbook_name": "3a9c537facba24f64033bb38de5fa430bac217b2444d40e4a9f58c869256fb00.xlsx"
+ }
+}

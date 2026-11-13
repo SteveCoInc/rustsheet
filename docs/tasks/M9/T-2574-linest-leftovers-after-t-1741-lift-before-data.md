@@ -55,6 +55,7 @@ listed it as unattributed, and no open task named it). Same root cause as the li
   size `#N/A`, which is Excel's value.
 Cells:
 - gen-m9/a4090567758520df.case.json (1): Calc!A277
+- excel-graph fill, 2026-11-13, probe request val11 (#4128). Owns: probes/t2574-zero-head-fresh (every visibly-off cell of each). Run `make eval-show CASE=<case>` for the cells, and score them against the request's frozen predictions where it has them.
 
 ## Acceptance criteria
 - [ ] The cells listed above pass or name another open task that owns their root cause; their lines leave

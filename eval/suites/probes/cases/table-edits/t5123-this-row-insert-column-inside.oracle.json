@@ -1,0 +1,141 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "F": {
+   "A1": {
+    "t": "n",
+    "v": 4.0
+   },
+   "A4": {
+    "t": "n",
+    "v": 1.0
+   },
+   "A5": {
+    "t": "n",
+    "v": 2.0
+   },
+   "A6": {
+    "t": "n",
+    "v": 4.0
+   },
+   "A7": {
+    "t": "n",
+    "v": 8.0
+   },
+   "A8": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "B4": {
+    "t": "s",
+    "v": "=Sales[@Qty]"
+   },
+   "B5": {
+    "t": "s",
+    "v": "=Sales[@Qty]"
+   },
+   "B6": {
+    "t": "s",
+    "v": "=Sales[@Qty]"
+   },
+   "B7": {
+    "t": "s",
+    "v": "=Sales[@Qty]"
+   },
+   "B8": {
+    "t": "s",
+    "v": "=Sales[@Qty]"
+   },
+   "C8": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "D8": {
+    "t": "b",
+    "v": false
+   },
+   "G1": {
+    "t": "s",
+    "v": "=Sales[@Qty]"
+   },
+   "G2": {
+    "t": "s",
+    "v": "=Sales[@Qty]"
+   },
+   "G3": {
+    "t": "s",
+    "v": "=Sales[@Qty]"
+   },
+   "G4": {
+    "t": "s",
+    "v": "=Sales[@Qty]"
+   },
+   "G5": {
+    "t": "s",
+    "v": "=Sales[@Qty]"
+   },
+   "G6": {
+    "t": "s",
+    "v": "=Sales[@Qty]"
+   },
+   "H1": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "H2": {
+    "t": "n",
+    "v": 1.0
+   },
+   "H3": {
+    "t": "n",
+    "v": 2.0
+   },
+   "H4": {
+    "t": "n",
+    "v": 4.0
+   },
+   "H5": {
+    "t": "n",
+    "v": 8.0
+   },
+   "H6": {
+    "t": "e",
+    "v": "#VALUE!"
+   }
+  },
+  "S": {
+   "F2": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "F4": {
+    "t": "n",
+    "v": 1.0
+   },
+   "F5": {
+    "t": "n",
+    "v": 2.0
+   },
+   "F6": {
+    "t": "n",
+    "v": 4.0
+   },
+   "F7": {
+    "t": "n",
+    "v": 8.0
+   },
+   "F8": {
+    "t": "e",
+    "v": "#VALUE!"
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "287c912d46a5f9af512c1e6075d61c3f48abfadafa3dc74b26d0f21454c13388",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-13T02:04:17+00:00",
+  "version": null,
+  "workbook_name": "bd8aab6038a4d61add8b22039a750bbbfd47cbe88d435087562b203f6a1e839d.xlsx"
+ }
+}

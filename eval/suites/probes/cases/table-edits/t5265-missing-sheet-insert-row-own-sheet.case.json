@@ -1,0 +1,73 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-5265: references to a deleted sheet through a row insert above their cell. S!C4:C7 hold 1,2,4,8; sheet F holds, in row 1 (it stays) and in row 5 (it moves down), A =SUM(S!C4:C7), B =S!C4+1 and C =SUM(S!$C$4:$C$7). delete_sheet S makes each a reference to a missing sheet (table-delete-sheet: =SUM(#REF!C4:C7)); then insert_row 3 on F. Does a moved cell keep its text, shift its relative rows, or become a bare #REF!? Sheet Obs (never edited) holds, for F!A1, B1, C1, A5, B5 and C5 in turn, the value and the FORMULATEXT (A1:A12; the references to row 5 follow the moved cells).",
+  "tags": [
+    "M8",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "C4": 1,
+        "C5": 2,
+        "C6": 4,
+        "C7": 8
+      }
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=SUM(S!C4:C7)",
+        "B1": "=S!C4+1",
+        "C1": "=SUM(S!$C$4:$C$7)",
+        "A5": "=SUM(S!C4:C7)",
+        "B5": "=S!C4+1",
+        "C5": "=SUM(S!$C$4:$C$7)"
+      }
+    },
+    {
+      "name": "Obs",
+      "cells": {
+        "A1": "=F!A1",
+        "A2": "=FORMULATEXT(F!A1)",
+        "A3": "=F!B1",
+        "A4": "=FORMULATEXT(F!B1)",
+        "A5": "=F!C1",
+        "A6": "=FORMULATEXT(F!C1)",
+        "A7": "=F!A5",
+        "A8": "=FORMULATEXT(F!A5)",
+        "A9": "=F!B5",
+        "A10": "=FORMULATEXT(F!B5)",
+        "A11": "=F!C5",
+        "A12": "=FORMULATEXT(F!C5)"
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "delete_sheet",
+      "sheet": "S"
+    },
+    {
+      "op": "insert_row",
+      "sheet": "F",
+      "row": 3
+    }
+  ],
+  "expected": {},
+  "check": [
+    "Obs!A1",
+    "Obs!A2",
+    "Obs!A3",
+    "Obs!A4",
+    "Obs!A5",
+    "Obs!A6",
+    "Obs!A7",
+    "Obs!A8",
+    "Obs!A9",
+    "Obs!A10",
+    "Obs!A11",
+    "Obs!A12"
+  ]
+}

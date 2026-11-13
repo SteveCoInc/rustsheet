@@ -118,6 +118,7 @@ Cells:
   - gen-m9/8dd2312c96effb1b.case.json: Calc!A169
   - gen-m9/c2974c061384fdd9.case.json: Calc!A267
 
+- excel-graph fill, 2026-11-13, probe request val11 (#4128). Owns: probes/t4894-f-inv-rt-saturation-band (every visibly-off cell of each). Run `make eval-show CASE=<case>` for the cells, and score them against the request's frozen predictions where it has them.
 
 ## Acceptance criteria
 - [ ] Visible parity (gen-m9, T-2255): each cell above has Excel's value within half a unit of the 15th significant

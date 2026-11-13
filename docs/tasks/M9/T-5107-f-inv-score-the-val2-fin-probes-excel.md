@@ -35,6 +35,8 @@ Owns: probes/val2-fin-01, probes/val2-fin-02 and probes/val2-fin-03 (every visib
 - val4 batch, docs/research/probe-request-val4-fin.md (excel-graph fill, 2026-11-10; predictions frozen in
   docs/research/val4-fin-predictions.json). Owns: probes/val4-fin-01, probes/val4-fin-02 and probes/val4-fin-03 (every
   visibly-off cell).
+- excel-graph fill, 2026-11-13, probe request val11 (#4128). Owns: probes/t5107-search-fresh, probes/t5107-search-fresh-tails (every visibly-off cell of each). Run `make eval-show CASE=<case>` for the cells, and score them against the request's frozen predictions where it has them.
+- probes/`t5107-search-fresh-tails` was filled, but its Excel values are parked at `docs/research/probe-request-val9/t5107-search-fresh-tails.oracle.json`, not beside the case. One of its points runs past the math generator's 600 s limit (`PointTimeoutError`, T-3680), and the `eval-math-check` gate will not pass a filled case without math values. Move the sidecar back once the definition has a deterministic budget.
 
 ## Acceptance criteria
 - [ ] Every hypothesis of the family in probe-requests-2026-11-08.md has a verdict (confirmed, refuted, undecided) citing

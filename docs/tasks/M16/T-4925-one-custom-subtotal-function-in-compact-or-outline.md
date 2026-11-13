@@ -27,6 +27,7 @@ Owner of these visibly-off cells (decision 0245), 752 values and texts on 4 shee
 - gen-pivot/640780d7b6f4ad53 P05!L8:V13
 - gen-pivot/ec473260bb2065b3 P05!L8:P249
 - gen-pivot/f9e7edbb5b74011a P09!L7:M23
+- excel-graph fill, 2026-11-13, probe request val11 (#4128). Owns: probes/t4925-pivot-one-custom-subtotal (every visibly-off cell of each). Run `make eval-show CASE=<case>` for the cells, and score them against the request's frozen predictions where it has them.
 
 ## Acceptance criteria
 - [ ] The cells above pass (`rustsheet-eval run --suite gen-pivot`), and no other case regresses (`make eval-baseline`).

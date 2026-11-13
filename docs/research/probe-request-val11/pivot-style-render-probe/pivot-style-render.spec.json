@@ -1,0 +1,944 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "Pivot style and label-format render probe (T-5569, T-5556).",
+ "tags": [
+  "probe",
+  "pivot"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Size",
+    "D1": "Channel",
+    "E1": "Kind",
+    "F1": "Rep",
+    "G1": "Sales",
+    "H1": "Units",
+    "I1": "When",
+    "A2": "East",
+    "B2": "A",
+    "C2": "S",
+    "D2": "Web",
+    "E2": "X",
+    "F2": "Ann",
+    "G2": 10,
+    "H2": 1,
+    "I2": 45292,
+    "A3": "East",
+    "B3": "A",
+    "C3": "S",
+    "D3": "Web",
+    "E3": "Y",
+    "F3": "Bo",
+    "G3": 17,
+    "H3": 2,
+    "I3": 45323,
+    "A4": "East",
+    "B4": "A",
+    "C4": "S",
+    "D4": "Store",
+    "E4": "Y",
+    "F4": "Bo",
+    "G4": 31,
+    "H4": 1,
+    "I4": 45385,
+    "A5": "East",
+    "B5": "A",
+    "C5": "L",
+    "D5": "Web",
+    "E5": "X",
+    "F5": "Ann",
+    "G5": 38,
+    "H5": 2,
+    "I5": 45292,
+    "A6": "East",
+    "B6": "A",
+    "C6": "L",
+    "D6": "Store",
+    "E6": "X",
+    "F6": "Ann",
+    "G6": 52,
+    "H6": 1,
+    "I6": 45354,
+    "A7": "East",
+    "B7": "A",
+    "C7": "L",
+    "D7": "Store",
+    "E7": "Y",
+    "F7": "Bo",
+    "G7": 59,
+    "H7": 2,
+    "I7": 45385,
+    "A8": "East",
+    "B8": "B",
+    "C8": "S",
+    "D8": "Web",
+    "E8": "Y",
+    "F8": "Bo",
+    "G8": 73,
+    "H8": 1,
+    "I8": 45323,
+    "A9": "East",
+    "B9": "B",
+    "C9": "S",
+    "D9": "Store",
+    "E9": "X",
+    "F9": "Ann",
+    "G9": 80,
+    "H9": 2,
+    "I9": 45354,
+    "A10": "East",
+    "B10": "B",
+    "C10": "L",
+    "D10": "Web",
+    "E10": "X",
+    "F10": "Ann",
+    "G10": 94,
+    "H10": 1,
+    "I10": 45292,
+    "A11": "East",
+    "B11": "B",
+    "C11": "L",
+    "D11": "Web",
+    "E11": "Y",
+    "F11": "Bo",
+    "G11": 101,
+    "H11": 2,
+    "I11": 45323,
+    "A12": "East",
+    "B12": "B",
+    "C12": "L",
+    "D12": "Store",
+    "E12": "Y",
+    "F12": "Bo",
+    "G12": 115,
+    "H12": 1,
+    "I12": 45385,
+    "A13": "West",
+    "B13": "A",
+    "C13": "S",
+    "D13": "Web",
+    "E13": "X",
+    "F13": "Ann",
+    "G13": 122,
+    "H13": 2,
+    "I13": 45292,
+    "A14": "West",
+    "B14": "A",
+    "C14": "S",
+    "D14": "Store",
+    "E14": "X",
+    "F14": "Ann",
+    "G14": 136,
+    "H14": 1,
+    "I14": 45354,
+    "A15": "West",
+    "B15": "A",
+    "C15": "S",
+    "D15": "Store",
+    "E15": "Y",
+    "F15": "Bo",
+    "G15": 143,
+    "H15": 2,
+    "I15": 45385,
+    "A16": "West",
+    "B16": "A",
+    "C16": "L",
+    "D16": "Web",
+    "E16": "Y",
+    "F16": "Bo",
+    "G16": 157,
+    "H16": 1,
+    "I16": 45323,
+    "A17": "West",
+    "B17": "A",
+    "C17": "L",
+    "D17": "Store",
+    "E17": "X",
+    "F17": "Ann",
+    "G17": 164,
+    "H17": 2,
+    "I17": 45354,
+    "A18": "West",
+    "B18": "B",
+    "C18": "S",
+    "D18": "Web",
+    "E18": "X",
+    "F18": "Ann",
+    "G18": 178,
+    "H18": 1,
+    "I18": 45292,
+    "A19": "West",
+    "B19": "B",
+    "C19": "S",
+    "D19": "Web",
+    "E19": "Y",
+    "F19": "Bo",
+    "G19": 185,
+    "H19": 2,
+    "I19": 45323,
+    "A20": "West",
+    "B20": "B",
+    "C20": "S",
+    "D20": "Store",
+    "E20": "Y",
+    "F20": "Bo",
+    "G20": 199,
+    "H20": 1,
+    "I20": 45385,
+    "A21": "West",
+    "B21": "B",
+    "C21": "L",
+    "D21": "Web",
+    "E21": "X",
+    "F21": "Ann",
+    "G21": 206,
+    "H21": 2,
+    "I21": 45292,
+    "A22": "West",
+    "B22": "B",
+    "C22": "L",
+    "D22": "Store",
+    "E22": "X",
+    "F22": "Ann",
+    "G22": 220,
+    "H22": 1,
+    "I22": 45354,
+    "A23": "West",
+    "B23": "B",
+    "C23": "L",
+    "D23": "Store",
+    "E23": "Y",
+    "F23": "Bo",
+    "G23": 227,
+    "H23": 2,
+    "I23": 45385
+   },
+   "number_formats": {
+    "I2": "m/d/yyyy",
+    "I3": "m/d/yyyy",
+    "I4": "m/d/yyyy",
+    "I5": "m/d/yyyy",
+    "I6": "m/d/yyyy",
+    "I7": "m/d/yyyy",
+    "I8": "m/d/yyyy",
+    "I9": "m/d/yyyy",
+    "I10": "m/d/yyyy",
+    "I11": "m/d/yyyy",
+    "I12": "m/d/yyyy",
+    "I13": "m/d/yyyy",
+    "I14": "m/d/yyyy",
+    "I15": "m/d/yyyy",
+    "I16": "m/d/yyyy",
+    "I17": "m/d/yyyy",
+    "I18": "m/d/yyyy",
+    "I19": "m/d/yyyy",
+    "I20": "m/d/yyyy",
+    "I21": "m/d/yyyy",
+    "I22": "m/d/yyyy",
+    "I23": "m/d/yyyy"
+   }
+  },
+  {
+   "name": "L16",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PL16",
+     "source": "Data!A1:I23",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Size"
+      ],
+      "columns": [
+       "Channel",
+       "Kind"
+      ],
+      "pages": [
+       {
+        "field": "Rep"
+       }
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "insertBlankRow": true
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "L16B",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PL16B",
+     "source": "Data!A1:I23",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Size"
+      ],
+      "columns": [
+       "Channel",
+       "Kind"
+      ],
+      "pages": [
+       {
+        "field": "Rep"
+       }
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "insertBlankRow": true
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "M9",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PM9",
+     "source": "Data!A1:I23",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Size"
+      ],
+      "columns": [
+       "Channel",
+       "Kind"
+      ],
+      "pages": [
+       {
+        "field": "Rep"
+       }
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "insertBlankRow": true
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "M9B",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PM9B",
+     "source": "Data!A1:I23",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Size"
+      ],
+      "columns": [
+       "Channel",
+       "Kind"
+      ],
+      "pages": [
+       {
+        "field": "Rep"
+       }
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "insertBlankRow": true
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "D2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PD2",
+     "source": "Data!A1:I23",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Size"
+      ],
+      "columns": [
+       "Channel",
+       "Kind"
+      ],
+      "pages": [
+       {
+        "field": "Rep"
+       }
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "insertBlankRow": true
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "D2B",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PD2B",
+     "source": "Data!A1:I23",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Size"
+      ],
+      "columns": [
+       "Channel",
+       "Kind"
+      ],
+      "pages": [
+       {
+        "field": "Rep"
+       }
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "insertBlankRow": true
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "L16N",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PL16N",
+     "source": "Data!A1:I23",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Size"
+      ],
+      "columns": [
+       "Channel",
+       "Kind"
+      ],
+      "pages": [
+       {
+        "field": "Rep"
+       }
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "insertBlankRow": true
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "L16S",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PL16S",
+     "source": "Data!A1:I23",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Size"
+      ],
+      "columns": [
+       "Channel",
+       "Kind"
+      ],
+      "pages": [
+       {
+        "field": "Rep"
+       }
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "insertBlankRow": true
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "L16X",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PL16X",
+     "source": "Data!A1:I23",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Size"
+      ],
+      "columns": [
+       "Channel",
+       "Kind"
+      ],
+      "pages": [
+       {
+        "field": "Rep"
+       }
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "insertBlankRow": true
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "L16C",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PL16C",
+     "source": "Data!A1:I23",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Size"
+      ],
+      "columns": [
+       "Channel",
+       "Kind"
+      ],
+      "pages": [
+       {
+        "field": "Rep"
+       }
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "insertBlankRow": true
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "AC",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PAC",
+     "source": "Data!A1:I23",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Units",
+       "When"
+      ],
+      "columns": [
+       "Channel"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "AO",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PAO",
+     "source": "Data!A1:I23",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Units",
+       "When"
+      ],
+      "columns": [
+       "Channel"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "table": {
+       "compact": false,
+       "compactData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Size": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Channel": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Kind": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Rep": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false
+        }
+       },
+       "When": {
+        "attrs": {
+         "compact": false
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "AT",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PAT",
+     "source": "Data!A1:I23",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Units",
+       "When"
+      ],
+      "columns": [
+       "Channel"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "table": {
+       "compact": false,
+       "outline": false,
+       "compactData": false,
+       "outlineData": false
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Size": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Channel": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Kind": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Rep": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "When": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "AM",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PAM",
+     "source": "Data!A1:I23",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Channel"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "table": {
+       "compact": false,
+       "outline": false,
+       "compactData": false,
+       "outlineData": false,
+       "mergeItem": true
+      },
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Size": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Channel": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Kind": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Rep": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Sales": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Units": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "When": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "AI",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PAI",
+     "source": "Data!A1:I23",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Product",
+       "Size"
+      ],
+      "columns": [
+       "Channel"
+      ],
+      "data": [
+       {
+        "field": "Sales"
+       }
+      ],
+      "table": {
+       "indent": 3
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

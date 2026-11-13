@@ -1,0 +1,81 @@
+{
+  "source": {
+    "kind": "excel-graph",
+    "application": "Excel for the web (Graph)",
+    "version": null,
+    "texts": {},
+    "workbook_name": "0326af17524d886ad9e61dfc9fc378a1e0c9b8b7aa933771e01717350f6df15e.xlsx",
+    "pivot_texts": {},
+    "input_sha256": "8eaf6158d3fa6234865bfa4dff23d94b8f100bb6fdd5518f9bf87d89715adf63"
+  },
+  "sheets": {
+    "S": {
+      "C3": {
+        "t": "n",
+        "v": 1.0
+      },
+      "D3": {
+        "t": "n",
+        "v": 2.0
+      },
+      "C4": {
+        "t": "n",
+        "v": 3.0
+      },
+      "D4": {
+        "t": "n",
+        "v": 4.0
+      },
+      "C5": {
+        "t": "n",
+        "v": 5.0
+      },
+      "D5": {
+        "t": "n",
+        "v": 6.0
+      },
+      "C6": {
+        "t": "n",
+        "v": 7.0
+      },
+      "D6": {
+        "t": "n",
+        "v": 8.0
+      }
+    },
+    "F": {
+      "A1": {
+        "t": "n",
+        "v": 1.0
+      },
+      "B1": {
+        "t": "s",
+        "v": "=INDIRECT(\"S!C3\")"
+      },
+      "A2": {
+        "t": "s",
+        "v": "=SEQUENCE(4,2)"
+      },
+      "B2": {
+        "t": "s",
+        "v": "=IFERROR(FORMULATEXT(INDIRECT(\"S!C3\")),\"none\")"
+      },
+      "A3": {
+        "t": "s",
+        "v": "1,2,3,4,5,6,7,8,,,,"
+      },
+      "B3": {
+        "t": "s",
+        "v": "=TEXTJOIN(\",\",FALSE,INDIRECT(\"S!C3:D8\"))"
+      },
+      "A4": {
+        "t": "n",
+        "v": 36.0
+      },
+      "B4": {
+        "t": "s",
+        "v": "=SUM(S!C3:D8)"
+      }
+    }
+  }
+}

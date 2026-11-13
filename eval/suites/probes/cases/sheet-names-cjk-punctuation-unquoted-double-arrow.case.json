@@ -1,0 +1,33 @@
+{
+  "format": "rustsheet-case/v1",
+  "tags": [
+    "M8",
+    "references",
+    "probe"
+  ],
+  "description": "A sheet whose name holds a rightwards double arrow (U+21D2) last and inside, referenced unquoted in the stored formula, as desktop Excel wrote such names in corpus files (Taskei P561217587, P561218761, P561219993): does Excel for the web load the workbook and read each B1, and what does FORMULATEXT show. A refusal of the workbook is the answer (as for an unquoted Ⓐ, references.md T-4446); one class a case, so a refusal decides only its class. Sheet k holds 10*k in B1. Ours: every unquoted reference is a parse error (#ERROR!), and FORMULATEXT shows the text as stored, unquoted. Inputs are synthetic: no name is a corpus file's.",
+  "expected": {},
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=表⇒!B1",
+        "A2": "=FORMULATEXT(A1)",
+        "A3": "=a⇒b!B1",
+        "A4": "=FORMULATEXT(A3)"
+      }
+    },
+    {
+      "name": "表⇒",
+      "cells": {
+        "B1": 10
+      }
+    },
+    {
+      "name": "a⇒b",
+      "cells": {
+        "B1": 20
+      }
+    }
+  ]
+}
