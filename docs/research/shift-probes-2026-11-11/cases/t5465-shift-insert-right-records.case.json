@@ -1,0 +1,141 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-5465 (SPEC-0039 Amendment 3, U11 and U13, for Excel's saved file) insert_cells of S!C4:D5 shifting right (rows 4:5, columns C on move right two). Conditional formats: C6:D7 (=C6>0, inside the down band's tail), E4:F5 (=E4>0, inside the right band's tail), B6:E7 (=B6>0, across the edge), K14 (=$C$6>0 and, a second rule, =$E$4>0: outside both bands, reading a moved cell). Data validations: C6 (=C6>0), E4 (=E4>0), B6:E7 (=B6>0), L14 (=$C$6>0), M14 (=$E$4>0). Names nmCell S!$C$6, nmAcross S!$B$6:$E$7, nmRight S!$E$4. Number formats as in on-sheet-and-formats. Wanted: Excel's saved workbook after the edit (rustsheet-oracle resave), or the refusal.",
+  "tags": [
+    "M4",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "B2": 22,
+        "C2": 23,
+        "D2": 24,
+        "E2": 25,
+        "F2": 26,
+        "G2": 27,
+        "B3": 32,
+        "C3": 33,
+        "D3": 34,
+        "E3": 35,
+        "F3": 36,
+        "G3": 37,
+        "B4": 42,
+        "C4": 43,
+        "D4": 44,
+        "E4": 45,
+        "F4": 46,
+        "G4": 47,
+        "B5": 52,
+        "C5": 53,
+        "D5": 54,
+        "E5": 55,
+        "F5": 56,
+        "G5": 57,
+        "B6": 62,
+        "C6": 63,
+        "D6": 64,
+        "E6": 65,
+        "F6": 66,
+        "G6": 67,
+        "B7": 72,
+        "C7": 73,
+        "D7": 74,
+        "E7": 75,
+        "F7": 76,
+        "G7": 77,
+        "B8": 82,
+        "C8": 83,
+        "D8": 84,
+        "E8": 85,
+        "F8": 86,
+        "G8": 87,
+        "B9": 92,
+        "C9": 93,
+        "D9": 94,
+        "E9": 95,
+        "F9": 96,
+        "G9": 97
+      },
+      "number_formats": {
+        "C6": "0.00",
+        "D9": "0.00",
+        "E4": "0%",
+        "F5": "0%",
+        "C10": "0.00"
+      },
+      "conditional_formats": [
+        {
+          "ref": "C6:D7",
+          "formula": "=C6>0"
+        },
+        {
+          "ref": "E4:F5",
+          "formula": "=E4>0"
+        },
+        {
+          "ref": "B6:E7",
+          "formula": "=B6>0"
+        },
+        {
+          "ref": "K14",
+          "formula": "=$C$6>0"
+        },
+        {
+          "ref": "K14",
+          "formula": "=$E$4>0"
+        }
+      ],
+      "data_validations": [
+        {
+          "ref": "C6",
+          "formula": "=C6>0"
+        },
+        {
+          "ref": "E4",
+          "formula": "=E4>0"
+        },
+        {
+          "ref": "B6:E7",
+          "formula": "=B6>0"
+        },
+        {
+          "ref": "L14",
+          "formula": "=$C$6>0"
+        },
+        {
+          "ref": "M14",
+          "formula": "=$E$4>0"
+        }
+      ]
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=nmCell",
+        "A2": "=SUM(nmAcross)",
+        "A3": "=nmRight"
+      }
+    }
+  ],
+  "names": {
+    "nmCell": "=S!$C$6",
+    "nmAcross": "=S!$B$6:$E$7",
+    "nmRight": "=S!$E$4"
+  },
+  "sheet_ops": [
+    {
+      "op": "insert_cells",
+      "sheet": "S",
+      "range": "C4:D5",
+      "shift": "right"
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!A2",
+    "F!A3"
+  ]
+}

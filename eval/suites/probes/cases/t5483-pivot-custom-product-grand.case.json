@@ -1,0 +1,574 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-5483: what a custom Product subtotal shows where its line meets the grand-total column. gen-pivot ec473260bb2065b3 P05 shows 0 there on all 63 lines, each with one of three item columns filled, where the item column shows the product; a custom Min shows the minimum in both (pivots.md \"What the gen-pivot batch found\"). Each sheet is one builder-v2 pivot at A3 over Data!A1:E11 (Region, Product, Size, Val, Kind; ten records), rows Region then Product, columns Size, Sum of Val unless said. East and West have records in both sizes and North in S only, so a rule that reads an empty item column as 0 gives 0 for North alone, and a rule that is 0 at every grand-total column gives 0 for all three. P1: the one function Product on Region, on the item's own line (compact). P2: Product and Min, whose lines follow the children. P3: Product in tabular form. P4: columns Size then Kind, for Size's default subtotal columns. P5: the function on a column field (rows Size, columns Region, Product), for the row grand total. P6: Product as the data field's own function, no custom subtotal. P7: the custom Product over an Average data field. PV: the shape of the evidence sheet, as a control: the Values field outermost on rows (rows Values, Region, Product) over StdDevp, Min and Sum of Val, the one function Product on Region. FSum: the one function sum. FCouA: the one function countA. FAvg: the one function avg. FMax: the one function max. FStd: the one function stdDev. FVar: the one function var.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-5483",
+  "M16"
+ ],
+ "sheets": [
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "Region",
+    "B1": "Product",
+    "C1": "Size",
+    "D1": "Val",
+    "E1": "Kind",
+    "A2": "East",
+    "B2": "A",
+    "C2": "S",
+    "D2": 10,
+    "E2": "X",
+    "A3": "East",
+    "B3": "A",
+    "C3": "L",
+    "D3": 4,
+    "E3": "Y",
+    "A4": "East",
+    "B4": "B",
+    "C4": "S",
+    "D4": 5,
+    "E4": "X",
+    "A5": "East",
+    "B5": "B",
+    "C5": "L",
+    "D5": 2,
+    "E5": "Y",
+    "A6": "West",
+    "B6": "A",
+    "C6": "S",
+    "D6": 7,
+    "E6": "X",
+    "A7": "West",
+    "B7": "B",
+    "C7": "S",
+    "D7": 3,
+    "E7": "Y",
+    "A8": "West",
+    "B8": "B",
+    "C8": "L",
+    "D8": 1,
+    "E8": "X",
+    "A9": "West",
+    "B9": "C",
+    "C9": "L",
+    "D9": 6,
+    "E9": "Y",
+    "A10": "North",
+    "B10": "A",
+    "C10": "S",
+    "D10": 2,
+    "E10": "X",
+    "A11": "North",
+    "B11": "B",
+    "C11": "S",
+    "D11": 3,
+    "E11": "Y"
+   }
+  },
+  {
+   "name": "P1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "ProductOwnLine",
+     "source": "Data!A1:E11",
+     "location": "A3",
+     "definition": {
+      "table": {},
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Size"
+      ],
+      "data": [
+       {
+        "field": "Val"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "subtotals": [
+         "product"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "P2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "ProductAndMin",
+     "source": "Data!A1:E11",
+     "location": "A3",
+     "definition": {
+      "table": {},
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Size"
+      ],
+      "data": [
+       {
+        "field": "Val"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "subtotals": [
+         "product",
+         "min"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "P3",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "ProductTabular",
+     "source": "Data!A1:E11",
+     "location": "A3",
+     "definition": {
+      "table": {
+       "outline": false,
+       "outlineData": false,
+       "compact": false,
+       "compactData": false
+      },
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Size"
+      ],
+      "data": [
+       {
+        "field": "Val"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        },
+        "subtotals": [
+         "product"
+        ]
+       },
+       "Product": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Size": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Val": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       },
+       "Kind": {
+        "attrs": {
+         "compact": false,
+         "outline": false
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "P4",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "ProductByOuterColumn",
+     "source": "Data!A1:E11",
+     "location": "A3",
+     "definition": {
+      "table": {},
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Size",
+       "Kind"
+      ],
+      "data": [
+       {
+        "field": "Val"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "subtotals": [
+         "product"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "P5",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "ProductOnColumns",
+     "source": "Data!A1:E11",
+     "location": "A3",
+     "definition": {
+      "table": {},
+      "rows": [
+       "Size"
+      ],
+      "columns": [
+       "Region",
+       "Product"
+      ],
+      "data": [
+       {
+        "field": "Val"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "subtotals": [
+         "product"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "P6",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "ProductDataField",
+     "source": "Data!A1:E11",
+     "location": "A3",
+     "definition": {
+      "table": {},
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Size"
+      ],
+      "data": [
+       {
+        "field": "Val",
+        "subtotal": "product"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "P7",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "ProductUnderAverage",
+     "source": "Data!A1:E11",
+     "location": "A3",
+     "definition": {
+      "table": {},
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Size"
+      ],
+      "data": [
+       {
+        "field": "Val",
+        "subtotal": "average"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "subtotals": [
+         "product"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "PV",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "ProductUnderValues",
+     "source": "Data!A1:E11",
+     "location": "A3",
+     "definition": {
+      "table": {},
+      "rows": [
+       "Values",
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Size"
+      ],
+      "data": [
+       {
+        "field": "Val",
+        "subtotal": "stdDevp"
+       },
+       {
+        "field": "Val",
+        "subtotal": "min"
+       },
+       {
+        "field": "Val",
+        "subtotal": "sum"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "subtotals": [
+         "product"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "FSum",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "OwnSum",
+     "source": "Data!A1:E11",
+     "location": "A3",
+     "definition": {
+      "table": {},
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Size"
+      ],
+      "data": [
+       {
+        "field": "Val"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "subtotals": [
+         "sum"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "FCouA",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "OwnCounta",
+     "source": "Data!A1:E11",
+     "location": "A3",
+     "definition": {
+      "table": {},
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Size"
+      ],
+      "data": [
+       {
+        "field": "Val"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "subtotals": [
+         "countA"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "FAvg",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "OwnAvg",
+     "source": "Data!A1:E11",
+     "location": "A3",
+     "definition": {
+      "table": {},
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Size"
+      ],
+      "data": [
+       {
+        "field": "Val"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "subtotals": [
+         "avg"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "FMax",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "OwnMax",
+     "source": "Data!A1:E11",
+     "location": "A3",
+     "definition": {
+      "table": {},
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Size"
+      ],
+      "data": [
+       {
+        "field": "Val"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "subtotals": [
+         "max"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "FStd",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "OwnStddev",
+     "source": "Data!A1:E11",
+     "location": "A3",
+     "definition": {
+      "table": {},
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Size"
+      ],
+      "data": [
+       {
+        "field": "Val"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "subtotals": [
+         "stdDev"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "FVar",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "OwnVar",
+     "source": "Data!A1:E11",
+     "location": "A3",
+     "definition": {
+      "table": {},
+      "rows": [
+       "Region",
+       "Product"
+      ],
+      "columns": [
+       "Size"
+      ],
+      "data": [
+       {
+        "field": "Val"
+       }
+      ],
+      "fields": {
+       "Region": {
+        "subtotals": [
+         "var"
+        ]
+       }
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,54 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-5123 (SPEC-0039 U1; T-2851's whole-line shapes): a whole-column range under one delete_column of D:E (count 2), across the last edge of the range (the shape of the sheet-ops engine oracle's =SUM(A:J) under a delete of H:J): does S!B:D shrink to S!B:C (sum 6)? S!A2:F2 hold 1,2,4,8,16,32 (so the sum names the columns read) and S!H4 holds =SUM(B:D), a whole-column range on its own sheet in a cell the delete moves. Sheet F holds A1 =SUM(S!B:D), A2 FORMULATEXT(A1), A3 =SUM(S!$B:$D), A4 FORMULATEXT(A3), A5 =SUM(S!C:C) (one whole column), A6 FORMULATEXT(A5), A7 =S!H4 and A8 =FORMULATEXT(S!H4) (the references follow the moved cell).",
+  "tags": [
+    "M8",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "A2": 1,
+        "B2": 2,
+        "C2": 4,
+        "D2": 8,
+        "E2": 16,
+        "F2": 32,
+        "H4": "=SUM(B:D)"
+      }
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=SUM(S!B:D)",
+        "A2": "=FORMULATEXT(A1)",
+        "A3": "=SUM(S!$B:$D)",
+        "A4": "=FORMULATEXT(A3)",
+        "A5": "=SUM(S!C:C)",
+        "A6": "=FORMULATEXT(A5)",
+        "A7": "=S!H4",
+        "A8": "=FORMULATEXT(S!H4)"
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "delete_column",
+      "sheet": "S",
+      "column": "D",
+      "count": 2
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!A2",
+    "F!A3",
+    "F!A4",
+    "F!A5",
+    "F!A6",
+    "F!A7",
+    "F!A8"
+  ]
+}

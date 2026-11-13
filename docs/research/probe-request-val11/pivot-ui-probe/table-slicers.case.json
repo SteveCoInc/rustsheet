@@ -1,0 +1,72 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "The workbook of docs/research/pivot-ui-probe, Part 1: a table with two table slicers that keep Excel's default settings. Sheet T holds the table Sales over A1:D7, the six records of probes/t4767-pivot-slicers (Region, Product, Date, Sales: East A 1, West A 2, East B 4, West B 8, North C 16, East C 32), a table slicer on Region at F3 and one on Product at I3. The slicer of that probe's sheet TS has crossFilter=none, which draws no button lighter; these two state no setting, so that a filter on one column shows how Excel draws the other's items with no data. It is not an eval case: no oracle fills it, and nothing scores it.",
+  "tags": [
+    "M16",
+    "pivot",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "T",
+      "cells": {
+        "A1": "Region",
+        "B1": "Product",
+        "C1": "Date",
+        "D1": "Sales",
+        "A2": "East",
+        "B2": "A",
+        "C2": 43480,
+        "D2": 1,
+        "A3": "West",
+        "B3": "A",
+        "C3": 43530,
+        "D3": 2,
+        "A4": "East",
+        "B4": "B",
+        "C4": 43600,
+        "D4": 4,
+        "A5": "West",
+        "B5": "B",
+        "C5": 43800,
+        "D5": 8,
+        "A6": "North",
+        "B6": "C",
+        "C6": 43900,
+        "D6": 16,
+        "A7": "East",
+        "B7": "C",
+        "C7": 44000,
+        "D7": 32
+      },
+      "number_formats": {
+        "C2": "yyyy-mm-dd",
+        "C3": "yyyy-mm-dd",
+        "C4": "yyyy-mm-dd",
+        "C5": "yyyy-mm-dd",
+        "C6": "yyyy-mm-dd",
+        "C7": "yyyy-mm-dd"
+      },
+      "tables": [
+        {
+          "name": "Sales",
+          "ref": "A1:D7"
+        }
+      ],
+      "slicers": [
+        {
+          "table": "Sales",
+          "column": "Region",
+          "anchor": "F3",
+          "table_slicer": {}
+        },
+        {
+          "table": "Sales",
+          "column": "Product",
+          "anchor": "I3",
+          "table_slicer": {}
+        }
+      ]
+    }
+  ]
+}

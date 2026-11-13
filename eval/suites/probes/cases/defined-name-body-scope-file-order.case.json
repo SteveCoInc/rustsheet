@@ -1,0 +1,54 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-90008 follow-up. In probes/defined-name-body-scope-first-sheet the two bodies that use, bare, a name only the first sheet defines differ in three ways at once: whose body it is (Data's DoubleOwn is #NAME?, the workbook's TripleOwn 30), where the file lists it (XlsxWriter sorts definedNames by name: DoubleOwn before Own, TripleOwn after) and Data being both the first and the active sheet. Only Data defines Own (10). EarlyBook = Own*3 (workbook, listed before Own), ThenBook = Own*3 (workbook, after), Data!EarlyData = Own*2 (Data's, before), Data!ThenData = Own*2 (Data's, after), ThenPin = [0]!Own*5 (the workbook's Own, which is not defined). Here Data is the first sheet and the active one: only the file order varies.",
+  "tags": [
+    "M8",
+    "names",
+    "probe"
+  ],
+  "names": {
+    "Data!Own": "=10",
+    "EarlyBook": "=Own*3",
+    "ThenBook": "=Own*3",
+    "Data!EarlyData": "=Own*2",
+    "Data!ThenData": "=Own*2",
+    "ThenPin": "=[0]!Own*5"
+  },
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "A1": "=EarlyBook",
+        "A2": "=ThenBook",
+        "A3": "=EarlyData",
+        "A4": "=ThenData",
+        "A5": "=ThenPin",
+        "A6": "=Own"
+      }
+    },
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=EarlyBook",
+        "A2": "=ThenBook",
+        "A3": "=Data!EarlyData",
+        "A4": "=Data!ThenData",
+        "A5": "=ThenPin"
+      }
+    }
+  ],
+  "expected": {},
+  "check": [
+    "Data!A1",
+    "Data!A2",
+    "Data!A3",
+    "Data!A4",
+    "Data!A5",
+    "Data!A6",
+    "Sheet1!A1",
+    "Sheet1!A2",
+    "Sheet1!A3",
+    "Sheet1!A4",
+    "Sheet1!A5"
+  ]
+}

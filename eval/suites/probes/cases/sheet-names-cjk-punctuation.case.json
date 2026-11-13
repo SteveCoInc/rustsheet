@@ -1,0 +1,260 @@
+{
+  "format": "rustsheet-case/v1",
+  "tags": [
+    "M8",
+    "references",
+    "probe"
+  ],
+  "description": "Sheet names with characters outside letters and digits, the classes desktop Excel wrote unquoted in corpus files' formulas (a circled digit first, a rightwards double arrow, a katakana middle dot, double angle and corner brackets; Taskei P561217587, P561218761, P561219993) and around them the boundaries of a rule: full-width twins of ASCII characters that force quotes, other CJK and Latin-1 symbols and punctuation, and punctuation first. Sheet k (in this order: ①表, ②一覧, 表⇒, a⇒b, a・b, 表２・３, a《b》, 表「一」, a＋b, a－b, a＆b, a（b）, a！b, a　b, a→b, a★b, a、b, a。b, a【b】, a〜b, a·b, a×b, a±b, a§b, ⇒a, ・a, 「a」) holds 10*k in B1. For sheet k, A(2k-1) is a quoted reference to its B1 and A(2k) its FORMULATEXT, which asks whether Excel writes the name unquoted; Bk is INDIRECT of the unquoted text, which asks whether it reads it. Ours: the quoted references read their B1, FORMULATEXT keeps the quotes (name_needs_quoting quotes every one of these names), and INDIRECT of the unquoted text is #REF!. Inputs are synthetic: no name is a corpus file's.",
+  "expected": {},
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "='①表'!B1",
+        "A2": "=FORMULATEXT(A1)",
+        "B1": "=INDIRECT(\"①表!B1\")",
+        "A3": "='②一覧'!B1",
+        "A4": "=FORMULATEXT(A3)",
+        "B2": "=INDIRECT(\"②一覧!B1\")",
+        "A5": "='表⇒'!B1",
+        "A6": "=FORMULATEXT(A5)",
+        "B3": "=INDIRECT(\"表⇒!B1\")",
+        "A7": "='a⇒b'!B1",
+        "A8": "=FORMULATEXT(A7)",
+        "B4": "=INDIRECT(\"a⇒b!B1\")",
+        "A9": "='a・b'!B1",
+        "A10": "=FORMULATEXT(A9)",
+        "B5": "=INDIRECT(\"a・b!B1\")",
+        "A11": "='表２・３'!B1",
+        "A12": "=FORMULATEXT(A11)",
+        "B6": "=INDIRECT(\"表２・３!B1\")",
+        "A13": "='a《b》'!B1",
+        "A14": "=FORMULATEXT(A13)",
+        "B7": "=INDIRECT(\"a《b》!B1\")",
+        "A15": "='表「一」'!B1",
+        "A16": "=FORMULATEXT(A15)",
+        "B8": "=INDIRECT(\"表「一」!B1\")",
+        "A17": "='a＋b'!B1",
+        "A18": "=FORMULATEXT(A17)",
+        "B9": "=INDIRECT(\"a＋b!B1\")",
+        "A19": "='a－b'!B1",
+        "A20": "=FORMULATEXT(A19)",
+        "B10": "=INDIRECT(\"a－b!B1\")",
+        "A21": "='a＆b'!B1",
+        "A22": "=FORMULATEXT(A21)",
+        "B11": "=INDIRECT(\"a＆b!B1\")",
+        "A23": "='a（b）'!B1",
+        "A24": "=FORMULATEXT(A23)",
+        "B12": "=INDIRECT(\"a（b）!B1\")",
+        "A25": "='a！b'!B1",
+        "A26": "=FORMULATEXT(A25)",
+        "B13": "=INDIRECT(\"a！b!B1\")",
+        "A27": "='a　b'!B1",
+        "A28": "=FORMULATEXT(A27)",
+        "B14": "=INDIRECT(\"a　b!B1\")",
+        "A29": "='a→b'!B1",
+        "A30": "=FORMULATEXT(A29)",
+        "B15": "=INDIRECT(\"a→b!B1\")",
+        "A31": "='a★b'!B1",
+        "A32": "=FORMULATEXT(A31)",
+        "B16": "=INDIRECT(\"a★b!B1\")",
+        "A33": "='a、b'!B1",
+        "A34": "=FORMULATEXT(A33)",
+        "B17": "=INDIRECT(\"a、b!B1\")",
+        "A35": "='a。b'!B1",
+        "A36": "=FORMULATEXT(A35)",
+        "B18": "=INDIRECT(\"a。b!B1\")",
+        "A37": "='a【b】'!B1",
+        "A38": "=FORMULATEXT(A37)",
+        "B19": "=INDIRECT(\"a【b】!B1\")",
+        "A39": "='a〜b'!B1",
+        "A40": "=FORMULATEXT(A39)",
+        "B20": "=INDIRECT(\"a〜b!B1\")",
+        "A41": "='a·b'!B1",
+        "A42": "=FORMULATEXT(A41)",
+        "B21": "=INDIRECT(\"a·b!B1\")",
+        "A43": "='a×b'!B1",
+        "A44": "=FORMULATEXT(A43)",
+        "B22": "=INDIRECT(\"a×b!B1\")",
+        "A45": "='a±b'!B1",
+        "A46": "=FORMULATEXT(A45)",
+        "B23": "=INDIRECT(\"a±b!B1\")",
+        "A47": "='a§b'!B1",
+        "A48": "=FORMULATEXT(A47)",
+        "B24": "=INDIRECT(\"a§b!B1\")",
+        "A49": "='⇒a'!B1",
+        "A50": "=FORMULATEXT(A49)",
+        "B25": "=INDIRECT(\"⇒a!B1\")",
+        "A51": "='・a'!B1",
+        "A52": "=FORMULATEXT(A51)",
+        "B26": "=INDIRECT(\"・a!B1\")",
+        "A53": "='「a」'!B1",
+        "A54": "=FORMULATEXT(A53)",
+        "B27": "=INDIRECT(\"「a」!B1\")"
+      }
+    },
+    {
+      "name": "①表",
+      "cells": {
+        "B1": 10
+      }
+    },
+    {
+      "name": "②一覧",
+      "cells": {
+        "B1": 20
+      }
+    },
+    {
+      "name": "表⇒",
+      "cells": {
+        "B1": 30
+      }
+    },
+    {
+      "name": "a⇒b",
+      "cells": {
+        "B1": 40
+      }
+    },
+    {
+      "name": "a・b",
+      "cells": {
+        "B1": 50
+      }
+    },
+    {
+      "name": "表２・３",
+      "cells": {
+        "B1": 60
+      }
+    },
+    {
+      "name": "a《b》",
+      "cells": {
+        "B1": 70
+      }
+    },
+    {
+      "name": "表「一」",
+      "cells": {
+        "B1": 80
+      }
+    },
+    {
+      "name": "a＋b",
+      "cells": {
+        "B1": 90
+      }
+    },
+    {
+      "name": "a－b",
+      "cells": {
+        "B1": 100
+      }
+    },
+    {
+      "name": "a＆b",
+      "cells": {
+        "B1": 110
+      }
+    },
+    {
+      "name": "a（b）",
+      "cells": {
+        "B1": 120
+      }
+    },
+    {
+      "name": "a！b",
+      "cells": {
+        "B1": 130
+      }
+    },
+    {
+      "name": "a　b",
+      "cells": {
+        "B1": 140
+      }
+    },
+    {
+      "name": "a→b",
+      "cells": {
+        "B1": 150
+      }
+    },
+    {
+      "name": "a★b",
+      "cells": {
+        "B1": 160
+      }
+    },
+    {
+      "name": "a、b",
+      "cells": {
+        "B1": 170
+      }
+    },
+    {
+      "name": "a。b",
+      "cells": {
+        "B1": 180
+      }
+    },
+    {
+      "name": "a【b】",
+      "cells": {
+        "B1": 190
+      }
+    },
+    {
+      "name": "a〜b",
+      "cells": {
+        "B1": 200
+      }
+    },
+    {
+      "name": "a·b",
+      "cells": {
+        "B1": 210
+      }
+    },
+    {
+      "name": "a×b",
+      "cells": {
+        "B1": 220
+      }
+    },
+    {
+      "name": "a±b",
+      "cells": {
+        "B1": 230
+      }
+    },
+    {
+      "name": "a§b",
+      "cells": {
+        "B1": 240
+      }
+    },
+    {
+      "name": "⇒a",
+      "cells": {
+        "B1": 250
+      }
+    },
+    {
+      "name": "・a",
+      "cells": {
+        "B1": 260
+      }
+    },
+    {
+      "name": "「a」",
+      "cells": {
+        "B1": 270
+      }
+    }
+  ]
+}

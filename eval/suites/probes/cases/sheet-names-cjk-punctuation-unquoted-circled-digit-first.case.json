@@ -1,0 +1,33 @@
+{
+  "format": "rustsheet-case/v1",
+  "tags": [
+    "M8",
+    "references",
+    "probe"
+  ],
+  "description": "A sheet whose name holds a circled digit first (U+2460, U+2461), referenced unquoted in the stored formula, as desktop Excel wrote such names in corpus files (Taskei P561217587, P561218761, P561219993): does Excel for the web load the workbook and read each B1, and what does FORMULATEXT show. A refusal of the workbook is the answer (as for an unquoted Ⓐ, references.md T-4446); one class a case, so a refusal decides only its class. Sheet k holds 10*k in B1. Ours: every unquoted reference is a parse error (#ERROR!), and FORMULATEXT shows the text as stored, unquoted. Inputs are synthetic: no name is a corpus file's.",
+  "expected": {},
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=①表!B1",
+        "A2": "=FORMULATEXT(A1)",
+        "A3": "=②一覧!B1",
+        "A4": "=FORMULATEXT(A3)"
+      }
+    },
+    {
+      "name": "①表",
+      "cells": {
+        "B1": 10
+      }
+    },
+    {
+      "name": "②一覧",
+      "cells": {
+        "B1": 20
+      }
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "A 3-D span of one sheet under a row delete on that sheet (T-5488): Excel stores 'Data1:Data1!A5' as Data1!A5 (FORMULATEXT, probes/3d-ref-one-sheet-span-lift), so the delete is expected to shift it as it shifts the plain reference beside it: A1:A4 against A6:A9. Pending: no Excel oracle was reachable from the author's host.",
+  "tags": [
+    "M8",
+    "sheet-ops",
+    "references",
+    "probe",
+    "T-5488"
+  ],
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=SUM(Data1:Data1!A5)",
+        "A2": "=FORMULATEXT(A1)",
+        "A3": "=SUM(Data1:Data1!A5:A7)",
+        "A4": "=FORMULATEXT(A3)",
+        "A6": "=SUM(Data1!A5)",
+        "A7": "=FORMULATEXT(A6)",
+        "A8": "=SUM(Data1!A5:A7)",
+        "A9": "=FORMULATEXT(A8)"
+      }
+    },
+    {
+      "name": "Data1",
+      "cells": {
+        "A4": 1,
+        "A5": 10,
+        "A6": 100,
+        "A7": 1000,
+        "A8": 10000
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "delete_row",
+      "sheet": "Data1",
+      "row": 2
+    }
+  ]
+}

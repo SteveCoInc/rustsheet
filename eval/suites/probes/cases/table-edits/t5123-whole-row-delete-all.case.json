@@ -1,0 +1,56 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-5123 (SPEC-0039 U1; T-2851's whole-line shapes): a whole-row range under one delete_row of rows 4-7 (count 4), every row of the range: how is it printed? S!B2:B9 hold 1,2,4,8,16,32,64,128 (so the sum names the rows read) and S!D12 holds =SUM(4:7), a whole-row range on its own sheet in a cell the delete moves. Sheet F holds A1 =SUM(S!4:7), A2 FORMULATEXT(A1), A3 =SUM(S!$4:$7), A4 FORMULATEXT(A3), A5 =SUM(S!5:5) (one whole row), A6 FORMULATEXT(A5), A7 =S!D12 and A8 =FORMULATEXT(S!D12) (the references follow the moved cell).",
+  "tags": [
+    "M8",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "B2": 1,
+        "B3": 2,
+        "B4": 4,
+        "B5": 8,
+        "B6": 16,
+        "B7": 32,
+        "B8": 64,
+        "B9": 128,
+        "D12": "=SUM(4:7)"
+      }
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=SUM(S!4:7)",
+        "A2": "=FORMULATEXT(A1)",
+        "A3": "=SUM(S!$4:$7)",
+        "A4": "=FORMULATEXT(A3)",
+        "A5": "=SUM(S!5:5)",
+        "A6": "=FORMULATEXT(A5)",
+        "A7": "=S!D12",
+        "A8": "=FORMULATEXT(S!D12)"
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "delete_row",
+      "sheet": "S",
+      "row": 4,
+      "count": 4
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!A2",
+    "F!A3",
+    "F!A4",
+    "F!A5",
+    "F!A6",
+    "F!A7",
+    "F!A8"
+  ]
+}

@@ -1,0 +1,153 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "Taskei P559189335: what reads after the colon of a range whose first corner is `$` or sheet-qualified, typed: whitespace, a defined name of letters only, of letters with an underscore, of letters spelled like a column (`nm`), a group, a cell past the last column (`XFE2`), a name that begins like a cell (`Q1_Total`) and `#REF!`. The plain corner reads them all (t2776-ws-after-colon, range-operator-unnamed-operands). Each cell's value, or its refusal, and FORMULATEXT beside it. Also a column-shaped workbook name `nb` after a sheet-qualified plain corner, spaced and unspaced, qualified, and first (review of CR-321719056, round 2).",
+ "tags": [
+  "probe",
+  "references",
+  "M2"
+ ],
+ "names": {
+  "end_one": "=Calc!$B$3",
+  "total": "=Calc!$B$3",
+  "nm": "=Calc!$B$3",
+  "Q1_Total": "=Calc!$B$3",
+  "end_two": "=Data!$A$3",
+  "total_two": "=Data!$A$3",
+  "nb": "=Data!$A$3"
+ },
+ "check": [
+  "Calc!A1",
+  "Calc!C1",
+  "Calc!A2",
+  "Calc!C2",
+  "Calc!A3",
+  "Calc!C3",
+  "Calc!A4",
+  "Calc!C4",
+  "Calc!A5",
+  "Calc!C5",
+  "Calc!A6",
+  "Calc!C6",
+  "Calc!A7",
+  "Calc!C7",
+  "Calc!A8",
+  "Calc!C8",
+  "Calc!A9",
+  "Calc!C9",
+  "Calc!A10",
+  "Calc!C10",
+  "Calc!A11",
+  "Calc!C11",
+  "Calc!A12",
+  "Calc!C12",
+  "Calc!A13",
+  "Calc!C13",
+  "Calc!A14",
+  "Calc!C14",
+  "Calc!A15",
+  "Calc!C15",
+  "Calc!A16",
+  "Calc!C16",
+  "Calc!A17",
+  "Calc!C17",
+  "Calc!A18",
+  "Calc!C18",
+  "Calc!A19",
+  "Calc!C19"
+ ],
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "B1": 1,
+    "B2": 2,
+    "B3": 3,
+    "A1": {
+     "entered": "=SUM($B$1: $B$3)"
+    },
+    "C1": "=FORMULATEXT(A1)",
+    "A2": {
+     "entered": "=SUM($B$1:end_one)"
+    },
+    "C2": "=FORMULATEXT(A2)",
+    "A3": {
+     "entered": "=SUM($B$1:total)"
+    },
+    "C3": "=FORMULATEXT(A3)",
+    "A4": {
+     "entered": "=SUM($B$1:nm)"
+    },
+    "C4": "=FORMULATEXT(A4)",
+    "A5": {
+     "entered": "=SUM($B$1:(B3))"
+    },
+    "C5": "=FORMULATEXT(A5)",
+    "A6": {
+     "entered": "=ROWS(Data!A1: A3)"
+    },
+    "C6": "=FORMULATEXT(A6)",
+    "A7": {
+     "entered": "=ROWS(Data!A1 :A3)"
+    },
+    "C7": "=FORMULATEXT(A7)",
+    "A8": {
+     "entered": "=ROWS(Data!A1:end_two)"
+    },
+    "C8": "=FORMULATEXT(A8)",
+    "A9": {
+     "entered": "=ROWS(Data!A1:total_two)"
+    },
+    "C9": "=FORMULATEXT(A9)",
+    "A10": {
+     "entered": "=ROWS(Data!$A$1:(Data!A3))"
+    },
+    "C10": "=FORMULATEXT(A10)",
+    "A11": {
+     "entered": "=ROWS(Data!A1:(A3))"
+    },
+    "C11": "=FORMULATEXT(A11)",
+    "A12": {
+     "entered": "=SUM($B$1:XFE2)"
+    },
+    "C12": "=FORMULATEXT(A12)",
+    "A13": {
+     "entered": "=SUM(Data!A1:XFE2)"
+    },
+    "C13": "=FORMULATEXT(A13)",
+    "A14": {
+     "entered": "=SUM(B1:Q1_Total)"
+    },
+    "C14": "=FORMULATEXT(A14)",
+    "A15": {
+     "entered": "=SUM($B$1:#REF!)"
+    },
+    "C15": "=FORMULATEXT(A15)",
+    "A16": {
+     "entered": "=SUM(Data!A1:nb)"
+    },
+    "C16": "=FORMULATEXT(A16)",
+    "A17": {
+     "entered": "=SUM(Data!A1: nb)"
+    },
+    "C17": "=FORMULATEXT(A17)",
+    "A18": {
+     "entered": "=SUM(Data!A1:Data!nb)"
+    },
+    "C18": "=FORMULATEXT(A18)",
+    "A19": {
+     "entered": "=SUM(Data!nb:Data!A1)"
+    },
+    "C19": "=FORMULATEXT(A19)"
+   }
+  },
+  {
+   "name": "Data",
+   "cells": {
+    "A1": 10,
+    "A2": 20,
+    "A3": 30
+   }
+  }
+ ],
+ "expected": {}
+}
