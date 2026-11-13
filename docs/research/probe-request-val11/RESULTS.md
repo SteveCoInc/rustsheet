@@ -6,12 +6,13 @@ this oracle has no Office.js or browser. They stay open for the oracle owner.
 
 ## Section 3: excel-graph fills
 
-- `probes`: 86 of the 88 pending cases of val9/val10/val11 have sidecars (the 48 M4 `table-edits` cases among them).
+- `probes`: 86 of the 88 pending cases were filled (85 have their sidecar beside the case; see the parked one below) of val9/val10/val11 have sidecars (the 48 M4 `table-edits` cases among them).
 - `probes-numeric`: `t5524-chisq-df1-complement-fresh` has a sidecar and a math sidecar.
 - Refused by Excel (an answer, `PROBE-REQUEST.md`): `table-edits/t5123-table-delete-rows-all-data-side-by-side`
   (delete rows 4:7) and `table-edits/t5358-no-header-delete-rows-top-straddle` (delete rows 2:4), both 409
   `InsertDeleteConflict` ("This won't work because it would move cells in a table on your worksheet"). They stay
   pending.
+- `t5107-search-fresh-tails` was filled, but its Excel values are parked at `docs/research/probe-request-val9/t5107-search-fresh-tails.oracle.json`, not beside the case. One of its points runs past the math generator's 600 s limit (`PointTimeoutError`, T-3680), and the `eval-math-check` gate will not pass a filled case without math values. Move the sidecar back once the definition has a deterministic budget.
 - Typed entries refused by Excel, recorded in the sidecar as REFUSED: `typed-formula-length-utf16-and-open-call`
   Sheet1!A6, A16, A21 and A26.
 - Visibly-off cells have owners: T-4579, T-4894, T-4994, T-2574, T-5107, T-4922, T-4924, T-4925 (amended) and

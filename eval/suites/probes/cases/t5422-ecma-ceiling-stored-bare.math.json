@@ -1,0 +1,22 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "f1b38bf3eb8bad56fcb04ff557932866d8bb50382b45d3e32c5443ee2dcdc1d5",
+  "definitions": {
+   "ECMA.CEILING": "dcab9afe9ac335c5"
+  },
+  "arguments_sha256": "b445be0ec69340438f069687806d382f41dd88178a2faa2d448dbc95afe74ea0"
+ },
+ "sheets": {
+  "S": {
+   "A1": {
+    "t": "n",
+    "v": "4.0",
+    "f": "=ECMA.CEILING(2.5,2)"
+   }
+  }
+ }
+}
