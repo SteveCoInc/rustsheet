@@ -35,6 +35,7 @@ Owns: probes/val2-fin-01, probes/val2-fin-02 and probes/val2-fin-03 (every visib
 - val4 batch, docs/research/probe-request-val4-fin.md (excel-graph fill, 2026-11-10; predictions frozen in
   docs/research/val4-fin-predictions.json). Owns: probes/val4-fin-01, probes/val4-fin-02 and probes/val4-fin-03 (every
   visibly-off cell).
+- excel-graph fill, 2026-11-13, probe request val11 (#4128). Owns: probes/t5107-search-fresh, probes/t5107-search-fresh-tails (every visibly-off cell of each). Run `make eval-show CASE=<case>` for the cells, and score them against the request's frozen predictions where it has them.
 
 ## Acceptance criteria
 - [ ] Every hypothesis of the family in probe-requests-2026-11-08.md has a verdict (confirmed, refuted, undecided) citing

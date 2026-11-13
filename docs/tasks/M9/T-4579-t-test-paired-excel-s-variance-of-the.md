@@ -47,6 +47,7 @@ decision.
   probe's visibly-off cells: probes/t4579-ttest-paired Div! A1, A3, A4, A5, A6, A8, A9, A10, A11, A12, A13, A14, A15,
   A16, A17, A18, A20, A21, A22, A23, A24, A25, A26, A27; Off! A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13,
   A14, A15, A16, A17, A18, A19, A20, A21, A22, A23, A24.
+- excel-graph fill, 2026-11-13, probe request val11 (#4128). Owns: probes/t4579-ttest-paired-fresh (every visibly-off cell of each). Run `make eval-show CASE=<case>` for the cells, and score them against the request's frozen predictions where it has them.
 
 ## Acceptance criteria
 - [x] A probe (excel-probe skill, excel-graph) separates the hypotheses for A136's `#DIV/0!` (pairs with a negative,

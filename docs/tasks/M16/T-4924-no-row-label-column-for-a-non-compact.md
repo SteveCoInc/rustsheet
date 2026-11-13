@@ -26,6 +26,7 @@ Owner of these visibly-off cells (decision 0245), 465 values and texts on 3 shee
 - gen-pivot/462f10551d480f9d P08!L3:W9
 - gen-pivot/640780d7b6f4ad53 P02!L5:DC8
 - gen-pivot/f9e7edbb5b74011a P07!L5:CT9
+- excel-graph fill, 2026-11-13, probe request val11 (#4128). Owns: probes/t4924-pivot-no-row-label-column (every visibly-off cell of each). Run `make eval-show CASE=<case>` for the cells, and score them against the request's frozen predictions where it has them.
 
 ## Acceptance criteria
 - [ ] The cells above pass (`rustsheet-eval run --suite gen-pivot`), and no other case regresses (`make eval-baseline`).

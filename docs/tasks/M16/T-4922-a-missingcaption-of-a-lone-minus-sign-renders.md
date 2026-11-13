@@ -31,6 +31,7 @@ Owner of these visibly-off cells (decision 0245), 1175 values and texts on 8 she
 - gen-pivot/ec473260bb2065b3 P03!N8:S10
 - gen-pivot/ec473260bb2065b3 P09!N10:AZ23
 - gen-pivot/ec473260bb2065b3 P12!N9:P19
+- excel-graph fill, 2026-11-13, probe request val11 (#4128). Owns: probes/t4922-pivot-missing-caption-values (every visibly-off cell of each). Run `make eval-show CASE=<case>` for the cells, and score them against the request's frozen predictions where it has them.
 
 ## Acceptance criteria
 - [ ] The cells above pass (`rustsheet-eval run --suite gen-pivot`), and no other case regresses (`make eval-baseline`).
